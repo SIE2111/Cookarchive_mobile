@@ -1,0 +1,71 @@
+import React from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { useTheme } from '../theme/ThemeContext';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { MainStackParamList } from '../navigation/AppNavigator';
+
+type Props = NativeStackScreenProps<MainStackParamList, 'RecipeSourceMenu'>;
+
+interface SourceOption {
+  key: string;
+  title: string;
+  subtitle: string;
+  target: 'ManualRecipe' | 'CommunityPool' | 'PhotoCapture' | null;
+}
+
+const OPTIONS: SourceOption[] = [
+  { key: 'manual', title: 'Selbst erstellen', subtitle: 'Titel, Zutaten, Schritte eintragen', target: 'ManualRecipe' },
+  { key: 'photo', title: 'Foto aufnehmen', subtitle: 'Kochbuchseite oder fertiges Gericht', target: 'PhotoCapture' },
+  { key: 'ai', title: 'KI generieren', subtitle: 'Nach Zutaten, Diät oder Zeit', target: null },
+  { key: 'web', title: 'Aus dem Internet', subtitle: 'Link einfügen, KI formuliert neu', target: null },
+  { key: 'pool', title: 'Community-Pool', subtitle: 'Rezept eines anderen übernehmen', target: 'CommunityPool' },
+];
+
+export default function RecipeSourceMenuScreen({ navigation }: Props) {
+  const { colors, radius } = useTheme();
+
+  return (
+    <View style={[styles.overlay, { backgroundColor: 'rgba(0,0,0,0.4)' }]}>
+      <Pressable style={StyleSheet.absoluteFill} onPress={() => navigation.goBack()} />
+      <View style={[styles.sheet, { backgroundColor: colors.bg, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg }]}>
+        <View style={styles.handle} />
+        <Text style={[styles.title, { color: colors.text }]}>Neues Rezept</Text>
+        <Text style={[styles.subtitle, { color: colors.muted }]}>Wähle einen Weg</Text>
+
+        {OPTIONS.map((option) => (
+          <Pressable
+            key={option.key}
+            disabled={!option.target}
+            onPress={() => {
+              if (option.target) {
+                navigation.replace(option.target);
+              }
+            }}
+            style={[
+              styles.optionRow,
+              { backgroundColor: colors.card, borderRadius: radius.md, opacity: option.target ? 1 : 0.4 },
+            ]}
+          >
+            <Text style={[styles.optionTitle, { color: colors.text }]}>{option.title}</Text>
+            <Text style={[styles.optionSubtitle, { color: colors.muted }]}>{option.subtitle}</Text>
+            {!option.target && (
+              <Text style={[styles.comingSoon, { color: colors.muted }]}>Noch nicht als Screen gebaut</Text>
+            )}
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  overlay: { flex: 1, justifyContent: 'flex-end' },
+  sheet: { padding: 20, paddingBottom: 32 },
+  handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: '#D6D3D1', alignSelf: 'center', marginBottom: 16 },
+  title: { fontSize: 17, fontWeight: '700' },
+  subtitle: { fontSize: 12, marginBottom: 16, marginTop: 2 },
+  optionRow: { padding: 14, marginBottom: 8 },
+  optionTitle: { fontSize: 13.5, fontWeight: '600' },
+  optionSubtitle: { fontSize: 11, marginTop: 2 },
+  comingSoon: { fontSize: 9.5, marginTop: 4, fontStyle: 'italic' },
+});

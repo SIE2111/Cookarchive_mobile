@@ -1,0 +1,96 @@
+import { supabase } from './supabaseClient';
+
+// TODO: echte Backend-URL eintragen, sobald deployed (z.B. Render/Fly.io)
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8000';
+
+class ApiError extends Error {
+  status: number;
+  detail: string;
+
+  constructor(status: number, detail: string) {
+    super(detail);
+    this.status = status;
+    this.detail = detail;
+  }
+}
+
+/**
+ * Zentrale Fetch-Hilfsfunktion: haengt automatisch das aktuelle Supabase-
+ * JWT als Authorization-Header an, wirft eine ApiError mit lesbarer
+ * Fehlermeldung bei nicht-2xx-Antworten (Backend liefert {"detail": "..."}).
+ */
+async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers,
+    },
+  });
+
+  if (!response.ok) {
+    let detail = `HTTP ${response.status}`;
+    try {
+      const body = await response.json();
+      detail = body.detail ?? detail;
+    } catch {
+      // Antwort war kein JSON - Standardmeldung behalten
+    }
+    throw new ApiError(response.status, detail);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+  return response.json() as Promise<T>;
+}
+
+export const api = {
+  get: <T>(path: string) => apiFetch<T>(path, { method: 'GET' }),
+  post: <T>(path: string, body?: unknown) =>
+    apiFetch<T>(path, { method: 'POST', body: body ? JSON.stringify(body) : undefined }),
+  patch: <T>(path: string, body?: unknown) =>
+    apiFetch<T>(path, { method: 'PATCH', body: body ? JSON.stringify(body) : undefined }),
+  delete: <T>(path: string) => apiFetch<T>(path, { method: 'DELETE' }),
+
+  /**
+   * Multipart-Upload fuer Bilder (siehe routers/images.py). Nutzt bewusst
+   * kein JSON.stringify - FormData setzt seinen eigenen Content-Type-
+   * Header inkl. Boundary automatisch, ein manuell gesetzter 'application/
+   * json'-Header (wie in apiFetch) wuerde den Upload sonst kaputt machen,
+   * daher hier ein eigener, schlankerer Fetch-Aufruf ohne den JSON-Header.
+   */
+  uploadImage: async (path: string, fileUri: string, fileName: string, mimeType: string): Promise<{ url: string }> => {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+
+    const formData = new FormData();
+    // React-Native-spezifische FormData-Datei-Form (kein echtes File-Objekt
+    // wie im Web verfuegbar) - siehe Expo-Dokumentation zu FormData-Uploads
+    formData.append('file', { uri: fileUri, name: fileName, type: mimeType } as unknown as Blob);
+
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      method: 'POST',
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      let detail = `HTTP ${response.status}`;
+      try {
+        const body = await response.json();
+        detail = body.detail ?? detail;
+      } catch {
+        // Antwort war kein JSON
+      }
+      throw new ApiError(response.status, detail);
+    }
+    return response.json();
+  },
+};
+
+export { ApiError };
