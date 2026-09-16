@@ -81,6 +81,29 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
     );
   };
 
+  const handleDelete = () => {
+    if (!recipe) return;
+    Alert.alert(
+      'Rezept löschen?',
+      `"${recipe.title}" wird dauerhaft gelöscht. Das kann nicht rückgängig gemacht werden.`,
+      [
+        { text: 'Abbrechen', style: 'cancel' },
+        {
+          text: 'Löschen',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.delete(`/recipes/${recipeId}`);
+              navigation.goBack();
+            } catch (err) {
+              Alert.alert('Löschen fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+            }
+          },
+        },
+      ],
+    );
+  };
+
   if (error) {
     return (
       <View style={[styles.centered, { backgroundColor: colors.bg }]}>
@@ -108,9 +131,14 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
           {recipe.servings ? `${recipe.servings} Portionen` : ''}
           {recipe.prep_time_minutes ? ` · ${recipe.prep_time_minutes} min` : ''}
         </Text>
-        <Pressable onPress={() => navigation.navigate('ManualRecipe', { recipeId: recipe.id })} hitSlop={8}>
-          <Text style={[styles.editLink, { color: gradient[0] }]}>Bearbeiten</Text>
-        </Pressable>
+        <View style={{ flexDirection: 'row', gap: 16 }}>
+          <Pressable onPress={() => navigation.navigate('ManualRecipe', { recipeId: recipe.id })} hitSlop={8}>
+            <Text style={[styles.editLink, { color: gradient[0] }]}>Bearbeiten</Text>
+          </Pressable>
+          <Pressable onPress={handleDelete} hitSlop={8}>
+            <Text style={[styles.editLink, { color: '#DC2626' }]}>Löschen</Text>
+          </Pressable>
+        </View>
       </View>
 
       <Pressable
