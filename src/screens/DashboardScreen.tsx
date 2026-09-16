@@ -122,15 +122,15 @@ export default function DashboardScreen({ navigation }: Props) {
 
       {/* Statistik-Kacheln - alle drei aus echten Daten, keine erfundenen Werte */}
       <View style={styles.statsRow}>
-        <View style={[styles.statCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
+        <View style={[styles.statCard, { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.cardBorder }]}>
           <Text style={[styles.statValue, { color: colors.text }]}>{recipes.length}</Text>
           <Text style={[styles.statLabel, { color: colors.muted }]}>Rezepte</Text>
         </View>
-        <View style={[styles.statCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
+        <View style={[styles.statCard, { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.cardBorder }]}>
           <Text style={[styles.statValue, { color: colors.text }]}>{newThisWeek}</Text>
           <Text style={[styles.statLabel, { color: colors.muted }]}>Neu (Woche)</Text>
         </View>
-        <View style={[styles.statCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
+        <View style={[styles.statCard, { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.cardBorder }]}>
           <Text style={[styles.statValue, { color: colors.text }]}>{folderCount}</Text>
           <Text style={[styles.statLabel, { color: colors.muted }]}>Ordner</Text>
         </View>
@@ -209,7 +209,7 @@ export default function DashboardScreen({ navigation }: Props) {
           Noch keine Rezepte – leg dein erstes über "Scan" oder "Rezepte" an.
         </Text>
       ) : (
-        <View style={[styles.recentCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
+        <View style={[styles.recentCard, { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.cardBorder }]}>
           {recentlyAdded.map((r, i) => (
             <Pressable
               key={r.id}

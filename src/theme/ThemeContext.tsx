@@ -19,7 +19,7 @@ export interface ThemeConfig {
 }
 
 const DEFAULT_THEME: ThemeConfig = {
-  accent: 'gruen',
+  accent: 'orange',
   background: 'warm-hell',
   typography: 'weich',
   radius: 'weich',
@@ -34,10 +34,10 @@ const ACCENT_GRADIENTS: Record<AccentColor, [string, string]> = {
   gelb: ['#EAB308', '#F59E0B'],
 };
 
-const BACKGROUND_COLORS: Record<BackgroundStyle, { bg: string; card: string; text: string; muted: string }> = {
-  'warm-hell': { bg: '#FBF7EF', card: '#FFFFFF', text: '#2A241C', muted: '#78716C' },
-  'kuehl-hell': { bg: '#F5F8F9', card: '#FFFFFF', text: '#1A2226', muted: '#5B6B6E' },
-  dunkel: { bg: '#121212', card: '#1F1F1F', text: '#FAFAF9', muted: '#A8A29E' },
+const BACKGROUND_COLORS: Record<BackgroundStyle, { bg: string; card: string; text: string; muted: string; cardBorder: string }> = {
+  'warm-hell': { bg: '#FBF7EF', card: '#FFFFFF', text: '#2A241C', muted: '#78716C', cardBorder: '#EDE6D8' },
+  'kuehl-hell': { bg: '#F5F8F9', card: '#FFFFFF', text: '#1A2226', muted: '#5B6B6E', cardBorder: '#E1E8EA' },
+  dunkel: { bg: '#121212', card: '#1F1F1F', text: '#FAFAF9', muted: '#A8A29E', cardBorder: '#333333' },
 };
 
 const RADIUS_VALUES: Record<RadiusStyle, { sm: number; md: number; lg: number }> = {

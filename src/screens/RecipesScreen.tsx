@@ -184,7 +184,7 @@ export default function RecipesScreen({ navigation, route }: Props) {
         renderItem={({ item }) => (
           <Pressable
             onPress={() => navigation.navigate('RecipeDetail', { recipeId: item.id, title: item.title })}
-            style={[styles.recipeRow, { backgroundColor: colors.card, borderRadius: radius.md }]}
+            style={[styles.recipeRow, { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.cardBorder }]}
           >
             {item.cover_image_url ? (
               <Image source={{ uri: item.cover_image_url }} style={[styles.thumbnail, { borderRadius: radius.sm }]} />

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Switch, Pressable, StyleSheet, ActivityIndicator, Alert, ScrollView, Linking } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { useTheme, type BackgroundStyle } from '../theme/ThemeContext';
+import { useTheme, type BackgroundStyle, type AccentColor } from '../theme/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { api, ApiError } from '../api/client';
 import type { CompositeScreenProps } from '@react-navigation/native';
@@ -50,6 +50,14 @@ const BACKGROUND_OPTIONS: { key: BackgroundStyle; title: string }[] = [
   { key: 'warm-hell', title: 'Hell (warm)' },
   { key: 'kuehl-hell', title: 'Hell (kühl)' },
   { key: 'dunkel', title: 'Dunkel' },
+];
+
+const ACCENT_OPTIONS: { key: AccentColor; title: string; color: string }[] = [
+  { key: 'orange', title: 'Orange', color: '#EA580C' },
+  { key: 'gruen', title: 'Grün', color: '#16A34A' },
+  { key: 'tuerkis', title: 'Türkis', color: '#0D9488' },
+  { key: 'pink', title: 'Pink', color: '#DB2777' },
+  { key: 'gelb', title: 'Gelb', color: '#EAB308' },
 ];
 
 const ROWS: { key: PreferenceKey; title: string; subtitle: string; lockedWhen?: (p: Preferences) => boolean }[] = [
@@ -314,6 +322,26 @@ export default function ProfileScreen({ navigation }: Props) {
       <Text style={[styles.hint, { color: colors.muted, marginBottom: 8 }]}>
         Wird beim Start des Koch-Modus vorausgewählt, kannst du dort jederzeit ändern.
       </Text>
+
+      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 12 }]}>AKZENTFARBE</Text>
+      <View style={styles.chipsRow}>
+        {ACCENT_OPTIONS.map((option) => {
+          const isSelected = theme.accent === option.key;
+          return (
+            <Pressable
+              key={option.key}
+              onPress={() => setTheme({ accent: option.key })}
+              style={[
+                styles.chip,
+                { backgroundColor: isSelected ? option.color : colors.card, borderRadius: radius.sm },
+              ]}
+            >
+              <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: isSelected ? '#fff' : option.color, marginRight: 7 }} />
+              <Text style={{ color: isSelected ? '#fff' : colors.text, fontSize: 12, fontWeight: '600' }}>{option.title}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
 
       <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 12 }]}>DARSTELLUNG (HELL/DUNKEL)</Text>
       <View style={styles.chipsRow}>
