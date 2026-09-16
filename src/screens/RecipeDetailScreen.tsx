@@ -35,6 +35,13 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
   const { recipeId } = route.params;
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [largeText, setLargeText] = useState(false);
+
+  useEffect(() => {
+    api.get<{ large_text: boolean }>('/preferences/').then((prefs) => setLargeText(prefs.large_text)).catch(() => {
+      // Praeferenz konnte nicht geladen werden - Standard-Schriftgroesse bleibt
+    });
+  }, []);
 
   useEffect(() => {
     const load = () => {
@@ -89,7 +96,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
 
       <Text style={[styles.sectionTitle, { color: colors.text }]}>Zutaten</Text>
       {recipe.ingredients.map((ing, i) => (
-        <Text key={i} style={[styles.ingredient, { color: colors.text }]}>
+        <Text key={i} style={[styles.ingredient, { color: colors.text, fontSize: largeText ? 16.5 : 13.5 }]}>
           {ing.amount ? `${ing.amount} ${ing.unit ?? ''} ` : ''}
           {ing.name}
         </Text>
@@ -99,7 +106,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
       {recipe.steps.map((step) => (
         <View key={step.order} style={[styles.stepCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
           <Text style={[styles.stepNumber, { color: colors.muted }]}>Schritt {step.order}</Text>
-          <Text style={[styles.stepText, { color: colors.text }]}>{step.text}</Text>
+          <Text style={[styles.stepText, { color: colors.text, fontSize: largeText ? 17 : 14, lineHeight: largeText ? 25 : 21 }]}>{step.text}</Text>
         </View>
       ))}
 

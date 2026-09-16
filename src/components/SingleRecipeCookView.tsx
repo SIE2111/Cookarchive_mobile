@@ -77,6 +77,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
   const [isIngredientsOpen, setIsIngredientsOpen] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [autoReadSteps, setAutoReadSteps] = useState(false);
+  const [largeText, setLargeText] = useState(false);
   const [techniqueVideo, setTechniqueVideo] = useState<TechniqueVideoInfo | null>(null);
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
   const [noteDraft, setNoteDraft] = useState('');
@@ -84,10 +85,11 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
 
   useEffect(() => {
     api
-      .get<{ auto_read_steps: boolean; default_hauben_level: HaubenLevel }>('/preferences/')
+      .get<{ auto_read_steps: boolean; default_hauben_level: HaubenLevel; large_text: boolean }>('/preferences/')
       .then((prefs) => {
         setAutoReadSteps(prefs.auto_read_steps);
         setLevel(prefs.default_hauben_level);
+        setLargeText(prefs.large_text);
       })
       .catch(() => {
         // Praeferenz konnte nicht geladen werden - Auto-Vorlesen bleibt aus,
@@ -348,7 +350,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
       {isIngredientsOpen && (
         <View style={[styles.ingredientsList, { backgroundColor: colors.card, borderRadius: radius.sm }]}>
           {recipe.ingredients.map((ing, i) => (
-            <Text key={i} style={[styles.ingredientLine, { color: colors.text }]}>
+            <Text key={i} style={[styles.ingredientLine, { color: colors.text, fontSize: largeText ? 16 : 13.5 }]}>
               {ing.amount ? `${ing.amount} ${ing.unit ?? ''} ` : ''}
               {ing.name}
             </Text>
@@ -365,7 +367,9 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
       </View>
 
       <View style={styles.stepTextRow}>
-        <Text style={[styles.stepText, { color: colors.text }]}>{currentStep.text}</Text>
+        <Text style={[styles.stepText, { color: colors.text, fontSize: largeText ? 20 : 16, lineHeight: largeText ? 29 : 24 }]}>
+          {currentStep.text}
+        </Text>
         <Pressable onPress={handleSpeak} style={[styles.speakButton, { backgroundColor: isSpeaking ? '#DC2626' : gradient[0] }]}>
           <MaterialCommunityIcons name={isSpeaking ? 'stop' : 'volume-high'} size={16} color="#fff" />
         </Pressable>
