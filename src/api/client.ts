@@ -75,7 +75,7 @@ export const api = {
    * umgeht das, indem es die Datei direkt vom Dateisystem aus natives
    * Code hochlaedt.
    */
-  uploadImage: async (path: string, fileUri: string, fileName: string, mimeType: string): Promise<{ url: string }> => {
+  uploadImage: async (path: string, fileUri: string, fileName: string, mimeType: string): Promise<{ url: string; storage_warning?: string | null }> => {
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
 

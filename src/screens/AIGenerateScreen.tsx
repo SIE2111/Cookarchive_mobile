@@ -156,6 +156,13 @@ export default function AIGenerateScreen({ navigation }: Props) {
         try {
           const uploadResult = await api.uploadImage('/images/upload', localImageUri, fileName, mimeType);
           coverImageUrl = uploadResult.url;
+          if (uploadResult.storage_warning) {
+            // Fallback-Logik im Backend (storage-architektur-standard.md):
+            // Drittanbieter-Upload ist fehlgeschlagen, Bild liegt stattdessen
+            // in der Cloud - Nutzer soll das sichtbar erfahren, nicht unbemerkt
+            // woanders landen als gewaehlt.
+            Alert.alert('Hinweis', uploadResult.storage_warning);
+          }
         } catch (uploadErr) {
           Alert.alert(
             'Bild-Upload fehlgeschlagen',

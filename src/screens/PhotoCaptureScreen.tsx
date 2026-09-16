@@ -137,6 +137,13 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
         try {
           const uploadResult = await api.uploadImage('/images/upload', imageUri, fileName, mimeType);
           coverImageUrl = uploadResult.url;
+          if (uploadResult.storage_warning) {
+            // Fallback-Logik im Backend (storage-architektur-standard.md):
+            // Drittanbieter-Upload ist fehlgeschlagen, Bild liegt stattdessen
+            // in der Cloud - Nutzer soll das sichtbar erfahren, nicht unbemerkt
+            // woanders landen als gewaehlt.
+            Alert.alert('Hinweis', uploadResult.storage_warning);
+          }
         } catch (uploadErr) {
           // Bild-Upload-Fehler soll das Speichern des Rezepts selbst nicht
           // verhindern - Rezept wird dann eben ohne Titelbild angelegt
