@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, Switch } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { api, ApiError } from '../api/client';
@@ -39,7 +40,7 @@ export default function OnboardingScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]} edges={['top']}>
       <Text style={[styles.title, { color: colors.text }]}>Willkommen bei Mein Kochbuch</Text>
       <Text style={[styles.subtitle, { color: colors.muted }]}>Ein paar Dinge zum Start</Text>
 
@@ -86,7 +87,7 @@ export default function OnboardingScreen({ navigation }: Props) {
       <Pressable onPress={handleContinue} disabled={isSubmitting} style={[styles.continueButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}>
         {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.continueButtonText}>Los geht's</Text>}
       </Pressable>
-    </View>
+    </SafeAreaView>
   );
 }
 

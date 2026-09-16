@@ -3,6 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../theme/ThemeContext';
@@ -97,10 +98,19 @@ const TAB_ICONS: Record<keyof MainTabParamList, keyof typeof MaterialCommunityIc
 
 function MainTabs() {
   const { colors, gradient } = useTheme();
+  const insets = useSafeAreaInsets();
   return (
     <Tab.Navigator
+      // Alle Tab-Screens haben bewusst headerShown:false (eigenes Design
+      // statt nativer Navigationsleiste) - dadurch uebernimmt aber auch
+      // niemand automatisch den Sicherheitsabstand zur Notch/Statusleiste.
+      // Zentral hier am Navigator geloest statt in jedem einzelnen Screen,
+      // damit kuenftige neue Tabs das automatisch mitbekommen. In v7 heisst
+      // die Option 'sceneStyle' (Teil von screenOptions), nicht mehr das
+      // veraltete 'sceneContainerStyle' vom Navigator selbst.
       screenOptions={({ route }) => ({
         headerShown: false,
+        sceneStyle: { paddingTop: insets.top },
         tabBarActiveTintColor: gradient[0],
         tabBarInactiveTintColor: colors.muted,
         tabBarStyle: { backgroundColor: colors.card, borderTopColor: colors.bg },
