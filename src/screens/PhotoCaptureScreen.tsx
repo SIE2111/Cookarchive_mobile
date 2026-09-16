@@ -65,7 +65,17 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
       );
       setStepLines(typedResult.steps.map((s) => s.text));
     } catch (err) {
-      setScanError(err instanceof ApiError ? err.detail : 'Foto konnte nicht erfasst werden');
+      // Statt eines generischen Platzhaltertexts die tatsaechliche Ursache
+      // zeigen - auch bei Netzwerk-/Timeout-Fehlern (kein ApiError), die
+      // bisher stillschweigend verschluckt wurden und das Debuggen
+      // unmoeglich gemacht haben.
+      const message =
+        err instanceof ApiError
+          ? err.detail
+          : err instanceof Error
+            ? `${err.name}: ${err.message}`
+            : 'Unbekannter Fehler beim Erfassen des Fotos.';
+      setScanError(message);
     } finally {
       setIsScanning(false);
     }
