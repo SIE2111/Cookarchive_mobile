@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Switch, Pressable, StyleSheet, ActivityIndicator, Alert, ScrollView, Linking } from 'react-native';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme, type BackgroundStyle } from '../theme/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { api, ApiError } from '../api/client';
@@ -27,12 +28,17 @@ interface Preferences {
 
 type PreferenceKey = 'show_brutzel' | 'large_text' | 'auto_read_steps' | 'server_sync_enabled';
 
-const STORAGE_OPTIONS: { key: StorageMode; title: string; subtitle: string }[] = [
-  { key: 'lokal', title: 'Lokal', subtitle: 'Nur auf diesem Gerät, kein Server' },
-  { key: 'nas', title: 'NAS', subtitle: 'Deine Rezepte, deine Daten – keine Cloud-Anbindung, nur für die Anmeldung wird unser Server kontaktiert' },
-  { key: 'eigene_cloud', title: 'Eigene Cloud', subtitle: 'Unsere Server-Infrastruktur (EU)' },
-  { key: 'drittanbieter_cloud', title: 'Drittanbieter-Cloud', subtitle: 'Google Drive, OneDrive, Dropbox' },
+const STORAGE_OPTIONS: { key: StorageMode; title: string; subtitle: string; icon: keyof typeof MaterialCommunityIcons.glyphMap }[] = [
+  { key: 'lokal', title: 'Nur lokal', subtitle: 'Verbleibt ausschließlich auf diesem Gerät.', icon: 'folder-outline' },
+  { key: 'nas', title: 'NAS', subtitle: 'Deine Rezepte, deine Daten – nur für die Anmeldung wird unser Server kontaktiert.', icon: 'nas' },
+  { key: 'eigene_cloud', title: 'Eigene Cloud', subtitle: 'Unsere Server-Infrastruktur (EU).', icon: 'cloud-outline' },
 ];
+
+const CLOUD_PROVIDER_ICONS: Record<string, keyof typeof MaterialCommunityIcons.glyphMap> = {
+  google_drive: 'google-drive',
+  onedrive: 'microsoft-onedrive',
+  dropbox: 'dropbox',
+};
 
 const HAUBEN_OPTIONS: { key: HaubenLevel; title: string; hats: number }[] = [
   { key: 'anfaenger', title: 'Anfänger', hats: 1 },
@@ -57,10 +63,10 @@ const ROWS: { key: PreferenceKey; title: string; subtitle: string; lockedWhen?: 
   },
 ];
 
-const CLOUD_PROVIDERS: { key: string; apiPrefix: string; title: string }[] = [
-  { key: 'google_drive', apiPrefix: '/google-auth', title: 'Google Drive' },
-  { key: 'onedrive', apiPrefix: '/onedrive-auth', title: 'OneDrive' },
-  { key: 'dropbox', apiPrefix: '/dropbox-auth', title: 'Dropbox' },
+const CLOUD_PROVIDERS: { key: string; apiPrefix: string; title: string; subtitle: string }[] = [
+  { key: 'google_drive', apiPrefix: '/google-auth', title: 'Google Drive', subtitle: 'Im eigenen Google Drive unter "MeinKochbuch".' },
+  { key: 'onedrive', apiPrefix: '/onedrive-auth', title: 'OneDrive', subtitle: 'Im eigenen OneDrive unter "MeinKochbuch".' },
+  { key: 'dropbox', apiPrefix: '/dropbox-auth', title: 'Dropbox', subtitle: 'In der eigenen Dropbox unter "MeinKochbuch".' },
 ];
 
 interface ProviderStatus {
@@ -81,11 +87,15 @@ export default function ProfileScreen({ navigation }: Props) {
   const [activeProviderStatus, setActiveProviderStatus] = useState<ProviderStatus | null>(null);
   const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadPrefs = () => {
     api
       .get<Preferences>('/preferences/')
       .then(setPrefs)
       .catch((err) => setError(err instanceof ApiError ? err.detail : 'Einstellungen konnten nicht geladen werden'));
+  };
+
+  useEffect(() => {
+    loadPrefs();
   }, []);
 
   const loadDriveStatus = () => {
@@ -105,7 +115,10 @@ export default function ProfileScreen({ navigation }: Props) {
     // Bei Rueckkehr aus dem System-Browser (nach der Anbieter-Anmeldung) ist
     // die App noch dieselbe Instanz, nur der Fokus wechselt zurueck - hier
     // den Status neu abfragen, damit "Verbunden" ohne manuelles Neuladen erscheint.
-    const unsubscribe = navigation.addListener('focus', loadDriveStatus);
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadDriveStatus();
+      loadPrefs();
+    });
     return unsubscribe;
   }, [navigation]);
 
@@ -207,77 +220,67 @@ export default function ProfileScreen({ navigation }: Props) {
           <Pressable
             key={option.key}
             onPress={() => handleStorageSelect(option.key)}
-            style={[
-              styles.row,
-              {
-                backgroundColor: colors.card,
-                borderRadius: radius.md,
-                borderWidth: isSelected ? 1.5 : 0,
-                borderColor: gradient[0],
-              },
-            ]}
+            style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}
           >
+            <MaterialCommunityIcons name={option.icon} size={20} color={colors.muted} style={styles.rowIcon} />
             <View style={{ flex: 1 }}>
               <Text style={[styles.rowTitle, { color: colors.text }]}>{option.title}</Text>
-              <Text style={[styles.rowSubtitle, { color: isSelected && option.key === 'nas' ? gradient[0] : colors.muted }]}>
-                {option.subtitle}
-              </Text>
+              <Text style={[styles.rowSubtitle, { color: colors.muted }]}>{option.subtitle}</Text>
             </View>
             {savingKey === 'storage_mode' && isSelected ? (
               <ActivityIndicator color={colors.muted} />
             ) : (
-              isSelected && <Text style={{ color: gradient[0], fontSize: 18 }}>✓</Text>
+              <MaterialCommunityIcons
+                name={isSelected ? 'radiobox-marked' : 'radiobox-blank'}
+                size={22}
+                color={isSelected ? gradient[0] : colors.muted}
+              />
             )}
           </Pressable>
         );
       })}
 
-      {prefs.storage_mode === 'drittanbieter_cloud' && (
-        <View style={[styles.driveBox, { backgroundColor: colors.card, borderRadius: radius.md }]}>
-          {!activeProviderStatus ? (
-            <ActivityIndicator color={colors.muted} />
-          ) : activeProviderStatus.connected && activeProviderStatus.provider ? (
-            <>
-              <Text style={[styles.rowTitle, { color: colors.text }]}>
-                ✅ {CLOUD_PROVIDERS.find((p) => p.key === activeProviderStatus.provider)?.title ?? activeProviderStatus.provider} verbunden
+      {CLOUD_PROVIDERS.map((p) => {
+        const isConnectedHere = prefs.storage_mode === 'drittanbieter_cloud' && activeProviderStatus?.provider === p.key;
+        return (
+          <Pressable
+            key={p.key}
+            onPress={() => {
+              if (isConnectedHere) return; // Verbunden -> nichts tun, Trennen ist der eigene Link unten
+              handleConnectProvider(p.key, p.apiPrefix);
+            }}
+            disabled={connectingProvider !== null}
+            style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md, opacity: connectingProvider && connectingProvider !== p.key ? 0.5 : 1 }]}
+          >
+            <MaterialCommunityIcons
+              name={CLOUD_PROVIDER_ICONS[p.key]}
+              size={20}
+              color={isConnectedHere ? '#16A34A' : colors.muted}
+              style={styles.rowIcon}
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.rowTitle, { color: isConnectedHere ? '#16A34A' : colors.text }]}>
+                {isConnectedHere ? `${p.title} ✓ verbunden` : p.title}
               </Text>
-              <Pressable
-                onPress={() => {
-                  const p = CLOUD_PROVIDERS.find((p) => p.key === activeProviderStatus.provider);
-                  if (p) handleDisconnectProvider(p.apiPrefix);
-                }}
-                style={{ marginTop: 10 }}
-              >
-                <Text style={{ color: '#DC2626', fontSize: 12.5, fontWeight: '600' }}>Verbindung trennen</Text>
-              </Pressable>
-            </>
-          ) : (
-            <>
-              <Text style={[styles.rowTitle, { color: colors.text }]}>Noch kein Anbieter verbunden</Text>
-              <Text style={[styles.rowSubtitle, { color: colors.muted, marginBottom: 10 }]}>
-                Öffnet den Browser zur Anmeldung, danach zurück zur App wechseln.
-              </Text>
-              {CLOUD_PROVIDERS.map((p) => (
-                <Pressable
-                  key={p.key}
-                  onPress={() => handleConnectProvider(p.key, p.apiPrefix)}
-                  disabled={connectingProvider !== null}
-                  style={[
-                    styles.connectButton,
-                    { backgroundColor: gradient[0], borderRadius: radius.sm, marginTop: 8, opacity: connectingProvider ? 0.7 : 1 },
-                  ]}
-                >
-                  {connectingProvider === p.key ? (
-                    <ActivityIndicator color="#fff" size="small" />
-                  ) : (
-                    <Text style={styles.connectButtonText}>Mit {p.title} verbinden</Text>
-                  )}
+              <Text style={[styles.rowSubtitle, { color: colors.muted }]}>{p.subtitle}</Text>
+              {isConnectedHere && (
+                <Pressable onPress={() => handleDisconnectProvider(p.apiPrefix)} hitSlop={8} style={{ marginTop: 6, alignSelf: 'flex-start' }}>
+                  <Text style={{ color: '#DC2626', fontSize: 11.5, fontWeight: '700' }}>Trennen</Text>
                 </Pressable>
-              ))}
-            </>
-          )}
-        </View>
-      )}
+              )}
+            </View>
+            {connectingProvider === p.key ? (
+              <ActivityIndicator color={colors.muted} />
+            ) : (
+              <MaterialCommunityIcons
+                name={isConnectedHere ? 'radiobox-marked' : 'radiobox-blank'}
+                size={22}
+                color={isConnectedHere ? '#16A34A' : colors.muted}
+              />
+            )}
+          </Pressable>
+        );
+      })}
 
       <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 20 }]}>STANDARD-STUFE IM KOCH-MODUS</Text>
       <View style={styles.chipsRow}>
@@ -400,10 +403,8 @@ const styles = StyleSheet.create({
   sectionLabel: { fontSize: 10.5, fontWeight: '700', letterSpacing: 0.5, marginBottom: 10 },
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
   chip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 9 },
-  driveBox: { padding: 14, marginTop: 10 },
-  connectButton: { paddingVertical: 11, alignItems: 'center' },
-  connectButtonText: { color: '#fff', fontSize: 13, fontWeight: '700' },
   row: { flexDirection: 'row', alignItems: 'center', padding: 14, marginBottom: 8 },
+  rowIcon: { marginRight: 12 },
   rowTitle: { fontSize: 13.5, fontWeight: '600' },
   rowSubtitle: { fontSize: 10.5, marginTop: 2 },
   hint: { fontSize: 10.5, lineHeight: 15, marginTop: 6, marginBottom: 20 },
