@@ -1,3 +1,4 @@
+import * as FileSystem from 'expo-file-system/legacy';
 import { supabase } from './supabaseClient';
 
 // TODO: echte Backend-URL eintragen, sobald deployed (z.B. Render/Fly.io)
@@ -64,32 +65,40 @@ export const api = {
    * json'-Header (wie in apiFetch) wuerde den Upload sonst kaputt machen,
    * daher hier ein eigener, schlankerer Fetch-Aufruf ohne den JSON-Header.
    */
+  /**
+   * Multipart-Upload fuer Bilder (siehe routers/images.py, routers/
+   * ai_generation.py:scan-photo). Nutzt bewusst FileSystem.uploadAsync
+   * statt manuell zusammengebauter FormData mit fetch() - React Natives
+   * neuerer Netzwerk-Stack (ab RN 0.74+) unterstuetzt das klassische
+   * {uri, name, type}-FormData-Part-Objekt nicht mehr und wirft dabei
+   * "Unsupported FormDataPart implementation". FileSystem.uploadAsync
+   * umgeht das, indem es die Datei direkt vom Dateisystem aus natives
+   * Code hochlaedt.
+   */
   uploadImage: async (path: string, fileUri: string, fileName: string, mimeType: string): Promise<{ url: string }> => {
     const { data } = await supabase.auth.getSession();
     const token = data.session?.access_token;
 
-    const formData = new FormData();
-    // React-Native-spezifische FormData-Datei-Form (kein echtes File-Objekt
-    // wie im Web verfuegbar) - siehe Expo-Dokumentation zu FormData-Uploads
-    formData.append('file', { uri: fileUri, name: fileName, type: mimeType } as unknown as Blob);
-
-    const response = await fetch(`${API_BASE_URL}${path}`, {
-      method: 'POST',
+    const result = await FileSystem.uploadAsync(`${API_BASE_URL}${path}`, fileUri, {
+      httpMethod: 'POST',
+      uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+      fieldName: 'file',
+      mimeType,
+      parameters: {},
       headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      body: formData,
     });
 
-    if (!response.ok) {
-      let detail = `HTTP ${response.status}`;
+    if (result.status < 200 || result.status >= 300) {
+      let detail = `HTTP ${result.status}`;
       try {
-        const body = await response.json();
+        const body = JSON.parse(result.body);
         detail = body.detail ?? detail;
       } catch {
         // Antwort war kein JSON
       }
-      throw new ApiError(response.status, detail);
+      throw new ApiError(result.status, detail);
     }
-    return response.json();
+    return JSON.parse(result.body);
   },
 };
 
