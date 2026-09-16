@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
 import { api, ApiError } from '../api/client';
 import BrutzelAvatar from '../components/BrutzelAvatar';
@@ -8,85 +9,72 @@ import type { MainStackParamList } from '../navigation/AppNavigator';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'SideDishSuggestion'>;
 
-interface SideSuggestion {
-  category: string;
-  idea: string;
-  pantry_based_on: string[];
+interface RecipeSummary {
+  id: string;
+  title: string;
+  tags: string[] | null;
+  prep_time_minutes: number | null;
+  cover_image_url: string | null;
 }
 
-interface SuggestSidesResponse {
-  side_suggestions: SideSuggestion[];
-  follow_up_question: string;
-}
+const MAX_SELECTABLE = 2;
+const MAX_SUGGESTIONS = 5;
 
 export default function SideDishSuggestionScreen({ route, navigation }: Props) {
   const { colors, gradient, radius } = useTheme();
   const { recipeId } = route.params;
 
-  const [data, setData] = useState<SuggestSidesResponse | null>(null);
+  const [candidates, setCandidates] = useState<RecipeSummary[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [generatingIdea, setGeneratingIdea] = useState<string | null>(null);
 
   useEffect(() => {
+    // Vorschlaege kommen bewusst aus den eigenen GESPEICHERTEN Rezepten,
+    // nicht von der KI erfunden - sortiert nach Zubereitungszeit (kuerzere
+    // Rezepte sind als schnelle Beilage plausibler). Es gibt in den Daten
+    // keine eigene "Beilage"-Kategorie, das ist die naechstbeste,
+    // nachvollziehbare Heuristik ohne etwas vorzutaeuschen.
     api
-      .post<SuggestSidesResponse>('/ai/suggest-sides', { recipe_id: recipeId })
-      .then(setData)
+      .get<RecipeSummary[]>('/recipes/')
+      .then((all) => {
+        const others = all
+          .filter((r) => r.id !== recipeId)
+          .sort((a, b) => (a.prep_time_minutes ?? 999) - (b.prep_time_minutes ?? 999))
+          .slice(0, MAX_SUGGESTIONS);
+        setCandidates(others);
+      })
       .catch((err) => setError(err instanceof ApiError ? err.detail : 'Vorschläge konnten nicht geladen werden'))
       .finally(() => setIsLoading(false));
   }, [recipeId]);
 
-  const goToCookModeSingle = () => navigation.replace('CookMode', { recipeIds: [recipeId] });
+  const goToCookMode = () => navigation.replace('CookMode', { recipeIds: [recipeId, ...selectedIds] });
 
-  const handleSelectSuggestion = async (idea: string) => {
-    setGeneratingIdea(idea);
-    try {
-      // Aus der reinen Text-Idee ein vollstaendiges Rezept generieren
-      // lassen (Baustein 3, /ai/generate-recipe) - noch nie live mit
-      // echtem OpenAI-Key getestet, siehe Konzept-Einschraenkung.
-      const generated = await api.post<{
-        title: string;
-        ingredients: unknown[];
-        steps: unknown[];
-      }>('/ai/generate-recipe', { free_text: `Beilage: ${idea}` });
-
-      // Generiertes Rezept speichern, um eine echte recipe_id fuer den
-      // parallelen Koch-Modus zu bekommen
-      const saved = await api.post<{ id: string }>('/recipes/', {
-        title: generated.title,
-        ingredients: generated.ingredients,
-        steps: generated.steps,
-      });
-
-      navigation.replace('CookMode', { recipeIds: [recipeId, saved.id] });
-    } catch (err) {
-      Alert.alert(
-        'Beilage konnte nicht generiert werden',
-        err instanceof ApiError ? err.detail : 'Unbekannter Fehler - du kannst trotzdem ohne Beilage weiterkochen.',
-      );
-    } finally {
-      setGeneratingIdea(null);
-    }
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      if (prev.length >= MAX_SELECTABLE) return prev; // max. 2 gleichzeitig, wie gewuenscht
+      return [...prev, id];
+    });
   };
 
   if (isLoading) {
     return (
       <View style={[styles.centered, { backgroundColor: colors.bg }]}>
         <ActivityIndicator color={colors.text} />
-        <Text style={{ color: colors.muted, fontSize: 12, marginTop: 12 }}>Brutzel überlegt sich Beilagen…</Text>
       </View>
     );
   }
 
-  // KI-Fehler (z.B. kein Key konfiguriert, siehe Backend) soll das Kochen
-  // nicht blockieren - einfach direkt weiter zum Koch-Modus.
-  if (error) {
+  // Fehler oder keine anderen gespeicherten Rezepte vorhanden - Kochen soll
+  // dadurch nie blockiert werden, einfach direkt weiter.
+  if (error || candidates.length === 0) {
     return (
       <View style={[styles.container, { backgroundColor: colors.bg }]}>
         <Text style={{ color: colors.muted, fontSize: 13, textAlign: 'center', marginBottom: 20 }}>
-          Keine Beilagen-Vorschläge verfügbar ({error}).
+          {error ? `Keine Beilagen-Vorschläge verfügbar (${error}).` : 'Noch keine weiteren gespeicherten Rezepte für eine Beilage vorhanden.'}
         </Text>
-        <Pressable onPress={goToCookModeSingle} style={[styles.primaryButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}>
+        <Pressable onPress={() => navigation.replace('CookMode', { recipeIds: [recipeId] })} style={[styles.primaryButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}>
           <Text style={styles.primaryButtonText}>Trotzdem kochen</Text>
         </Pressable>
       </View>
@@ -99,34 +87,40 @@ export default function SideDishSuggestionScreen({ route, navigation }: Props) {
         <BrutzelAvatar size={32} />
         <Text style={[styles.title, { color: colors.text }]}>Passt eine Beilage dazu?</Text>
       </View>
+      <Text style={[styles.subtitle, { color: colors.muted }]}>
+        Bis zu {MAX_SELECTABLE} auswählen, aus deinen eigenen gespeicherten Rezepten.
+      </Text>
 
-      {data?.side_suggestions.map((s, i) => (
-        <Pressable
-          key={i}
-          onPress={() => handleSelectSuggestion(s.idea)}
-          disabled={generatingIdea !== null}
-          style={[styles.suggestionCard, { backgroundColor: colors.card, borderRadius: radius.md, opacity: generatingIdea && generatingIdea !== s.idea ? 0.5 : 1 }]}
-        >
-          <Text style={[styles.category, { color: gradient[0] }]}>{s.category}</Text>
-          <Text style={[styles.idea, { color: colors.text }]}>{s.idea}</Text>
-          {s.pantry_based_on.length > 0 && (
-            <Text style={[styles.pantry, { color: colors.muted }]}>Basiert auf: {s.pantry_based_on.join(', ')}</Text>
-          )}
-          {generatingIdea === s.idea && (
-            <View style={styles.generatingRow}>
-              <ActivityIndicator size="small" color={gradient[0]} />
-              <Text style={[styles.generatingText, { color: colors.muted }]}>Rezept wird erstellt…</Text>
+      {candidates.map((r) => {
+        const isSelected = selectedIds.includes(r.id);
+        return (
+          <Pressable
+            key={r.id}
+            onPress={() => toggleSelect(r.id)}
+            style={[
+              styles.suggestionCard,
+              { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: isSelected ? 1.5 : 0, borderColor: gradient[0] },
+            ]}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.recipeTitle, { color: colors.text }]}>{r.title}</Text>
+              {r.prep_time_minutes && (
+                <Text style={[styles.recipeMeta, { color: colors.muted }]}>⏱ {r.prep_time_minutes} Min.</Text>
+              )}
             </View>
-          )}
-        </Pressable>
-      ))}
+            <MaterialCommunityIcons
+              name={isSelected ? 'checkbox-marked-circle' : 'checkbox-blank-circle-outline'}
+              size={22}
+              color={isSelected ? gradient[0] : colors.muted}
+            />
+          </Pressable>
+        );
+      })}
 
-      {data?.follow_up_question && (
-        <Text style={[styles.followUp, { color: colors.muted }]}>{data.follow_up_question}</Text>
-      )}
-
-      <Pressable onPress={goToCookModeSingle} style={[styles.primaryButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}>
-        <Text style={styles.primaryButtonText}>Ohne Beilage kochen</Text>
+      <Pressable onPress={goToCookMode} style={[styles.primaryButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}>
+        <Text style={styles.primaryButtonText}>
+          {selectedIds.length > 0 ? `Mit ${selectedIds.length} Beilage${selectedIds.length > 1 ? 'n' : ''} kochen` : 'Ohne Beilage kochen'}
+        </Text>
       </Pressable>
     </View>
   );
@@ -135,16 +129,12 @@ export default function SideDishSuggestionScreen({ route, navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
   title: { fontSize: 17, fontWeight: '700', flex: 1 },
-  suggestionCard: { padding: 14, marginBottom: 10 },
-  category: { fontSize: 11, fontWeight: '700', marginBottom: 4 },
-  idea: { fontSize: 13.5, lineHeight: 19 },
-  pantry: { fontSize: 10.5, marginTop: 6 },
-  generatingRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
-  generatingText: { fontSize: 11 },
-  followUp: { fontSize: 12.5, marginTop: 4, marginBottom: 20, fontStyle: 'italic' },
+  subtitle: { fontSize: 12, marginBottom: 18 },
+  suggestionCard: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, marginBottom: 10 },
+  recipeTitle: { fontSize: 14, fontWeight: '600' },
+  recipeMeta: { fontSize: 11, marginTop: 3 },
   primaryButton: { height: 48, alignItems: 'center', justifyContent: 'center', marginTop: 'auto' },
   primaryButtonText: { color: '#fff', fontWeight: '700', fontSize: 14.5 },
-  skipLink: { fontSize: 12.5, textAlign: 'center' },
 });
