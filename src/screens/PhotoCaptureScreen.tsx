@@ -126,7 +126,28 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
         .filter((line) => line.trim())
         .map((line, i) => ({ order: i + 1, text: line.trim() }));
 
-      await api.post('/recipes/', { title: title.trim(), ingredients, steps });
+      // Das aufgenommene/ausgewaehlte Foto (imageUri, siehe oben) als
+      // Titelbild mit hochladen - bisher wurde es nur zur Kontrolle
+      // angezeigt, aber beim Speichern nie tatsaechlich verwendet.
+      let coverImageUrl: string | null = null;
+      if (imageUri) {
+        const fileName = imageUri.split('/').pop() ?? 'foto.jpg';
+        const extension = fileName.split('.').pop()?.toLowerCase();
+        const mimeType = extension === 'png' ? 'image/png' : 'image/jpeg';
+        try {
+          const uploadResult = await api.uploadImage('/images/upload', imageUri, fileName, mimeType);
+          coverImageUrl = uploadResult.url;
+        } catch (uploadErr) {
+          // Bild-Upload-Fehler soll das Speichern des Rezepts selbst nicht
+          // verhindern - Rezept wird dann eben ohne Titelbild angelegt
+          Alert.alert(
+            'Bild-Upload fehlgeschlagen',
+            `Das Rezept wird ohne Titelbild gespeichert. Fehler: ${uploadErr instanceof ApiError ? uploadErr.detail : 'Unbekannt'}`,
+          );
+        }
+      }
+
+      await api.post('/recipes/', { title: title.trim(), ingredients, steps, cover_image_url: coverImageUrl });
       navigation.navigate('MainTabs');
     } catch (err) {
       Alert.alert('Speichern fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');

@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
   label: { fontSize: 11, fontWeight: '500', marginBottom: 6 },
   folderChipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
   folderChip: { paddingHorizontal: 12, paddingVertical: 8 },
-  input: { height: 44, paddingHorizontal: 12, fontSize: 13.5 },
+  input: { minHeight: 44, paddingHorizontal: 12, fontSize: 13.5 },
   sectionTitle: { fontSize: 13, fontWeight: '700', marginTop: 20, marginBottom: 10 },
   ingredientRow: { flexDirection: 'row', gap: 6, marginBottom: 7 },
   ingredientName: { flex: 2 },

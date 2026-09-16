@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, ActivityIndicator, Image } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../theme/ThemeContext';
 import { api, ApiError } from '../api/client';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -60,6 +61,24 @@ export default function AIGenerateScreen({ navigation }: Props) {
   const [ingredients, setIngredients] = useState<IngredientDraft[]>([]);
   const [steps, setSteps] = useState<StepDraft[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [localImageUri, setLocalImageUri] = useState<string | null>(null);
+
+  const handlePickImage = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Zugriff verweigert', 'Ohne Foto-Zugriff kann kein Bild ausgewählt werden.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 0.7,
+      allowsEditing: true,
+      aspect: [4, 3],
+    });
+    if (!result.canceled && result.assets[0]) {
+      setLocalImageUri(result.assets[0].uri);
+    }
+  };
 
   const handleGenerate = async () => {
     setIsGenerating(true);
@@ -129,11 +148,28 @@ export default function AIGenerateScreen({ navigation }: Props) {
 
     setIsSaving(true);
     try {
+      let coverImageUrl: string | null = null;
+      if (localImageUri) {
+        const fileName = localImageUri.split('/').pop() ?? 'foto.jpg';
+        const extension = fileName.split('.').pop()?.toLowerCase();
+        const mimeType = extension === 'png' ? 'image/png' : 'image/jpeg';
+        try {
+          const uploadResult = await api.uploadImage('/images/upload', localImageUri, fileName, mimeType);
+          coverImageUrl = uploadResult.url;
+        } catch (uploadErr) {
+          Alert.alert(
+            'Bild-Upload fehlgeschlagen',
+            `Das Rezept wird ohne Titelbild gespeichert. Fehler: ${uploadErr instanceof ApiError ? uploadErr.detail : 'Unbekannt'}`,
+          );
+        }
+      }
+
       await api.post('/recipes/', {
         title: title.trim(),
         ingredients: cleanIngredients,
         steps: cleanSteps,
         tags: result?.tags ?? undefined,
+        cover_image_url: coverImageUrl,
       });
       navigation.navigate('MainTabs');
     } catch (err) {
@@ -219,6 +255,14 @@ export default function AIGenerateScreen({ navigation }: Props) {
   // Schritt 2: generiertes Ergebnis bearbeiten und speichern
   return (
     <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
+      <Pressable onPress={handlePickImage} style={[styles.imagePicker, { backgroundColor: colors.card, borderRadius: radius.md }]}>
+        {localImageUri ? (
+          <Image source={{ uri: localImageUri }} style={[styles.imagePreview, { borderRadius: radius.md }]} />
+        ) : (
+          <Text style={[styles.imagePickerText, { color: colors.muted }]}>📷 Titelbild hinzufügen (optional)</Text>
+        )}
+      </Pressable>
+
       {result.allergen_warning && (
         <View style={[styles.warningBanner, { borderRadius: radius.sm }]}>
           <Text style={styles.warningText}>⚠️ {result.allergen_warning}</Text>
@@ -309,9 +353,12 @@ const styles = StyleSheet.create({
   generateButtonText: { color: '#fff', fontWeight: '600', fontSize: 14.5 },
   container: { padding: 18, paddingBottom: 60 },
   warningBanner: { backgroundColor: '#FEF3C7', padding: 12, marginBottom: 16 },
+  imagePicker: { height: 130, alignItems: 'center', justifyContent: 'center', marginBottom: 16, overflow: 'hidden' },
+  imagePickerText: { fontSize: 12.5, fontWeight: '500' },
+  imagePreview: { width: '100%', height: '100%' },
   warningText: { color: '#92400E', fontSize: 12, lineHeight: 17 },
   label: { fontSize: 11, fontWeight: '500', marginBottom: 6, marginTop: 12 },
-  input: { height: 44, paddingHorizontal: 12, fontSize: 13.5 },
+  input: { minHeight: 44, paddingHorizontal: 12, fontSize: 13.5 },
   multilineInput: { height: 70, paddingTop: 12, textAlignVertical: 'top' },
   sectionTitle: { fontSize: 13, fontWeight: '700', marginTop: 20, marginBottom: 10 },
   ingredientRow: { flexDirection: 'row', gap: 6, marginBottom: 7 },
