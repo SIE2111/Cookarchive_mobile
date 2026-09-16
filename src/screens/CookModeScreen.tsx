@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import SingleRecipeCookView from '../components/SingleRecipeCookView';
+import CookingFinishedCelebration from '../components/CookingFinishedCelebration';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/AppNavigator';
 
@@ -15,18 +16,26 @@ export default function CookModeScreen({ route, navigation }: Props) {
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [titles, setTitles] = useState<Record<string, string>>({});
+  const [showCelebration, setShowCelebration] = useState(false);
 
   const handleFinished = () => {
     if (recipeIds.length === 1) {
-      navigation.goBack();
+      setShowCelebration(true);
       return;
     }
     if (activeIndex < recipeIds.length - 1) {
       setActiveIndex((i) => i + 1);
     } else {
-      navigation.goBack();
+      setShowCelebration(true);
     }
   };
+
+  if (showCelebration) {
+    // Bei mehreren parallel gekochten Rezepten alle Titel zusammenfassen,
+    // statt willkuerlich nur eines zu nennen.
+    const finishedTitles = recipeIds.map((id) => titles[id]).filter(Boolean).join(', ');
+    return <CookingFinishedCelebration recipeTitle={finishedTitles || undefined} onDone={() => navigation.goBack()} />;
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
