@@ -53,7 +53,7 @@ export type MainStackParamList = {
   MainTabs: undefined;
   RecipeDetail: { recipeId: string; title: string };
   RecipeSourceMenu: undefined;
-  ManualRecipe: undefined;
+  ManualRecipe: { recipeId?: string } | undefined;
   WebImport: { pickedUrl?: string } | undefined;
   WebBrowse: { initialQuery?: string } | undefined;
   AIGenerate: undefined;
@@ -178,7 +178,7 @@ function MainNavigator() {
       <MainStack.Screen
         name="ManualRecipe"
         component={ManualRecipeScreen}
-        options={{ title: 'Selbst erstellen' }}
+        options={({ route }) => ({ title: route.params?.recipeId ? 'Rezept bearbeiten' : 'Selbst erstellen' })}
       />
       <MainStack.Screen
         name="WebImport"

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -50,6 +50,15 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
   const [title, setTitle] = useState('');
   const [ingredientLines, setIngredientLines] = useState<string[]>([]);
   const [stepLines, setStepLines] = useState<string[]>([]);
+  const [folders, setFolders] = useState<{ id: string; name: string }[]>([]);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.get<{ id: string; name: string }[]>('/folders/').then(setFolders).catch(() => {
+      // Ordner sind hier nur "nice to have" - schlaegt das Laden fehl,
+      // bleibt die Auswahl einfach leer, das Speichern selbst funktioniert trotzdem
+    });
+  }, []);
 
   const runScan = async (uri: string, mimeType: string) => {
     setIsScanning(true);
@@ -154,7 +163,7 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
         }
       }
 
-      await api.post('/recipes/', { title: title.trim(), ingredients, steps, cover_image_url: coverImageUrl });
+      await api.post('/recipes/', { title: title.trim(), ingredients, steps, cover_image_url: coverImageUrl, folder_id: selectedFolderId });
       navigation.navigate('MainTabs');
     } catch (err) {
       Alert.alert('Speichern fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
@@ -223,6 +232,26 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
         onChangeText={setTitle}
       />
 
+      {folders.length > 0 && (
+        <>
+          <Text style={[styles.label, { color: colors.muted, marginTop: 16 }]}>Ordner (optional)</Text>
+          <View style={styles.folderChipsRow}>
+            {folders.map((folder) => {
+              const isSelected = selectedFolderId === folder.id;
+              return (
+                <Pressable
+                  key={folder.id}
+                  onPress={() => setSelectedFolderId(isSelected ? null : folder.id)}
+                  style={[styles.folderChip, { backgroundColor: isSelected ? gradient[0] : colors.card, borderRadius: radius.sm }]}
+                >
+                  <Text style={{ color: isSelected ? '#fff' : colors.text, fontSize: 12, fontWeight: '600' }}>{folder.name}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </>
+      )}
+
       <Text style={[styles.sectionTitle, { color: colors.text }]}>Zutaten (bitte prüfen)</Text>
       {ingredientLines.map((line, i) => (
         <TextInput
@@ -264,6 +293,8 @@ const styles = StyleSheet.create({
   warningCard: { backgroundColor: '#FEF3C7', padding: 12, marginBottom: 16 },
   warningText: { fontSize: 12, color: '#92400E', lineHeight: 17 },
   label: { fontSize: 11, fontWeight: '500', marginBottom: 6 },
+  folderChipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
+  folderChip: { paddingHorizontal: 12, paddingVertical: 8 },
   input: { minHeight: 44, paddingHorizontal: 14, paddingVertical: 10, fontSize: 13.5 },
   stepInput: { minHeight: 50 },
   sectionTitle: { fontSize: 13, fontWeight: '700', marginTop: 20, marginBottom: 10 },

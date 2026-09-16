@@ -18,14 +18,21 @@ interface StepDraft {
   text: string;
 }
 
-export default function ManualRecipeScreen({ navigation }: Props) {
+export default function ManualRecipeScreen({ navigation, route }: Props) {
   const { colors, gradient, radius } = useTheme();
+  const editingRecipeId = route.params?.recipeId ?? null;
+  const [isLoadingExisting, setIsLoadingExisting] = useState(!!editingRecipeId);
   const [title, setTitle] = useState('');
   const [servings, setServings] = useState('');
+  const [tagsText, setTagsText] = useState('');
   const [ingredients, setIngredients] = useState<IngredientDraft[]>([{ name: '', amount: '', unit: '' }]);
   const [steps, setSteps] = useState<StepDraft[]>([{ text: '' }]);
   const [isSaving, setIsSaving] = useState(false);
   const [localImageUri, setLocalImageUri] = useState<string | null>(null);
+  // Bereits gespeichertes Titelbild (Edit-Modus) - wird nur dann neu
+  // hochgeladen, wenn der Nutzer ein NEUES Bild waehlt (localImageUri
+  // gesetzt); bleibt sonst unveraendert bestehen.
+  const [existingCoverUrl, setExistingCoverUrl] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [folders, setFolders] = useState<{ id: string; name: string }[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
@@ -46,6 +53,46 @@ export default function ManualRecipeScreen({ navigation }: Props) {
       // trotzdem (folder_id ist optional)
     });
   }, []);
+
+  useEffect(() => {
+    if (!editingRecipeId) return;
+    api
+      .get<{
+        title: string;
+        servings: number | null;
+        folder_id: string | null;
+        tags: string[] | null;
+        ingredients: { name: string; amount: number | null; unit: string | null }[];
+        steps: { order: number; text: string }[];
+        cover_image_url: string | null;
+      }>(`/recipes/${editingRecipeId}`)
+      .then((existing) => {
+        setTitle(existing.title);
+        setServings(existing.servings != null ? String(existing.servings) : '');
+        setSelectedFolderId(existing.folder_id);
+        setTagsText((existing.tags ?? []).join(', '));
+        setIngredients(
+          existing.ingredients.length > 0
+            ? existing.ingredients.map((ing) => ({
+                name: ing.name,
+                amount: ing.amount != null ? String(ing.amount) : '',
+                unit: ing.unit ?? '',
+              }))
+            : [{ name: '', amount: '', unit: '' }],
+        );
+        setSteps(
+          existing.steps.length > 0
+            ? existing.steps.sort((a, b) => a.order - b.order).map((s) => ({ text: s.text }))
+            : [{ text: '' }],
+        );
+        setExistingCoverUrl(existing.cover_image_url);
+      })
+      .catch((err) => {
+        Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Rezept konnte nicht geladen werden');
+        navigation.goBack();
+      })
+      .finally(() => setIsLoadingExisting(false));
+  }, [editingRecipeId]);
 
   const handlePickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -122,7 +169,10 @@ export default function ManualRecipeScreen({ navigation }: Props) {
 
     setIsSaving(true);
     try {
-      let coverImageUrl: string | null = null;
+      // Titelbild: nur neu hochladen, wenn der Nutzer tatsaechlich ein neues
+      // Bild ausgewaehlt hat. Im Edit-Modus ohne neue Auswahl bleibt das
+      // bereits gespeicherte Bild einfach bestehen (existingCoverUrl).
+      let coverImageUrl: string | null = existingCoverUrl;
       if (localImageUri) {
         setIsUploadingImage(true);
         const fileName = localImageUri.split('/').pop() ?? 'foto.jpg';
@@ -140,24 +190,36 @@ export default function ManualRecipeScreen({ navigation }: Props) {
           }
         } catch (uploadErr) {
           // Bild-Upload-Fehler soll das Speichern des Rezepts selbst nicht
-          // verhindern - Rezept wird dann eben ohne Bild angelegt
+          // verhindern - vorheriges/kein Bild bleibt dann einfach bestehen
           Alert.alert(
             'Bild-Upload fehlgeschlagen',
-            `Das Rezept wird ohne Bild gespeichert. Fehler: ${uploadErr instanceof ApiError ? uploadErr.detail : 'Unbekannt'}`,
+            `Das Rezept wird ohne das neue Bild gespeichert. Fehler: ${uploadErr instanceof ApiError ? uploadErr.detail : 'Unbekannt'}`,
           );
         } finally {
           setIsUploadingImage(false);
         }
       }
 
-      await api.post('/recipes/', {
+      const tags = tagsText
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean);
+
+      const payload = {
         title: title.trim(),
         servings: servings ? Number(servings) : null,
         ingredients: cleanIngredients,
         steps: cleanSteps,
         cover_image_url: coverImageUrl,
         folder_id: selectedFolderId,
-      });
+        tags: tags.length > 0 ? tags : null,
+      };
+
+      if (editingRecipeId) {
+        await api.patch(`/recipes/${editingRecipeId}`, payload);
+      } else {
+        await api.post('/recipes/', payload);
+      }
 
       // Best-effort: alle verwendeten Zutatennamen in die Werteliste
       // eintragen, damit sie kuenftig als Vorschlag erscheinen (Backend
@@ -168,7 +230,11 @@ export default function ManualRecipeScreen({ navigation }: Props) {
         api.post('/ingredients/', { name: ing.name, default_unit: ing.unit || null }).catch(() => {});
       });
 
-      navigation.navigate('MainTabs');
+      if (editingRecipeId) {
+        navigation.goBack();
+      } else {
+        navigation.navigate('MainTabs');
+      }
     } catch (err) {
       Alert.alert('Speichern fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
     } finally {
@@ -176,11 +242,19 @@ export default function ManualRecipeScreen({ navigation }: Props) {
     }
   };
 
+  if (isLoadingExisting) {
+    return (
+      <View style={[styles.centered, { backgroundColor: colors.bg }]}>
+        <ActivityIndicator color={colors.text} />
+      </View>
+    );
+  }
+
   return (
     <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
       <Pressable onPress={handlePickImage} style={[styles.imagePicker, { backgroundColor: colors.card, borderRadius: radius.md }]}>
-        {localImageUri ? (
-          <Image source={{ uri: localImageUri }} style={[styles.imagePreview, { borderRadius: radius.md }]} />
+        {localImageUri || existingCoverUrl ? (
+          <Image source={{ uri: localImageUri ?? existingCoverUrl! }} style={[styles.imagePreview, { borderRadius: radius.md }]} />
         ) : (
           <Text style={[styles.imagePickerText, { color: colors.muted }]}>📷 Foto hinzufügen</Text>
         )}
@@ -203,6 +277,15 @@ export default function ManualRecipeScreen({ navigation }: Props) {
         keyboardType="numeric"
         value={servings}
         onChangeText={setServings}
+      />
+
+      <Text style={[styles.label, { color: colors.muted, marginTop: 16 }]}>Kategorien (mit Komma getrennt)</Text>
+      <TextInput
+        style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
+        placeholder="z.B. vegetarisch, schnell, warm"
+        placeholderTextColor={colors.muted}
+        value={tagsText}
+        onChangeText={setTagsText}
       />
 
       {folders.length > 0 && (
@@ -299,7 +382,7 @@ export default function ManualRecipeScreen({ navigation }: Props) {
             {isUploadingImage && <Text style={styles.saveButtonText}>Bild wird hochgeladen…</Text>}
           </View>
         ) : (
-          <Text style={styles.saveButtonText}>Rezept speichern</Text>
+          <Text style={styles.saveButtonText}>{editingRecipeId ? 'Änderungen speichern' : 'Rezept speichern'}</Text>
         )}
       </Pressable>
     </ScrollView>
@@ -308,6 +391,7 @@ export default function ManualRecipeScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { padding: 18, paddingBottom: 60 },
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   imagePicker: { height: 140, alignItems: 'center', justifyContent: 'center', marginBottom: 18, overflow: 'hidden' },
   imagePickerText: { fontSize: 13, fontWeight: '500' },
   imagePreview: { width: '100%', height: '100%' },

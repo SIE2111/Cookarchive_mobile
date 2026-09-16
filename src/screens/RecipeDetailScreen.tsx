@@ -37,11 +37,16 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api
-      .get<RecipeDetail>(`/recipes/${recipeId}`)
-      .then(setRecipe)
-      .catch((err) => setError(err instanceof ApiError ? err.detail : 'Rezept konnte nicht geladen werden'));
-  }, [recipeId]);
+    const load = () => {
+      api
+        .get<RecipeDetail>(`/recipes/${recipeId}`)
+        .then(setRecipe)
+        .catch((err) => setError(err instanceof ApiError ? err.detail : 'Rezept konnte nicht geladen werden'));
+    };
+    load();
+    const unsubscribe = navigation.addListener('focus', load);
+    return unsubscribe;
+  }, [recipeId, navigation]);
 
   if (error) {
     return (
@@ -65,10 +70,15 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
         <Image source={{ uri: recipe.cover_image_url }} style={[styles.heroImage, { borderRadius: radius.md }]} />
       )}
       <Text style={[styles.title, { color: colors.text }]}>{recipe.title}</Text>
-      <Text style={[styles.meta, { color: colors.muted }]}>
-        {recipe.servings ? `${recipe.servings} Portionen` : ''}
-        {recipe.prep_time_minutes ? ` · ${recipe.prep_time_minutes} min` : ''}
-      </Text>
+      <View style={styles.metaRow}>
+        <Text style={[styles.meta, { color: colors.muted }]}>
+          {recipe.servings ? `${recipe.servings} Portionen` : ''}
+          {recipe.prep_time_minutes ? ` · ${recipe.prep_time_minutes} min` : ''}
+        </Text>
+        <Pressable onPress={() => navigation.navigate('ManualRecipe', { recipeId: recipe.id })} hitSlop={8}>
+          <Text style={[styles.editLink, { color: gradient[0] }]}>Bearbeiten</Text>
+        </Pressable>
+      </View>
 
       <Pressable
         onPress={() => navigation.navigate('SideDishSuggestion', { recipeId: recipe.id })}
@@ -108,7 +118,9 @@ const styles = StyleSheet.create({
   heroImage: { width: '100%', height: 180, marginBottom: 14 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 20, fontWeight: '700' },
-  meta: { fontSize: 12, marginTop: 4, marginBottom: 20 },
+  metaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4, marginBottom: 20 },
+  meta: { fontSize: 12 },
+  editLink: { fontSize: 12.5, fontWeight: '700' },
   cookButton: { height: 46, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
   cookButtonText: { color: '#fff', fontWeight: '700', fontSize: 14 },
   sectionTitle: { fontSize: 13, fontWeight: '700', marginTop: 8, marginBottom: 10 },
