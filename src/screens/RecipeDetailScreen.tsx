@@ -74,7 +74,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
         onPress={() => navigation.navigate('SideDishSuggestion', { recipeId: recipe.id })}
         style={[styles.cookButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}
       >
-        <Text style={styles.cookButtonText}>Kochen starten</Text>
+        <Text style={styles.cookButtonText}>Zubereitung starten</Text>
       </Pressable>
 
       <Text style={[styles.sectionTitle, { color: colors.text }]}>Zutaten</Text>

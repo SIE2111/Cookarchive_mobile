@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, ActivityIndicator, Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../theme/ThemeContext';
@@ -21,6 +21,7 @@ interface StepDraft {
 export default function ManualRecipeScreen({ navigation }: Props) {
   const { colors, gradient, radius } = useTheme();
   const [title, setTitle] = useState('');
+  const [servings, setServings] = useState('');
   const [ingredients, setIngredients] = useState<IngredientDraft[]>([{ name: '', amount: '', unit: '' }]);
   const [steps, setSteps] = useState<StepDraft[]>([{ text: '' }]);
   const [isSaving, setIsSaving] = useState(false);
@@ -28,6 +29,15 @@ export default function ManualRecipeScreen({ navigation }: Props) {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [folders, setFolders] = useState<{ id: string; name: string }[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+
+  // Zutaten-Autovervollstaendigung: greift auf die bereits vorhandene
+  // Werteliste im Backend zu (/ingredients/, existierte schon lange, war
+  // aber nirgends angebunden) - beim Tippen erscheinen passende Vorschlaege
+  // inkl. Standard-Einheit, ein Tippen auf die Zutat legt bei Bedarf einen
+  // neuen Eintrag in der Werteliste an (fuer kuenftige Vorschlaege).
+  const [focusedIngredientIndex, setFocusedIngredientIndex] = useState<number | null>(null);
+  const [suggestions, setSuggestions] = useState<{ id: string; name: string; default_unit: string | null }[]>([]);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     api.get<{ id: string; name: string }[]>('/folders/').then(setFolders).catch(() => {
@@ -56,6 +66,33 @@ export default function ManualRecipeScreen({ navigation }: Props) {
 
   const updateIngredient = (index: number, field: keyof IngredientDraft, value: string) => {
     setIngredients((prev) => prev.map((ing, i) => (i === index ? { ...ing, [field]: value } : ing)));
+  };
+
+  const handleIngredientNameChange = (index: number, value: string) => {
+    updateIngredient(index, 'name', value);
+    setFocusedIngredientIndex(index);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    const trimmed = value.trim();
+    if (trimmed.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    debounceRef.current = setTimeout(() => {
+      api
+        .get<{ id: string; name: string; default_unit: string | null }[]>(`/ingredients/?q=${encodeURIComponent(trimmed)}`)
+        .then(setSuggestions)
+        .catch(() => setSuggestions([]));
+    }, 300);
+  };
+
+  const handleSelectSuggestion = (index: number, suggestion: { name: string; default_unit: string | null }) => {
+    setIngredients((prev) =>
+      prev.map((ing, i) =>
+        i === index ? { ...ing, name: suggestion.name, unit: ing.unit || suggestion.default_unit || '' } : ing,
+      ),
+    );
+    setSuggestions([]);
+    setFocusedIngredientIndex(null);
   };
 
   const updateStep = (index: number, value: string) => {
@@ -115,11 +152,22 @@ export default function ManualRecipeScreen({ navigation }: Props) {
 
       await api.post('/recipes/', {
         title: title.trim(),
+        servings: servings ? Number(servings) : null,
         ingredients: cleanIngredients,
         steps: cleanSteps,
         cover_image_url: coverImageUrl,
         folder_id: selectedFolderId,
       });
+
+      // Best-effort: alle verwendeten Zutatennamen in die Werteliste
+      // eintragen, damit sie kuenftig als Vorschlag erscheinen (Backend
+      // erkennt bereits vorhandene Namen selbst und legt keine Duplikate an -
+      // siehe routers/ingredients.py). Fehler hier werden bewusst
+      // verschluckt, das Rezept ist ja schon erfolgreich gespeichert.
+      cleanIngredients.forEach((ing) => {
+        api.post('/ingredients/', { name: ing.name, default_unit: ing.unit || null }).catch(() => {});
+      });
+
       navigation.navigate('MainTabs');
     } catch (err) {
       Alert.alert('Speichern fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
@@ -145,6 +193,16 @@ export default function ManualRecipeScreen({ navigation }: Props) {
         placeholderTextColor={colors.muted}
         value={title}
         onChangeText={setTitle}
+      />
+
+      <Text style={[styles.label, { color: colors.muted, marginTop: 16 }]}>Portionen</Text>
+      <TextInput
+        style={[styles.input, styles.servingsInput, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
+        placeholder="z.B. 4"
+        placeholderTextColor={colors.muted}
+        keyboardType="numeric"
+        value={servings}
+        onChangeText={setServings}
       />
 
       {folders.length > 0 && (
@@ -174,29 +232,42 @@ export default function ManualRecipeScreen({ navigation }: Props) {
 
       <Text style={[styles.sectionTitle, { color: colors.text }]}>Zutaten</Text>
       {ingredients.map((ing, i) => (
-        <View key={i} style={styles.ingredientRow}>
-          <TextInput
-            style={[styles.input, styles.ingredientName, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-            placeholder="Zutat"
-            placeholderTextColor={colors.muted}
-            value={ing.name}
-            onChangeText={(v) => updateIngredient(i, 'name', v)}
-          />
-          <TextInput
-            style={[styles.input, styles.ingredientAmount, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-            placeholder="Menge"
-            placeholderTextColor={colors.muted}
-            keyboardType="numeric"
-            value={ing.amount}
-            onChangeText={(v) => updateIngredient(i, 'amount', v)}
-          />
-          <TextInput
-            style={[styles.input, styles.ingredientUnit, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-            placeholder="Einh."
-            placeholderTextColor={colors.muted}
-            value={ing.unit}
-            onChangeText={(v) => updateIngredient(i, 'unit', v)}
-          />
+        <View key={i}>
+          <View style={styles.ingredientRow}>
+            <TextInput
+              style={[styles.input, styles.ingredientName, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
+              placeholder="Zutat"
+              placeholderTextColor={colors.muted}
+              value={ing.name}
+              onChangeText={(v) => handleIngredientNameChange(i, v)}
+              onFocus={() => setFocusedIngredientIndex(i)}
+            />
+            <TextInput
+              style={[styles.input, styles.ingredientAmount, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
+              placeholder="Menge"
+              placeholderTextColor={colors.muted}
+              keyboardType="numeric"
+              value={ing.amount}
+              onChangeText={(v) => updateIngredient(i, 'amount', v)}
+            />
+            <TextInput
+              style={[styles.input, styles.ingredientUnit, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
+              placeholder="Einh."
+              placeholderTextColor={colors.muted}
+              value={ing.unit}
+              onChangeText={(v) => updateIngredient(i, 'unit', v)}
+            />
+          </View>
+          {focusedIngredientIndex === i && suggestions.length > 0 && (
+            <View style={[styles.suggestionsBox, { backgroundColor: colors.card, borderRadius: radius.sm }]}>
+              {suggestions.map((s) => (
+                <Pressable key={s.id} onPress={() => handleSelectSuggestion(i, s)} style={styles.suggestionRow}>
+                  <Text style={{ color: colors.text, fontSize: 12.5 }}>{s.name}</Text>
+                  {s.default_unit && <Text style={{ color: colors.muted, fontSize: 11 }}>{s.default_unit}</Text>}
+                </Pressable>
+              ))}
+            </View>
+          )}
         </View>
       ))}
       <Pressable onPress={() => setIngredients((prev) => [...prev, { name: '', amount: '', unit: '' }])}>
@@ -241,6 +312,9 @@ const styles = StyleSheet.create({
   imagePickerText: { fontSize: 13, fontWeight: '500' },
   imagePreview: { width: '100%', height: '100%' },
   label: { fontSize: 11, fontWeight: '500', marginBottom: 6 },
+  servingsInput: { width: 90 },
+  suggestionsBox: { marginTop: -3, marginBottom: 9, paddingVertical: 4 },
+  suggestionRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 9 },
   folderChipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
   folderChip: { paddingHorizontal: 12, paddingVertical: 8 },
   input: { minHeight: 44, paddingHorizontal: 12, fontSize: 13.5 },
