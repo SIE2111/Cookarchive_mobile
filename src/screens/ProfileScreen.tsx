@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Switch, Pressable, StyleSheet, ActivityIndicator, Alert, ScrollView } from 'react-native';
+import { View, Text, Switch, Pressable, StyleSheet, ActivityIndicator, Alert, ScrollView, Linking } from 'react-native';
 import { useTheme, type BackgroundStyle } from '../theme/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { api, ApiError } from '../api/client';
@@ -63,6 +63,8 @@ export default function ProfileScreen({ navigation }: Props) {
   const [prefs, setPrefs] = useState<Preferences | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [savingKey, setSavingKey] = useState<PreferenceKey | 'storage_mode' | 'default_hauben_level' | null>(null);
+  const [driveStatus, setDriveStatus] = useState<{ configured: boolean; connected: boolean; provider: string | null } | null>(null);
+  const [isConnectingDrive, setIsConnectingDrive] = useState(false);
 
   useEffect(() => {
     api
@@ -70,6 +72,49 @@ export default function ProfileScreen({ navigation }: Props) {
       .then(setPrefs)
       .catch((err) => setError(err instanceof ApiError ? err.detail : 'Einstellungen konnten nicht geladen werden'));
   }, []);
+
+  const loadDriveStatus = () => {
+    api
+      .get<{ configured: boolean; connected: boolean; provider: string | null }>('/google-auth/status')
+      .then(setDriveStatus)
+      .catch(() => {
+        // Status konnte nicht geladen werden - Verbinden-Button bleibt dann
+        // einfach ausgeblendet, kein Grund den restlichen Screen zu blockieren
+      });
+  };
+
+  useEffect(() => {
+    loadDriveStatus();
+    // Bei Rueckkehr aus dem System-Browser (nach Google-Anmeldung) ist die
+    // App noch dieselbe Instanz, nur der Fokus wechselt zurueck - hier den
+    // Status neu abfragen, damit "Verbunden" ohne manuelles Neuladen erscheint.
+    const unsubscribe = navigation.addListener('focus', loadDriveStatus);
+    return unsubscribe;
+  }, [navigation]);
+
+  const handleConnectGoogleDrive = async () => {
+    setIsConnectingDrive(true);
+    try {
+      const { authorize_url } = await api.get<{ authorize_url: string }>('/google-auth/connect');
+      // BEWUSST der System-Browser (Linking.openURL), nicht unser eigener
+      // WebBrowseScreen: Google verbietet OAuth-Logins in eingebetteten
+      // WebViews aus Sicherheitsgruenden (Antwort waere "disallowed_useragent").
+      await Linking.openURL(authorize_url);
+    } catch (err) {
+      Alert.alert('Verbinden fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+    } finally {
+      setIsConnectingDrive(false);
+    }
+  };
+
+  const handleDisconnectGoogleDrive = async () => {
+    try {
+      await api.post('/google-auth/disconnect');
+      loadDriveStatus();
+    } catch (err) {
+      Alert.alert('Trennen fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+    }
+  };
 
   const handleToggle = async (key: PreferenceKey, value: boolean) => {
     if (!prefs) return;
@@ -169,6 +214,45 @@ export default function ProfileScreen({ navigation }: Props) {
           </Pressable>
         );
       })}
+
+      {prefs.storage_mode === 'drittanbieter_cloud' && (
+        <View style={[styles.driveBox, { backgroundColor: colors.card, borderRadius: radius.md }]}>
+          {!driveStatus ? (
+            <ActivityIndicator color={colors.muted} />
+          ) : !driveStatus.configured ? (
+            <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
+              Drittanbieter-Anbindung ist serverseitig noch nicht konfiguriert.
+            </Text>
+          ) : driveStatus.connected ? (
+            <>
+              <Text style={[styles.rowTitle, { color: colors.text }]}>
+                ✅ Google Drive verbunden
+              </Text>
+              <Pressable onPress={handleDisconnectGoogleDrive} style={{ marginTop: 10 }}>
+                <Text style={{ color: '#DC2626', fontSize: 12.5, fontWeight: '600' }}>Verbindung trennen</Text>
+              </Pressable>
+            </>
+          ) : (
+            <>
+              <Text style={[styles.rowTitle, { color: colors.text }]}>Noch kein Anbieter verbunden</Text>
+              <Text style={[styles.rowSubtitle, { color: colors.muted, marginBottom: 10 }]}>
+                Öffnet den Browser zur Anmeldung, danach zurück zur App wechseln.
+              </Text>
+              <Pressable
+                onPress={handleConnectGoogleDrive}
+                disabled={isConnectingDrive}
+                style={[styles.connectButton, { backgroundColor: gradient[0], borderRadius: radius.sm, opacity: isConnectingDrive ? 0.7 : 1 }]}
+              >
+                {isConnectingDrive ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.connectButtonText}>Mit Google Drive verbinden</Text>
+                )}
+              </Pressable>
+            </>
+          )}
+        </View>
+      )}
 
       <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 20 }]}>STANDARD-STUFE IM KOCH-MODUS</Text>
       <View style={styles.chipsRow}>
@@ -291,6 +375,9 @@ const styles = StyleSheet.create({
   sectionLabel: { fontSize: 10.5, fontWeight: '700', letterSpacing: 0.5, marginBottom: 10 },
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
   chip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 9 },
+  driveBox: { padding: 14, marginTop: 10 },
+  connectButton: { paddingVertical: 11, alignItems: 'center' },
+  connectButtonText: { color: '#fff', fontSize: 13, fontWeight: '700' },
   row: { flexDirection: 'row', alignItems: 'center', padding: 14, marginBottom: 8 },
   rowTitle: { fontSize: 13.5, fontWeight: '600' },
   rowSubtitle: { fontSize: 10.5, marginTop: 2 },
