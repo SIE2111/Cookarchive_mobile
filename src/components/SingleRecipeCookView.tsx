@@ -37,6 +37,19 @@ const BRUTZEL_TIPS: Record<string, string> = {
   koecheln_lassen: 'Nicht sprudelnd kochen lassen – nur leise Bläschen, sonst wird die Suppe trüb.',
 };
 
+// Generische Tipps fuer Schritte OHNE technique_tag (das betrifft aktuell
+// rund 70% aller Schritte in den Starter-Rezepten) - Brutzel hatte bisher
+// nur bei rund einem Viertel der Schritte ueberhaupt etwas zu sagen. Wird
+// deterministisch nach Schrittnummer gewaehlt (kein Zufall -> kein
+// Flackern bei Re-Renders desselben Schritts).
+const GENERIC_BRUTZEL_TIPS: string[] = [
+  'Lies dir den Schritt einmal ganz durch, bevor du loslegst – dann läuft\'s runder.',
+  'Alle Zutaten für diesen Schritt schon bereitgestellt? Spart unnötiges Suchen.',
+  'Kein Stress – du kannst jederzeit einen Schritt zurückgehen, falls was unklar war.',
+  'Falls ein Timer läuft: ruhig weiterlesen, Brutzel erinnert dich rechtzeitig.',
+  'Guter Moment für einen Schluck Wasser, bevor es weitergeht.',
+];
+
 interface TechniqueVideoInfo {
   keyword: string;
   title: string;
@@ -366,27 +379,27 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
         </View>
       )}
 
-      {currentStep.technique_tag && (
-        <View style={[styles.brutzelCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
-          <BrutzelAvatar size={26} />
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.brutzelText, { color: colors.muted }]}>
-              <Text style={{ fontWeight: '700', color: gradient[0] }}>Brutzel: </Text>
-              {BRUTZEL_TIPS[currentStep.technique_tag] ??
-                'Bei dieser Technik lohnt sich besondere Aufmerksamkeit – nimm dir kurz Zeit dafür.'}
-            </Text>
-            {techniqueVideo?.available && techniqueVideo.youtube_video_id && (
-              <Pressable
-                onPress={() => Linking.openURL(`https://www.youtube.com/watch?v=${techniqueVideo.youtube_video_id}`)}
-                style={styles.videoLink}
-              >
-                <MaterialCommunityIcons name="youtube" size={15} color="#DC2626" />
-                <Text style={[styles.videoLinkText, { color: gradient[0] }]}>Technik-Video ansehen</Text>
-              </Pressable>
-            )}
-          </View>
+      <View style={[styles.brutzelCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
+        <BrutzelAvatar size={26} />
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.brutzelText, { color: colors.muted }]}>
+            <Text style={{ fontWeight: '700', color: gradient[0] }}>Brutzel: </Text>
+            {currentStep.technique_tag
+              ? (BRUTZEL_TIPS[currentStep.technique_tag] ??
+                'Bei dieser Technik lohnt sich besondere Aufmerksamkeit – nimm dir kurz Zeit dafür.')
+              : GENERIC_BRUTZEL_TIPS[currentIndex % GENERIC_BRUTZEL_TIPS.length]}
+          </Text>
+          {techniqueVideo?.available && techniqueVideo.youtube_video_id && (
+            <Pressable
+              onPress={() => Linking.openURL(`https://www.youtube.com/watch?v=${techniqueVideo.youtube_video_id}`)}
+              style={styles.videoLink}
+            >
+              <MaterialCommunityIcons name="youtube" size={15} color="#DC2626" />
+              <Text style={[styles.videoLinkText, { color: gradient[0] }]}>Technik-Video ansehen</Text>
+            </Pressable>
+          )}
         </View>
-      )}
+      </View>
 
       {currentStep.user_note ? (
         <Pressable
