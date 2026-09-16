@@ -17,6 +17,7 @@ interface Ingredient {
 interface RecipeForCooking {
   id: string;
   title: string;
+  servings: number | null;
   ingredients: Ingredient[];
   steps: RecipeStep[];
 }
@@ -322,6 +323,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
       >
         <Text style={[styles.ingredientsToggleText, { color: colors.text }]}>
           Zutaten ({recipe.ingredients.length})
+          {recipe.servings ? `  ·  für ${recipe.servings} Portionen` : ''}
         </Text>
         <Text style={{ color: colors.muted, fontSize: 12 }}>{isIngredientsOpen ? '▲' : '▼'}</Text>
       </Pressable>
