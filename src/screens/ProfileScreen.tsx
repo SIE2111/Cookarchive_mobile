@@ -3,10 +3,15 @@ import { View, Text, Switch, Pressable, StyleSheet, ActivityIndicator, Alert, Sc
 import { useTheme } from '../theme/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { api, ApiError } from '../api/client';
+import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { MainStackParamList } from '../navigation/AppNavigator';
+import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import type { MainTabParamList, MainStackParamList } from '../navigation/AppNavigator';
 
-type Props = NativeStackScreenProps<MainStackParamList, 'Profile'>;
+type Props = CompositeScreenProps<
+  BottomTabScreenProps<MainTabParamList, 'Profil'>,
+  NativeStackScreenProps<MainStackParamList>
+>;
 
 type StorageMode = 'lokal' | 'nas' | 'eigene_cloud' | 'drittanbieter_cloud';
 
@@ -169,7 +174,7 @@ export default function ProfileScreen({ navigation }: Props) {
       )}
 
       <Pressable
-        onPress={() => navigation.navigate('Household')}
+        onPress={() => navigation.getParent()?.navigate('Household')}
         style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md, marginTop: 20 }]}
       >
         <Text style={[styles.rowTitle, { color: colors.text, flex: 1 }]}>Haushalt</Text>

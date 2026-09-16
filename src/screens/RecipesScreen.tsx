@@ -2,10 +2,15 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, FlatList, Pressable, StyleSheet, ActivityIndicator, RefreshControl, Image } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { api, ApiError } from '../api/client';
+import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { MainStackParamList } from '../navigation/AppNavigator';
+import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import type { MainTabParamList, MainStackParamList } from '../navigation/AppNavigator';
 
-type Props = NativeStackScreenProps<MainStackParamList, 'Start'>;
+type Props = CompositeScreenProps<
+  BottomTabScreenProps<MainTabParamList, 'Rezepte'>,
+  NativeStackScreenProps<MainStackParamList>
+>;
 
 interface RecipeSummary {
   id: string;
@@ -15,12 +20,17 @@ interface RecipeSummary {
   cover_image_url: string | null;
 }
 
-export default function StartScreen({ navigation }: Props) {
+export default function RecipesScreen({ navigation, route }: Props) {
   const { colors, gradient, radius } = useTheme();
   const [recipes, setRecipes] = useState<RecipeSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Optionaler Tag-Filter, den das Dashboard beim Antippen einer Kategorie
+  // mitgibt (siehe DashboardScreen) - rein clientseitig gefiltert, da das
+  // Backend aktuell keinen eigenen Tag-Filter-Parameter anbietet.
+  const filterTag = route.params?.filterTag;
 
   const loadRecipes = useCallback(async () => {
     try {
@@ -36,11 +46,18 @@ export default function StartScreen({ navigation }: Props) {
     loadRecipes().finally(() => setIsLoading(false));
   }, [loadRecipes]);
 
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', loadRecipes);
+    return unsubscribe;
+  }, [navigation, loadRecipes]);
+
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await loadRecipes();
     setIsRefreshing(false);
   };
+
+  const visibleRecipes = filterTag ? recipes.filter((r) => r.tags?.includes(filterTag)) : recipes;
 
   if (isLoading) {
     return (
@@ -54,15 +71,26 @@ export default function StartScreen({ navigation }: Props) {
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       {error && <Text style={[styles.errorText, { color: '#DC2626' }]}>{error}</Text>}
 
+      {filterTag && (
+        <Pressable
+          onPress={() => navigation.setParams({ filterTag: undefined })}
+          style={[styles.filterPill, { backgroundColor: gradient[0], borderRadius: radius.sm }]}
+        >
+          <Text style={styles.filterPillText}>{filterTag} ✕</Text>
+        </Pressable>
+      )}
+
       <FlatList
-        data={recipes}
+        data={visibleRecipes}
         keyExtractor={(item) => item.id}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
         contentContainerStyle={{ paddingBottom: 100 }}
         ListEmptyComponent={
           !error ? (
             <Text style={[styles.emptyText, { color: colors.muted }]}>
-              Noch keine Rezepte – leg dein erstes über den Button unten an.
+              {filterTag
+                ? `Keine Rezepte mit "${filterTag}" gefunden.`
+                : 'Noch keine Rezepte – leg dein erstes über den Button unten an.'}
             </Text>
           ) : null
         }
@@ -96,8 +124,9 @@ export default function StartScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: 18, paddingTop: 16 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header: { fontSize: 19, fontWeight: '700', marginBottom: 16 },
   errorText: { fontSize: 12, marginBottom: 12 },
+  filterPill: { alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 7, marginBottom: 12 },
+  filterPillText: { color: '#fff', fontSize: 12, fontWeight: '600' },
   emptyText: { fontSize: 13, textAlign: 'center', marginTop: 40, lineHeight: 20 },
   recipeRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 10, marginBottom: 9 },
   thumbnail: { width: 46, height: 46 },

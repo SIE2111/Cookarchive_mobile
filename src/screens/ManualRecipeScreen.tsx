@@ -102,7 +102,7 @@ export default function ManualRecipeScreen({ navigation }: Props) {
         steps: cleanSteps,
         cover_image_url: coverImageUrl,
       });
-      navigation.navigate('Start');
+      navigation.navigate('MainTabs');
     } catch (err) {
       Alert.alert('Speichern fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
     } finally {

@@ -30,7 +30,7 @@ export default function OnboardingScreen({ navigation }: Props) {
         starter_pack_size: selectedPackSize,
       });
       clearJustRegistered();
-      navigation.replace('Start');
+      navigation.replace('MainTabs');
     } catch (err) {
       setError(err instanceof ApiError ? err.detail : 'Einrichtung fehlgeschlagen');
     } finally {

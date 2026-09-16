@@ -117,7 +117,7 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
         .map((line, i) => ({ order: i + 1, text: line.trim() }));
 
       await api.post('/recipes/', { title: title.trim(), ingredients, steps });
-      navigation.navigate('Start');
+      navigation.navigate('MainTabs');
     } catch (err) {
       Alert.alert('Speichern fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
     } finally {
