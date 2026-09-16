@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, ActivityIndicator, Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../theme/ThemeContext';
@@ -26,6 +26,16 @@ export default function ManualRecipeScreen({ navigation }: Props) {
   const [isSaving, setIsSaving] = useState(false);
   const [localImageUri, setLocalImageUri] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [folders, setFolders] = useState<{ id: string; name: string }[]>([]);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.get<{ id: string; name: string }[]>('/folders/').then(setFolders).catch(() => {
+      // Ordner sind hier nur "nice to have" - schlaegt das Laden fehl,
+      // bleibt die Auswahl einfach leer, das Speichern selbst funktioniert
+      // trotzdem (folder_id ist optional)
+    });
+  }, []);
 
   const handlePickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -101,6 +111,7 @@ export default function ManualRecipeScreen({ navigation }: Props) {
         ingredients: cleanIngredients,
         steps: cleanSteps,
         cover_image_url: coverImageUrl,
+        folder_id: selectedFolderId,
       });
       navigation.navigate('MainTabs');
     } catch (err) {
@@ -128,6 +139,31 @@ export default function ManualRecipeScreen({ navigation }: Props) {
         value={title}
         onChangeText={setTitle}
       />
+
+      {folders.length > 0 && (
+        <>
+          <Text style={[styles.label, { color: colors.muted, marginTop: 16 }]}>Ordner (optional)</Text>
+          <View style={styles.folderChipsRow}>
+            {folders.map((folder) => {
+              const isSelected = selectedFolderId === folder.id;
+              return (
+                <Pressable
+                  key={folder.id}
+                  onPress={() => setSelectedFolderId(isSelected ? null : folder.id)}
+                  style={[
+                    styles.folderChip,
+                    { backgroundColor: isSelected ? gradient[0] : colors.card, borderRadius: radius.sm },
+                  ]}
+                >
+                  <Text style={{ color: isSelected ? '#fff' : colors.text, fontSize: 12, fontWeight: '600' }}>
+                    {folder.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </>
+      )}
 
       <Text style={[styles.sectionTitle, { color: colors.text }]}>Zutaten</Text>
       {ingredients.map((ing, i) => (
@@ -198,6 +234,8 @@ const styles = StyleSheet.create({
   imagePickerText: { fontSize: 13, fontWeight: '500' },
   imagePreview: { width: '100%', height: '100%' },
   label: { fontSize: 11, fontWeight: '500', marginBottom: 6 },
+  folderChipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
+  folderChip: { paddingHorizontal: 12, paddingVertical: 8 },
   input: { height: 44, paddingHorizontal: 12, fontSize: 13.5 },
   sectionTitle: { fontSize: 13, fontWeight: '700', marginTop: 20, marginBottom: 10 },
   ingredientRow: { flexDirection: 'row', gap: 6, marginBottom: 7 },

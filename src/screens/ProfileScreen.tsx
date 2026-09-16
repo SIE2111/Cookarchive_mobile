@@ -181,6 +181,19 @@ export default function ProfileScreen({ navigation }: Props) {
         <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>
       </Pressable>
 
+      <Pressable
+        onPress={() => navigation.getParent()?.navigate('Onboarding')}
+        style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md, marginTop: 8 }]}
+      >
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.rowTitle, { color: colors.text }]}>Starter-Rezepte importieren</Text>
+          <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
+            Bereits importierte werden übersprungen, keine Duplikate
+          </Text>
+        </View>
+        <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>
+      </Pressable>
+
       <Pressable onPress={() => signOut()} style={[styles.signOutButton, { borderColor: '#DC2626', borderRadius: radius.md }]}>
         <Text style={styles.signOutText}>Abmelden</Text>
       </Pressable>

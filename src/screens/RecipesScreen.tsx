@@ -1,5 +1,19 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, FlatList, Pressable, StyleSheet, ActivityIndicator, RefreshControl, Image } from 'react-native';
+import {
+  View,
+  Text,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  ActivityIndicator,
+  RefreshControl,
+  Image,
+  ScrollView,
+  Alert,
+  Modal,
+  TextInput,
+} from 'react-native';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
 import { api, ApiError } from '../api/client';
 import type { CompositeScreenProps } from '@react-navigation/native';
@@ -18,24 +32,42 @@ interface RecipeSummary {
   tags: string[] | null;
   updated_at: string;
   cover_image_url: string | null;
+  folder_id: string | null;
+}
+
+interface FolderSummary {
+  id: string;
+  name: string;
+  parent_folder_id: string | null;
+  icon: string | null;
+  recipe_count: number;
 }
 
 export default function RecipesScreen({ navigation, route }: Props) {
   const { colors, gradient, radius } = useTheme();
   const [recipes, setRecipes] = useState<RecipeSummary[]>([]);
+  const [folders, setFolders] = useState<FolderSummary[]>([]);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [isSavingFolder, setIsSavingFolder] = useState(false);
 
   // Optionaler Tag-Filter, den das Dashboard beim Antippen einer Kategorie
   // mitgibt (siehe DashboardScreen) - rein clientseitig gefiltert, da das
   // Backend aktuell keinen eigenen Tag-Filter-Parameter anbietet.
   const filterTag = route.params?.filterTag;
 
-  const loadRecipes = useCallback(async () => {
+  const loadAll = useCallback(async () => {
     try {
-      const data = await api.get<RecipeSummary[]>('/recipes/');
-      setRecipes(data);
+      const [recipeData, folderData] = await Promise.all([
+        api.get<RecipeSummary[]>('/recipes/'),
+        api.get<FolderSummary[]>('/folders/'),
+      ]);
+      setRecipes(recipeData);
+      setFolders(folderData);
       setError(null);
     } catch (err) {
       setError(err instanceof ApiError ? err.detail : 'Rezepte konnten nicht geladen werden');
@@ -43,21 +75,40 @@ export default function RecipesScreen({ navigation, route }: Props) {
   }, []);
 
   useEffect(() => {
-    loadRecipes().finally(() => setIsLoading(false));
-  }, [loadRecipes]);
+    loadAll().finally(() => setIsLoading(false));
+  }, [loadAll]);
 
   useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', loadRecipes);
+    const unsubscribe = navigation.addListener('focus', loadAll);
     return unsubscribe;
-  }, [navigation, loadRecipes]);
+  }, [navigation, loadAll]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await loadRecipes();
+    await loadAll();
     setIsRefreshing(false);
   };
 
-  const visibleRecipes = filterTag ? recipes.filter((r) => r.tags?.includes(filterTag)) : recipes;
+  const handleCreateFolder = async () => {
+    const name = newFolderName.trim();
+    if (!name) return;
+    setIsSavingFolder(true);
+    try {
+      await api.post('/folders/', { name });
+      setNewFolderName('');
+      setIsCreatingFolder(false);
+      await loadAll();
+    } catch (err) {
+      Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Ordner konnte nicht angelegt werden');
+    } finally {
+      setIsSavingFolder(false);
+    }
+  };
+
+  let visibleRecipes = selectedFolderId ? recipes.filter((r) => r.folder_id === selectedFolderId) : recipes;
+  if (filterTag) {
+    visibleRecipes = visibleRecipes.filter((r) => r.tags?.includes(filterTag));
+  }
 
   if (isLoading) {
     return (
@@ -80,6 +131,40 @@ export default function RecipesScreen({ navigation, route }: Props) {
         </Pressable>
       )}
 
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.folderBar} contentContainerStyle={{ gap: 8 }}>
+        <Pressable
+          onPress={() => setSelectedFolderId(null)}
+          style={[
+            styles.folderChip,
+            { backgroundColor: selectedFolderId === null ? gradient[0] : colors.card, borderRadius: radius.sm },
+          ]}
+        >
+          <Text style={[styles.folderChipText, { color: selectedFolderId === null ? '#fff' : colors.text }]}>
+            Alle ({recipes.length})
+          </Text>
+        </Pressable>
+        {folders.map((folder) => {
+          const isSelected = selectedFolderId === folder.id;
+          return (
+            <Pressable
+              key={folder.id}
+              onPress={() => setSelectedFolderId(isSelected ? null : folder.id)}
+              style={[styles.folderChip, { backgroundColor: isSelected ? gradient[0] : colors.card, borderRadius: radius.sm }]}
+            >
+              <Text style={[styles.folderChipText, { color: isSelected ? '#fff' : colors.text }]}>
+                {folder.name} ({folder.recipe_count})
+              </Text>
+            </Pressable>
+          );
+        })}
+        <Pressable
+          onPress={() => setIsCreatingFolder(true)}
+          style={[styles.folderChip, styles.newFolderChip, { borderColor: colors.muted, borderRadius: radius.sm }]}
+        >
+          <MaterialCommunityIcons name="plus" size={15} color={colors.muted} />
+        </Pressable>
+      </ScrollView>
+
       <FlatList
         data={visibleRecipes}
         keyExtractor={(item) => item.id}
@@ -90,7 +175,9 @@ export default function RecipesScreen({ navigation, route }: Props) {
             <Text style={[styles.emptyText, { color: colors.muted }]}>
               {filterTag
                 ? `Keine Rezepte mit "${filterTag}" gefunden.`
-                : 'Noch keine Rezepte – leg dein erstes über den Button unten an.'}
+                : selectedFolderId
+                  ? 'Dieser Ordner ist noch leer.'
+                  : 'Noch keine Rezepte – leg dein erstes über den Button unten an.'}
             </Text>
           ) : null
         }
@@ -117,6 +204,35 @@ export default function RecipesScreen({ navigation, route }: Props) {
       <Pressable style={[styles.fab, { backgroundColor: gradient[0] }]} onPress={() => navigation.navigate('RecipeSourceMenu')}>
         <Text style={styles.fabIcon}>+</Text>
       </Pressable>
+
+      <Modal visible={isCreatingFolder} transparent animationType="fade" onRequestClose={() => setIsCreatingFolder(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: colors.bg, borderRadius: radius.lg }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Neuer Ordner</Text>
+            <TextInput
+              style={[styles.modalInput, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
+              placeholder="z.B. Grillrezepte"
+              placeholderTextColor={colors.muted}
+              value={newFolderName}
+              onChangeText={setNewFolderName}
+              autoFocus
+              onSubmitEditing={handleCreateFolder}
+            />
+            <View style={styles.modalButtonRow}>
+              <Pressable onPress={() => { setIsCreatingFolder(false); setNewFolderName(''); }} style={styles.modalCancelButton}>
+                <Text style={[styles.modalCancelText, { color: colors.muted }]}>Abbrechen</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleCreateFolder}
+                disabled={isSavingFolder || !newFolderName.trim()}
+                style={[styles.modalSaveButton, { backgroundColor: gradient[0], borderRadius: radius.sm, opacity: isSavingFolder ? 0.7 : 1 }]}
+              >
+                {isSavingFolder ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.modalSaveText}>Anlegen</Text>}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -127,6 +243,10 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 12, marginBottom: 12 },
   filterPill: { alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 7, marginBottom: 12 },
   filterPillText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+  folderBar: { marginBottom: 14, maxHeight: 36 },
+  folderChip: { paddingHorizontal: 13, paddingVertical: 8, justifyContent: 'center' },
+  folderChipText: { fontSize: 12, fontWeight: '600' },
+  newFolderChip: { borderWidth: 1.3, paddingHorizontal: 10 },
   emptyText: { fontSize: 13, textAlign: 'center', marginTop: 40, lineHeight: 20 },
   recipeRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 10, marginBottom: 9 },
   thumbnail: { width: 46, height: 46 },
@@ -145,4 +265,13 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   fabIcon: { color: '#fff', fontSize: 26, fontWeight: '300', marginTop: -2 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 30 },
+  modalCard: { padding: 20 },
+  modalTitle: { fontSize: 16, fontWeight: '700', marginBottom: 14 },
+  modalInput: { height: 44, paddingHorizontal: 14, fontSize: 13.5, marginBottom: 16 },
+  modalButtonRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 16, alignItems: 'center' },
+  modalCancelButton: { paddingVertical: 8, paddingHorizontal: 4 },
+  modalCancelText: { fontSize: 13, fontWeight: '600' },
+  modalSaveButton: { paddingHorizontal: 18, paddingVertical: 10, minWidth: 80, alignItems: 'center' },
+  modalSaveText: { color: '#fff', fontSize: 13, fontWeight: '700' },
 });
