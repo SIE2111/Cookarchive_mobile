@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { api, ApiError } from '../api/client';
@@ -27,11 +27,19 @@ interface ImportedRecipe {
   origin_url: string;
 }
 
-export default function WebImportScreen({ navigation }: Props) {
+export default function WebImportScreen({ navigation, route }: Props) {
   const { colors, gradient, radius } = useTheme();
   const [url, setUrl] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [originUrl, setOriginUrl] = useState<string | null>(null);
+
+  // Vom WebBrowseScreen uebernommener Link - kommt als Navigations-Param
+  // zurueck, wenn der Nutzer dort "Diesen Link uebernehmen" tippt.
+  useEffect(() => {
+    if (route.params?.pickedUrl) {
+      setUrl(route.params.pickedUrl);
+    }
+  }, [route.params?.pickedUrl]);
 
   // Nach dem Import editierbar, genau wie bei "Selbst erstellen" - das
   // Backend legt bewusst noch KEIN Rezept an, das passiert erst hier beim
@@ -124,16 +132,28 @@ export default function WebImportScreen({ navigation }: Props) {
           <Text style={{ fontWeight: '700' }}>komplett neu in eigenen Worten formuliert</Text> (Urheberrecht) - nicht
           einfach kopiert.
         </Text>
-        <TextInput
-          style={[styles.urlInput, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-          placeholder="https://…"
-          placeholderTextColor={colors.muted}
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="url"
-          value={url}
-          onChangeText={setUrl}
-        />
+        <View style={styles.urlRow}>
+          <TextInput
+            style={[styles.urlInput, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md, flex: 1 }]}
+            placeholder="https://…"
+            placeholderTextColor={colors.muted}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="url"
+            value={url}
+            onChangeText={setUrl}
+          />
+          <Pressable
+            onPress={() => navigation.navigate('WebBrowse', { initialQuery: url || 'rezept' })}
+            style={[styles.searchButton, { backgroundColor: colors.card, borderRadius: radius.md }]}
+          >
+            <Text style={{ fontSize: 18 }}>🔍</Text>
+          </Pressable>
+        </View>
+        <Text style={[styles.orHint, { color: colors.muted }]}>
+          Kein Link zur Hand? Über die Lupe direkt in der App danach suchen.
+        </Text>
+
         <Pressable
           onPress={handleImport}
           disabled={isImporting}
@@ -217,7 +237,10 @@ const styles = StyleSheet.create({
   introContainer: { flex: 1, padding: 22, justifyContent: 'center' },
   introTitle: { fontSize: 20, fontWeight: '700', marginBottom: 10 },
   introText: { fontSize: 13, lineHeight: 19, marginBottom: 22 },
-  urlInput: { height: 46, paddingHorizontal: 14, fontSize: 13.5, marginBottom: 14 },
+  urlRow: { flexDirection: 'row', gap: 8, marginBottom: 6 },
+  urlInput: { height: 46, paddingHorizontal: 14, fontSize: 13.5 },
+  searchButton: { width: 46, height: 46, alignItems: 'center', justifyContent: 'center' },
+  orHint: { fontSize: 10.5, marginBottom: 14, fontStyle: 'italic' },
   importButton: { height: 48, alignItems: 'center', justifyContent: 'center' },
   importButtonText: { color: '#fff', fontWeight: '600', fontSize: 14.5 },
   container: { padding: 18, paddingBottom: 60 },

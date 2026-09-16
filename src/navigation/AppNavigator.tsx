@@ -16,6 +16,7 @@ import RecipeDetailScreen from '../screens/RecipeDetailScreen';
 import RecipeSourceMenuScreen from '../screens/RecipeSourceMenuScreen';
 import ManualRecipeScreen from '../screens/ManualRecipeScreen';
 import WebImportScreen from '../screens/WebImportScreen';
+import WebBrowseScreen from '../screens/WebBrowseScreen';
 import AIGenerateScreen from '../screens/AIGenerateScreen';
 import CookModeScreen from '../screens/CookModeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
@@ -52,7 +53,8 @@ export type MainStackParamList = {
   RecipeDetail: { recipeId: string; title: string };
   RecipeSourceMenu: undefined;
   ManualRecipe: undefined;
-  WebImport: undefined;
+  WebImport: { pickedUrl?: string } | undefined;
+  WebBrowse: { initialQuery?: string } | undefined;
   AIGenerate: undefined;
   CookMode: { recipeIds: string[] };
   CommunityPool: undefined;
@@ -172,6 +174,11 @@ function MainNavigator() {
         name="WebImport"
         component={WebImportScreen}
         options={{ title: 'Aus dem Internet' }}
+      />
+      <MainStack.Screen
+        name="WebBrowse"
+        component={WebBrowseScreen}
+        options={{ title: 'Rezept suchen' }}
       />
       <MainStack.Screen
         name="AIGenerate"
