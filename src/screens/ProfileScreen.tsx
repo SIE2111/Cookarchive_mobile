@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Switch, Pressable, StyleSheet, ActivityIndicator, Alert, ScrollView } from 'react-native';
-import { useTheme } from '../theme/ThemeContext';
+import { useTheme, type BackgroundStyle } from '../theme/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { api, ApiError } from '../api/client';
 import type { CompositeScreenProps } from '@react-navigation/native';
@@ -14,6 +14,7 @@ type Props = CompositeScreenProps<
 >;
 
 type StorageMode = 'lokal' | 'nas' | 'eigene_cloud' | 'drittanbieter_cloud';
+type HaubenLevel = 'anfaenger' | 'fortgeschritten' | 'profi';
 
 interface Preferences {
   show_brutzel: boolean;
@@ -21,6 +22,7 @@ interface Preferences {
   auto_read_steps: boolean;
   server_sync_enabled: boolean;
   storage_mode: StorageMode;
+  default_hauben_level: HaubenLevel;
 }
 
 type PreferenceKey = 'show_brutzel' | 'large_text' | 'auto_read_steps' | 'server_sync_enabled';
@@ -30,6 +32,18 @@ const STORAGE_OPTIONS: { key: StorageMode; title: string; subtitle: string }[] =
   { key: 'nas', title: 'NAS', subtitle: 'Deine Rezepte, deine Daten – keine Cloud-Anbindung, nur für die Anmeldung wird unser Server kontaktiert' },
   { key: 'eigene_cloud', title: 'Eigene Cloud', subtitle: 'Unsere Server-Infrastruktur (EU)' },
   { key: 'drittanbieter_cloud', title: 'Drittanbieter-Cloud', subtitle: 'Google Drive, OneDrive, Dropbox' },
+];
+
+const HAUBEN_OPTIONS: { key: HaubenLevel; title: string; hats: number }[] = [
+  { key: 'anfaenger', title: 'Anfänger', hats: 1 },
+  { key: 'fortgeschritten', title: 'Fortgeschritten', hats: 2 },
+  { key: 'profi', title: 'Profi', hats: 3 },
+];
+
+const BACKGROUND_OPTIONS: { key: BackgroundStyle; title: string }[] = [
+  { key: 'warm-hell', title: 'Hell (warm)' },
+  { key: 'kuehl-hell', title: 'Hell (kühl)' },
+  { key: 'dunkel', title: 'Dunkel' },
 ];
 
 const ROWS: { key: PreferenceKey; title: string; subtitle: string; lockedWhen?: (p: Preferences) => boolean }[] = [
@@ -44,11 +58,11 @@ const ROWS: { key: PreferenceKey; title: string; subtitle: string; lockedWhen?: 
 ];
 
 export default function ProfileScreen({ navigation }: Props) {
-  const { colors, gradient, radius } = useTheme();
+  const { colors, gradient, radius, theme, setTheme } = useTheme();
   const { signOut } = useAuth();
   const [prefs, setPrefs] = useState<Preferences | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [savingKey, setSavingKey] = useState<PreferenceKey | 'storage_mode' | null>(null);
+  const [savingKey, setSavingKey] = useState<PreferenceKey | 'storage_mode' | 'default_hauben_level' | null>(null);
 
   useEffect(() => {
     api
@@ -80,6 +94,22 @@ export default function ProfileScreen({ navigation }: Props) {
     setSavingKey('storage_mode');
     try {
       const updated = await api.patch<Preferences>('/preferences/', { storage_mode: mode });
+      setPrefs(updated);
+    } catch (err) {
+      setPrefs(previous);
+      Alert.alert('Konnte nicht gespeichert werden', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+    } finally {
+      setSavingKey(null);
+    }
+  };
+
+  const handleHaubenLevelSelect = async (level: HaubenLevel) => {
+    if (!prefs || prefs.default_hauben_level === level) return;
+    const previous = prefs;
+    setPrefs({ ...prefs, default_hauben_level: level });
+    setSavingKey('default_hauben_level');
+    try {
+      const updated = await api.patch<Preferences>('/preferences/', { default_hauben_level: level });
       setPrefs(updated);
     } catch (err) {
       setPrefs(previous);
@@ -139,6 +169,60 @@ export default function ProfileScreen({ navigation }: Props) {
           </Pressable>
         );
       })}
+
+      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 20 }]}>STANDARD-STUFE IM KOCH-MODUS</Text>
+      <View style={styles.chipsRow}>
+        {HAUBEN_OPTIONS.map((option) => {
+          const isSelected = prefs.default_hauben_level === option.key;
+          return (
+            <Pressable
+              key={option.key}
+              onPress={() => handleHaubenLevelSelect(option.key)}
+              style={[
+                styles.chip,
+                { backgroundColor: isSelected ? gradient[0] : colors.card, borderRadius: radius.sm },
+              ]}
+            >
+              {savingKey === 'default_hauben_level' && isSelected ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <>
+                  {Array.from({ length: option.hats }).map((_, i) => (
+                    <Text key={i} style={{ fontSize: 12 }}>👨‍🍳</Text>
+                  ))}
+                  <Text style={{ color: isSelected ? '#fff' : colors.text, fontSize: 12, fontWeight: '600', marginLeft: 4 }}>
+                    {option.title}
+                  </Text>
+                </>
+              )}
+            </Pressable>
+          );
+        })}
+      </View>
+      <Text style={[styles.hint, { color: colors.muted, marginBottom: 8 }]}>
+        Wird beim Start des Koch-Modus vorausgewählt, kannst du dort jederzeit ändern.
+      </Text>
+
+      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 12 }]}>DARSTELLUNG (HELL/DUNKEL)</Text>
+      <View style={styles.chipsRow}>
+        {BACKGROUND_OPTIONS.map((option) => {
+          const isSelected = theme.background === option.key;
+          return (
+            <Pressable
+              key={option.key}
+              onPress={() => setTheme({ background: option.key })}
+              style={[
+                styles.chip,
+                { backgroundColor: isSelected ? gradient[0] : colors.card, borderRadius: radius.sm },
+              ]}
+            >
+              <Text style={{ color: isSelected ? '#fff' : colors.text, fontSize: 12, fontWeight: '600' }}>
+                {option.title}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
 
       <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 20 }]}>DARSTELLUNG &amp; BEDIENUNG</Text>
 
@@ -205,6 +289,8 @@ const styles = StyleSheet.create({
   container: { padding: 18, paddingBottom: 40 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   sectionLabel: { fontSize: 10.5, fontWeight: '700', letterSpacing: 0.5, marginBottom: 10 },
+  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
+  chip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 9 },
   row: { flexDirection: 'row', alignItems: 'center', padding: 14, marginBottom: 8 },
   rowTitle: { fontSize: 13.5, fontWeight: '600' },
   rowSubtitle: { fontSize: 10.5, marginTop: 2 },

@@ -71,11 +71,15 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
 
   useEffect(() => {
     api
-      .get<{ auto_read_steps: boolean }>('/preferences/')
-      .then((prefs) => setAutoReadSteps(prefs.auto_read_steps))
+      .get<{ auto_read_steps: boolean; default_hauben_level: HaubenLevel }>('/preferences/')
+      .then((prefs) => {
+        setAutoReadSteps(prefs.auto_read_steps);
+        setLevel(prefs.default_hauben_level);
+      })
       .catch(() => {
-        // Praeferenz konnte nicht geladen werden - Auto-Vorlesen bleibt
-        // einfach aus, kein Grund den ganzen Koch-Modus zu blockieren
+        // Praeferenz konnte nicht geladen werden - Auto-Vorlesen bleibt aus,
+        // Hauben-Stufe bleibt beim Fallback 'fortgeschritten', kein Grund
+        // den ganzen Koch-Modus zu blockieren
       });
   }, []);
 
