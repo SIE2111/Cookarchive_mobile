@@ -92,7 +92,7 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
       return;
     }
     const pickerResult = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       quality: 0.8,
     });
     if (!pickerResult.canceled && pickerResult.assets[0]) {
