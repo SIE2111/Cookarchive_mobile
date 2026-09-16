@@ -21,8 +21,10 @@
         "NSCameraUsageDescription": "Mein Kochbuch braucht Kamerazugriff, um Kochbuchseiten oder Rezeptzettel zu fotografieren und automatisch zu erfassen.",
         "NSPhotoLibraryUsageDescription": "Mein Kochbuch braucht Zugriff auf deine Fotos, um Rezeptbilder auszuwählen oder Kochbuchseiten aus der Galerie zu erfassen.",
         "UIBackgroundModes": [
+          "audio",
           "audio"
-        ]
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
