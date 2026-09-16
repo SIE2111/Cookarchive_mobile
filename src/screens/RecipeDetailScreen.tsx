@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Pressable, Image } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Pressable, Image, Alert } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { api, ApiError } from '../api/client';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -55,6 +55,32 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
     return unsubscribe;
   }, [recipeId, navigation]);
 
+  const goToSideDish = () => navigation.navigate('SideDishSuggestion', { recipeId: recipeId });
+
+  const handleStartCooking = () => {
+    Alert.alert(
+      'Zutaten übernehmen?',
+      'Sollen die Zutaten dieses Rezepts in die Einkaufsliste übernommen werden?',
+      [
+        { text: 'Nein, direkt kochen', style: 'cancel', onPress: goToSideDish },
+        {
+          text: 'Ja, übernehmen',
+          onPress: async () => {
+            try {
+              await api.post('/shopping-list/add-recipe', { recipe_id: recipeId });
+            } catch (err) {
+              // Einkaufsliste ist ein Zusatznutzen - ein Fehler dabei soll
+              // das eigentliche Kochen nicht blockieren, nur sichtbar melden
+              Alert.alert('Hinweis', err instanceof ApiError ? err.detail : 'Zutaten konnten nicht zur Einkaufsliste hinzugefügt werden.');
+            } finally {
+              goToSideDish();
+            }
+          },
+        },
+      ],
+    );
+  };
+
   if (error) {
     return (
       <View style={[styles.centered, { backgroundColor: colors.bg }]}>
@@ -88,7 +114,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
       </View>
 
       <Pressable
-        onPress={() => navigation.navigate('SideDishSuggestion', { recipeId: recipe.id })}
+        onPress={handleStartCooking}
         style={[styles.cookButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}
       >
         <Text style={styles.cookButtonText}>Zubereitung starten</Text>
