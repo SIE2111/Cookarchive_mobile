@@ -19,6 +19,7 @@ import ManualRecipeScreen from '../screens/ManualRecipeScreen';
 import WebImportScreen from '../screens/WebImportScreen';
 import WebBrowseScreen from '../screens/WebBrowseScreen';
 import AIGenerateScreen from '../screens/AIGenerateScreen';
+import WeeklyPlanScreen from '../screens/WeeklyPlanScreen';
 import CookModeScreen from '../screens/CookModeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import CommunityPoolScreen from '../screens/CommunityPoolScreen';
@@ -57,6 +58,7 @@ export type MainStackParamList = {
   WebImport: { pickedUrl?: string } | undefined;
   WebBrowse: { initialQuery?: string } | undefined;
   AIGenerate: undefined;
+  WeeklyPlan: undefined;
   CookMode: { recipeIds: string[] };
   CommunityPool: undefined;
   Household: undefined;
@@ -194,6 +196,11 @@ function MainNavigator() {
         name="AIGenerate"
         component={AIGenerateScreen}
         options={{ title: 'KI-Rezept' }}
+      />
+      <MainStack.Screen
+        name="WeeklyPlan"
+        component={WeeklyPlanScreen}
+        options={{ title: 'Wochenplan' }}
       />
       <MainStack.Screen
         name="CookMode"

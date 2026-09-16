@@ -174,9 +174,7 @@ export default function DashboardScreen({ navigation }: Props) {
           <Text style={styles.actionText}>Einkaufszettel</Text>
         </Pressable>
         <Pressable
-          onPress={() =>
-            Alert.alert('Bald verfügbar', 'Der Wochenplaner ist noch in Arbeit und kommt in einem späteren Update.')
-          }
+          onPress={() => navigation.navigate('WeeklyPlan')}
           style={[styles.actionButton, { backgroundColor: colors.card, borderRadius: radius.md }]}
         >
           <MaterialCommunityIcons name="calendar-week-outline" size={18} color={colors.text} />
