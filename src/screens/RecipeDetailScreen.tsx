@@ -28,7 +28,17 @@ interface RecipeDetail {
   steps: Step[];
   personal_note: string | null;
   cover_image_url: string | null;
+  source_type: string;
 }
+
+const SOURCE_LABELS: Record<string, string> = {
+  manual: '✍️ Selbst erstellt',
+  web_import: '🌐 Aus dem Web importiert',
+  ai_generated: '🤖 KI-generiert',
+  photo_scan: '📷 Per Foto erfasst',
+  starter_pack: '⭐ Starter-Paket',
+  pool_fork: '👥 Aus dem Community-Pool',
+};
 
 export default function RecipeDetailScreen({ route, navigation }: Props) {
   const { colors, gradient, radius } = useTheme();
@@ -141,6 +151,10 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
         </View>
       </View>
 
+      <Text style={[styles.sourceHint, { color: colors.muted }]}>
+        {SOURCE_LABELS[recipe.source_type] ?? recipe.source_type}
+      </Text>
+
       <Pressable
         onPress={handleStartCooking}
         style={[styles.cookButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}
@@ -182,6 +196,7 @@ const styles = StyleSheet.create({
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4, marginBottom: 20 },
   meta: { fontSize: 12 },
   editLink: { fontSize: 12.5, fontWeight: '700' },
+  sourceHint: { fontSize: 10.5, marginTop: -12, marginBottom: 18 },
   cookButton: { height: 46, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
   cookButtonText: { color: '#fff', fontWeight: '700', fontSize: 14 },
   sectionTitle: { fontSize: 13, fontWeight: '700', marginTop: 8, marginBottom: 10 },

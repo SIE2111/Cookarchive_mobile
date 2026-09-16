@@ -177,6 +177,7 @@ export default function AIGenerateScreen({ navigation }: Props) {
         steps: cleanSteps,
         tags: result?.tags ?? undefined,
         cover_image_url: coverImageUrl,
+        source_type: 'ai_generated',
       });
       navigation.navigate('MainTabs');
     } catch (err) {

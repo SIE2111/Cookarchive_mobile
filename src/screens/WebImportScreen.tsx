@@ -156,6 +156,7 @@ export default function WebImportScreen({ navigation, route }: Props) {
         ingredients: cleanIngredients,
         steps: cleanSteps,
         cover_image_url: coverImageUrl,
+        source_type: 'web_import',
       });
       navigation.navigate('MainTabs');
     } catch (err) {

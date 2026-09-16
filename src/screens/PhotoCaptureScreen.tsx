@@ -163,7 +163,7 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
         }
       }
 
-      await api.post('/recipes/', { title: title.trim(), ingredients, steps, cover_image_url: coverImageUrl, folder_id: selectedFolderId });
+      await api.post('/recipes/', { title: title.trim(), ingredients, steps, cover_image_url: coverImageUrl, folder_id: selectedFolderId, source_type: 'photo_scan' });
       navigation.navigate('MainTabs');
     } catch (err) {
       Alert.alert('Speichern fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');

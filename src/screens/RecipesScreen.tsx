@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -33,7 +33,17 @@ interface RecipeSummary {
   updated_at: string;
   cover_image_url: string | null;
   folder_id: string | null;
+  source_type: string;
 }
+
+const SOURCE_ICONS: Record<string, keyof typeof MaterialCommunityIcons.glyphMap> = {
+  manual: 'pencil-outline',
+  web_import: 'web',
+  ai_generated: 'robot-outline',
+  photo_scan: 'camera-outline',
+  starter_pack: 'star-outline',
+  pool_fork: 'account-group-outline',
+};
 
 interface FolderSummary {
   id: string;
@@ -54,6 +64,7 @@ export default function RecipesScreen({ navigation, route }: Props) {
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [isSavingFolder, setIsSavingFolder] = useState(false);
+  const [searchText, setSearchText] = useState('');
 
   // Optionaler Tag-Filter, den das Dashboard beim Antippen einer Kategorie
   // mitgibt (siehe DashboardScreen) - rein clientseitig gefiltert, da das
@@ -62,8 +73,11 @@ export default function RecipesScreen({ navigation, route }: Props) {
 
   const loadAll = useCallback(async () => {
     try {
+      const recipesUrl = searchText.trim()
+        ? `/recipes/?q=${encodeURIComponent(searchText.trim())}`
+        : '/recipes/';
       const [recipeData, folderData] = await Promise.all([
-        api.get<RecipeSummary[]>('/recipes/'),
+        api.get<RecipeSummary[]>(recipesUrl),
         api.get<FolderSummary[]>('/folders/'),
       ]);
       setRecipes(recipeData);
@@ -72,14 +86,25 @@ export default function RecipesScreen({ navigation, route }: Props) {
     } catch (err) {
       setError(err instanceof ApiError ? err.detail : 'Rezepte konnten nicht geladen werden');
     }
-  }, []);
+  }, [searchText]);
+
+  const isFirstLoad = useRef(true);
 
   useEffect(() => {
-    loadAll().finally(() => setIsLoading(false));
+    if (isFirstLoad.current) {
+      isFirstLoad.current = false;
+      loadAll().finally(() => setIsLoading(false));
+      return;
+    }
+    // Nur Suchänderungen entprellen - der Erstaufruf oben laeuft sofort
+    const timer = setTimeout(() => {
+      loadAll();
+    }, 350);
+    return () => clearTimeout(timer);
   }, [loadAll]);
 
   useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', loadAll);
+    const unsubscribe = navigation.addListener('focus', () => loadAll());
     return unsubscribe;
   }, [navigation, loadAll]);
 
@@ -120,6 +145,23 @@ export default function RecipesScreen({ navigation, route }: Props) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
+      <View style={[styles.searchBar, { backgroundColor: colors.card, borderRadius: radius.md }]}>
+        <MaterialCommunityIcons name="magnify" size={17} color={colors.muted} />
+        <TextInput
+          style={[styles.searchInput, { color: colors.text }]}
+          placeholder="Rezept oder Zutat suchen…"
+          placeholderTextColor={colors.muted}
+          value={searchText}
+          onChangeText={setSearchText}
+          autoCapitalize="none"
+        />
+        {searchText.length > 0 && (
+          <Pressable onPress={() => setSearchText('')} hitSlop={8}>
+            <MaterialCommunityIcons name="close-circle" size={16} color={colors.muted} />
+          </Pressable>
+        )}
+      </View>
+
       {error && <Text style={[styles.errorText, { color: '#DC2626' }]}>{error}</Text>}
 
       {filterTag && (
@@ -173,11 +215,13 @@ export default function RecipesScreen({ navigation, route }: Props) {
         ListEmptyComponent={
           !error ? (
             <Text style={[styles.emptyText, { color: colors.muted }]}>
-              {filterTag
-                ? `Keine Rezepte mit "${filterTag}" gefunden.`
-                : selectedFolderId
-                  ? 'Dieser Ordner ist noch leer.'
-                  : 'Noch keine Rezepte – leg dein erstes über den Button unten an.'}
+              {searchText.trim()
+                ? `Keine Treffer für "${searchText.trim()}".`
+                : filterTag
+                  ? `Keine Rezepte mit "${filterTag}" gefunden.`
+                  : selectedFolderId
+                    ? 'Dieser Ordner ist noch leer.'
+                    : 'Noch keine Rezepte – leg dein erstes über den Button unten an.'}
             </Text>
           ) : null
         }
@@ -192,7 +236,14 @@ export default function RecipesScreen({ navigation, route }: Props) {
               <View style={[styles.thumbnailPlaceholder, { borderRadius: radius.sm, backgroundColor: colors.bg }]} />
             )}
             <View style={{ flex: 1 }}>
-              <Text style={[styles.recipeTitle, { color: colors.text }]}>{item.title}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <Text style={[styles.recipeTitle, { color: colors.text }]} numberOfLines={1}>{item.title}</Text>
+                <MaterialCommunityIcons
+                  name={SOURCE_ICONS[item.source_type] ?? 'file-outline'}
+                  size={12}
+                  color={colors.muted}
+                />
+              </View>
               {item.tags && item.tags.length > 0 && (
                 <Text style={[styles.recipeTags, { color: colors.muted }]}>{item.tags.join(' · ')}</Text>
               )}
@@ -239,6 +290,8 @@ export default function RecipesScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: 18, paddingTop: 16 },
+  searchBar: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, height: 42, marginBottom: 12 },
+  searchInput: { flex: 1, fontSize: 13.5 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   errorText: { fontSize: 12, marginBottom: 12 },
   filterPill: { alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 7, marginBottom: 12 },
@@ -251,7 +304,7 @@ const styles = StyleSheet.create({
   recipeRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 10, marginBottom: 9 },
   thumbnail: { width: 46, height: 46 },
   thumbnailPlaceholder: { width: 46, height: 46 },
-  recipeTitle: { fontSize: 14, fontWeight: '700' },
+  recipeTitle: { fontSize: 14, fontWeight: '700', flexShrink: 1 },
   recipeTags: { fontSize: 11, marginTop: 3 },
   fab: {
     position: 'absolute',

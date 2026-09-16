@@ -218,7 +218,9 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
       if (editingRecipeId) {
         await api.patch(`/recipes/${editingRecipeId}`, payload);
       } else {
-        await api.post('/recipes/', payload);
+        // source_type nur beim ERSTELLEN mitschicken - beim Bearbeiten
+        // bleibt die urspruengliche Herkunft unangetastet.
+        await api.post('/recipes/', { ...payload, source_type: 'manual' });
       }
 
       // Best-effort: alle verwendeten Zutatennamen in die Werteliste
