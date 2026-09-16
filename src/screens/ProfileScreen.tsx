@@ -57,14 +57,29 @@ const ROWS: { key: PreferenceKey; title: string; subtitle: string; lockedWhen?: 
   },
 ];
 
+const CLOUD_PROVIDERS: { key: string; apiPrefix: string; title: string }[] = [
+  { key: 'google_drive', apiPrefix: '/google-auth', title: 'Google Drive' },
+  { key: 'onedrive', apiPrefix: '/onedrive-auth', title: 'OneDrive' },
+  { key: 'dropbox', apiPrefix: '/dropbox-auth', title: 'Dropbox' },
+];
+
+interface ProviderStatus {
+  configured: boolean;
+  connected: boolean;
+  provider: string | null;
+}
+
 export default function ProfileScreen({ navigation }: Props) {
   const { colors, gradient, radius, theme, setTheme } = useTheme();
   const { signOut } = useAuth();
   const [prefs, setPrefs] = useState<Preferences | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [savingKey, setSavingKey] = useState<PreferenceKey | 'storage_mode' | 'default_hauben_level' | null>(null);
-  const [driveStatus, setDriveStatus] = useState<{ configured: boolean; connected: boolean; provider: string | null } | null>(null);
-  const [isConnectingDrive, setIsConnectingDrive] = useState(false);
+  // Nur EIN Anbieter kann gleichzeitig aktiv sein (Backend garantiert das
+  // beim Verbinden, siehe google_auth.py) - ein einzelner Status genuegt,
+  // 'provider' darin sagt, welcher der drei es gerade ist.
+  const [activeProviderStatus, setActiveProviderStatus] = useState<ProviderStatus | null>(null);
+  const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
 
   useEffect(() => {
     api
@@ -74,42 +89,44 @@ export default function ProfileScreen({ navigation }: Props) {
   }, []);
 
   const loadDriveStatus = () => {
+    // Irgendeinen der drei Status-Endpunkte abfragen reicht - alle drei
+    // liefern dasselbe 'provider'-Feld (welcher Anbieter gerade aktiv ist).
     api
-      .get<{ configured: boolean; connected: boolean; provider: string | null }>('/google-auth/status')
-      .then(setDriveStatus)
+      .get<ProviderStatus>('/google-auth/status')
+      .then(setActiveProviderStatus)
       .catch(() => {
-        // Status konnte nicht geladen werden - Verbinden-Button bleibt dann
-        // einfach ausgeblendet, kein Grund den restlichen Screen zu blockieren
+        // Status konnte nicht geladen werden - Verbinden-Buttons bleiben
+        // dann einfach ausgeblendet, kein Grund den restlichen Screen zu blockieren
       });
   };
 
   useEffect(() => {
     loadDriveStatus();
-    // Bei Rueckkehr aus dem System-Browser (nach Google-Anmeldung) ist die
-    // App noch dieselbe Instanz, nur der Fokus wechselt zurueck - hier den
-    // Status neu abfragen, damit "Verbunden" ohne manuelles Neuladen erscheint.
+    // Bei Rueckkehr aus dem System-Browser (nach der Anbieter-Anmeldung) ist
+    // die App noch dieselbe Instanz, nur der Fokus wechselt zurueck - hier
+    // den Status neu abfragen, damit "Verbunden" ohne manuelles Neuladen erscheint.
     const unsubscribe = navigation.addListener('focus', loadDriveStatus);
     return unsubscribe;
   }, [navigation]);
 
-  const handleConnectGoogleDrive = async () => {
-    setIsConnectingDrive(true);
+  const handleConnectProvider = async (providerKey: string, apiPrefix: string) => {
+    setConnectingProvider(providerKey);
     try {
-      const { authorize_url } = await api.get<{ authorize_url: string }>('/google-auth/connect');
+      const { authorize_url } = await api.get<{ authorize_url: string }>(`${apiPrefix}/connect`);
       // BEWUSST der System-Browser (Linking.openURL), nicht unser eigener
-      // WebBrowseScreen: Google verbietet OAuth-Logins in eingebetteten
-      // WebViews aus Sicherheitsgruenden (Antwort waere "disallowed_useragent").
+      // WebBrowseScreen: alle drei Anbieter verbieten OAuth-Logins in
+      // eingebetteten WebViews aus Sicherheitsgruenden.
       await Linking.openURL(authorize_url);
     } catch (err) {
       Alert.alert('Verbinden fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
     } finally {
-      setIsConnectingDrive(false);
+      setConnectingProvider(null);
     }
   };
 
-  const handleDisconnectGoogleDrive = async () => {
+  const handleDisconnectProvider = async (apiPrefix: string) => {
     try {
-      await api.post('/google-auth/disconnect');
+      await api.post(`${apiPrefix}/disconnect`);
       loadDriveStatus();
     } catch (err) {
       Alert.alert('Trennen fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
@@ -217,18 +234,20 @@ export default function ProfileScreen({ navigation }: Props) {
 
       {prefs.storage_mode === 'drittanbieter_cloud' && (
         <View style={[styles.driveBox, { backgroundColor: colors.card, borderRadius: radius.md }]}>
-          {!driveStatus ? (
+          {!activeProviderStatus ? (
             <ActivityIndicator color={colors.muted} />
-          ) : !driveStatus.configured ? (
-            <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
-              Drittanbieter-Anbindung ist serverseitig noch nicht konfiguriert.
-            </Text>
-          ) : driveStatus.connected ? (
+          ) : activeProviderStatus.connected && activeProviderStatus.provider ? (
             <>
               <Text style={[styles.rowTitle, { color: colors.text }]}>
-                ✅ Google Drive verbunden
+                ✅ {CLOUD_PROVIDERS.find((p) => p.key === activeProviderStatus.provider)?.title ?? activeProviderStatus.provider} verbunden
               </Text>
-              <Pressable onPress={handleDisconnectGoogleDrive} style={{ marginTop: 10 }}>
+              <Pressable
+                onPress={() => {
+                  const p = CLOUD_PROVIDERS.find((p) => p.key === activeProviderStatus.provider);
+                  if (p) handleDisconnectProvider(p.apiPrefix);
+                }}
+                style={{ marginTop: 10 }}
+              >
                 <Text style={{ color: '#DC2626', fontSize: 12.5, fontWeight: '600' }}>Verbindung trennen</Text>
               </Pressable>
             </>
@@ -238,17 +257,23 @@ export default function ProfileScreen({ navigation }: Props) {
               <Text style={[styles.rowSubtitle, { color: colors.muted, marginBottom: 10 }]}>
                 Öffnet den Browser zur Anmeldung, danach zurück zur App wechseln.
               </Text>
-              <Pressable
-                onPress={handleConnectGoogleDrive}
-                disabled={isConnectingDrive}
-                style={[styles.connectButton, { backgroundColor: gradient[0], borderRadius: radius.sm, opacity: isConnectingDrive ? 0.7 : 1 }]}
-              >
-                {isConnectingDrive ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={styles.connectButtonText}>Mit Google Drive verbinden</Text>
-                )}
-              </Pressable>
+              {CLOUD_PROVIDERS.map((p) => (
+                <Pressable
+                  key={p.key}
+                  onPress={() => handleConnectProvider(p.key, p.apiPrefix)}
+                  disabled={connectingProvider !== null}
+                  style={[
+                    styles.connectButton,
+                    { backgroundColor: gradient[0], borderRadius: radius.sm, marginTop: 8, opacity: connectingProvider ? 0.7 : 1 },
+                  ]}
+                >
+                  {connectingProvider === p.key ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text style={styles.connectButtonText}>Mit {p.title} verbinden</Text>
+                  )}
+                </Pressable>
+              ))}
             </>
           )}
         </View>
