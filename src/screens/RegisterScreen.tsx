@@ -30,11 +30,13 @@ export default function RegisterScreen({ navigation }: Props) {
     }
     setIsSubmitting(true);
     try {
-      await signUpWithPassword(email, password);
-      // TODO: nach Bestaetigung des 4-stelligen Codes (Supabase-Dashboard-
-      // Einstellung, siehe Umsetzungskonzept 7b) folgt automatisch das
-      // Onboarding - noch zu verdrahten, sobald der Bestaetigungs-Screen
-      // als eigene Komponente steht.
+      const { needsEmailConfirmation } = await signUpWithPassword(email, password);
+      if (needsEmailConfirmation) {
+        navigation.navigate('ConfirmEmail', { email });
+      }
+      // Falls keine Bestaetigung noetig war, wechselt der AppNavigator
+      // automatisch zum Onboarding, sobald die Session gesetzt ist -
+      // hier ist dann nichts weiter zu tun.
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Registrierung fehlgeschlagen';
       Alert.alert('Registrierung fehlgeschlagen', message);

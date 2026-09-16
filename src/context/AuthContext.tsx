@@ -15,7 +15,8 @@ interface AuthContextValue {
   justRegistered: boolean;
   clearJustRegistered: () => void;
   signInWithPassword: (email: string, password: string) => Promise<void>;
-  signUpWithPassword: (email: string, password: string) => Promise<void>;
+  signUpWithPassword: (email: string, password: string) => Promise<{ needsEmailConfirmation: boolean }>;
+  resendConfirmationEmail: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -50,12 +51,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error) throw error;
       },
       signUpWithPassword: async (email, password) => {
-        const { error } = await supabase.auth.signUp({ email, password });
+        const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
-        // Markiert diese Session als "gerade neu registriert" - der
-        // AppNavigator entscheidet anhand dieses Flags, ob nach dem Login
-        // zuerst das Onboarding oder direkt die Startseite gezeigt wird.
-        setJustRegistered(true);
+        if (data.session) {
+          // Bestaetigung war nicht noetig (z.B. "Confirm email" deaktiviert,
+          // oder Nutzer wurde bereits vorher per Admin-API bestaetigt) -
+          // Session ist sofort da, normaler Weg zum Onboarding.
+          setJustRegistered(true);
+          return { needsEmailConfirmation: false };
+        }
+        // Kein Fehler, aber auch keine Session: Supabase hat den Nutzer
+        // angelegt und wartet auf Bestaetigung der E-Mail. Bisher blieb die
+        // App hier im Login/Register-Bereich haengen, ohne dass sichtbar
+        // war, woran es lag - deshalb jetzt explizit erkannt und an die
+        // aufrufende Stelle (RegisterScreen) zurueckgemeldet.
+        return { needsEmailConfirmation: true };
+      },
+      resendConfirmationEmail: async (email) => {
+        const { error } = await supabase.auth.resend({ type: 'signup', email });
+        if (error) throw error;
       },
       signOut: async () => {
         await supabase.auth.signOut();

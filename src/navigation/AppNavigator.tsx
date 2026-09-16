@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../theme/ThemeContext';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
+import ConfirmEmailScreen from '../screens/ConfirmEmailScreen';
 import StartScreen from '../screens/StartScreen';
 import RecipeDetailScreen from '../screens/RecipeDetailScreen';
 import RecipeSourceMenuScreen from '../screens/RecipeSourceMenuScreen';
@@ -21,6 +22,7 @@ import PhotoCaptureScreen from '../screens/PhotoCaptureScreen';
 export type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
+  ConfirmEmail: { email: string };
 };
 
 export type MainStackParamList = {
@@ -45,6 +47,7 @@ function AuthNavigator() {
     <AuthStack.Navigator screenOptions={{ headerShown: false }}>
       <AuthStack.Screen name="Login" component={LoginScreen} />
       <AuthStack.Screen name="Register" component={RegisterScreen} />
+      <AuthStack.Screen name="ConfirmEmail" component={ConfirmEmailScreen} />
     </AuthStack.Navigator>
   );
 }
