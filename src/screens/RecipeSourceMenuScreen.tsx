@@ -10,14 +10,14 @@ interface SourceOption {
   key: string;
   title: string;
   subtitle: string;
-  target: 'ManualRecipe' | 'CommunityPool' | 'PhotoCapture' | null;
+  target: 'ManualRecipe' | 'CommunityPool' | 'PhotoCapture' | 'WebImport' | null;
 }
 
 const OPTIONS: SourceOption[] = [
   { key: 'manual', title: 'Selbst erstellen', subtitle: 'Titel, Zutaten, Schritte eintragen', target: 'ManualRecipe' },
   { key: 'photo', title: 'Foto aufnehmen', subtitle: 'Kochbuchseite oder fertiges Gericht', target: 'PhotoCapture' },
   { key: 'ai', title: 'KI generieren', subtitle: 'Nach Zutaten, Diät oder Zeit', target: null },
-  { key: 'web', title: 'Aus dem Internet', subtitle: 'Link einfügen, KI formuliert neu', target: null },
+  { key: 'web', title: 'Aus dem Internet', subtitle: 'Link einfügen, KI formuliert neu', target: 'WebImport' },
   { key: 'pool', title: 'Community-Pool', subtitle: 'Rezept eines anderen übernehmen', target: 'CommunityPool' },
 ];
 

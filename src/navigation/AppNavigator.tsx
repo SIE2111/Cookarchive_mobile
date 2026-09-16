@@ -15,6 +15,7 @@ import ShoppingListScreen from '../screens/ShoppingListScreen';
 import RecipeDetailScreen from '../screens/RecipeDetailScreen';
 import RecipeSourceMenuScreen from '../screens/RecipeSourceMenuScreen';
 import ManualRecipeScreen from '../screens/ManualRecipeScreen';
+import WebImportScreen from '../screens/WebImportScreen';
 import CookModeScreen from '../screens/CookModeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import CommunityPoolScreen from '../screens/CommunityPoolScreen';
@@ -50,6 +51,7 @@ export type MainStackParamList = {
   RecipeDetail: { recipeId: string; title: string };
   RecipeSourceMenu: undefined;
   ManualRecipe: undefined;
+  WebImport: undefined;
   CookMode: { recipeIds: string[] };
   CommunityPool: undefined;
   Household: undefined;
@@ -163,6 +165,11 @@ function MainNavigator() {
         name="ManualRecipe"
         component={ManualRecipeScreen}
         options={{ title: 'Selbst erstellen' }}
+      />
+      <MainStack.Screen
+        name="WebImport"
+        component={WebImportScreen}
+        options={{ title: 'Aus dem Internet' }}
       />
       <MainStack.Screen
         name="CookMode"

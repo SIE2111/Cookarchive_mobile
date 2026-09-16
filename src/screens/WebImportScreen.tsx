@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, ActivityIndicator, Image } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
+import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { api, ApiError } from '../api/client';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/AppNavigator';
 
-type Props = NativeStackScreenProps<MainStackParamList, 'ManualRecipe'>;
+type Props = NativeStackScreenProps<MainStackParamList, 'WebImport'>;
 
 interface IngredientDraft {
   name: string;
@@ -18,29 +17,56 @@ interface StepDraft {
   text: string;
 }
 
-export default function ManualRecipeScreen({ navigation }: Props) {
-  const { colors, gradient, radius } = useTheme();
-  const [title, setTitle] = useState('');
-  const [ingredients, setIngredients] = useState<IngredientDraft[]>([{ name: '', amount: '', unit: '' }]);
-  const [steps, setSteps] = useState<StepDraft[]>([{ text: '' }]);
-  const [isSaving, setIsSaving] = useState(false);
-  const [localImageUri, setLocalImageUri] = useState<string | null>(null);
-  const [isUploadingImage, setIsUploadingImage] = useState(false);
+interface ImportedRecipe {
+  title: string;
+  servings: number | null;
+  prep_time_minutes: number | null;
+  ingredients: { name: string; amount: number | null; unit: string | null }[];
+  steps: { order: number; text: string }[];
+  tags: string[] | null;
+  origin_url: string;
+}
 
-  const handlePickImage = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Zugriff verweigert', 'Ohne Foto-Zugriff kann kein Bild ausgewählt werden.');
+export default function WebImportScreen({ navigation }: Props) {
+  const { colors, gradient, radius } = useTheme();
+  const [url, setUrl] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
+  const [originUrl, setOriginUrl] = useState<string | null>(null);
+
+  // Nach dem Import editierbar, genau wie bei "Selbst erstellen" - das
+  // Backend legt bewusst noch KEIN Rezept an, das passiert erst hier beim
+  // "Speichern" (siehe routers/web_import.py).
+  const [title, setTitle] = useState('');
+  const [ingredients, setIngredients] = useState<IngredientDraft[]>([]);
+  const [steps, setSteps] = useState<StepDraft[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleImport = async () => {
+    const trimmedUrl = url.trim();
+    if (!trimmedUrl) {
+      Alert.alert('Link fehlt', 'Bitte einen Link zu einem Rezept einfügen.');
       return;
     }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 0.7,
-      allowsEditing: true,
-      aspect: [4, 3],
-    });
-    if (!result.canceled && result.assets[0]) {
-      setLocalImageUri(result.assets[0].uri);
+    setIsImporting(true);
+    try {
+      const result = await api.post<ImportedRecipe>('/web-import/import-recipe', { url: trimmedUrl });
+      setTitle(result.title);
+      setIngredients(
+        result.ingredients.map((ing) => ({
+          name: ing.name,
+          amount: ing.amount != null ? String(ing.amount) : '',
+          unit: ing.unit ?? '',
+        })),
+      );
+      setSteps(result.steps.sort((a, b) => a.order - b.order).map((s) => ({ text: s.text })));
+      setOriginUrl(result.origin_url);
+    } catch (err) {
+      // Backend liefert bereits gut lesbare Fehlertexte (z.B. "Auf dieser
+      // Seite wurde kein Rezept erkannt.", Timeout, fehlender API-Key) -
+      // die werden hier 1:1 durchgereicht, kein eigener generischer Text.
+      Alert.alert('Import fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+    } finally {
+      setIsImporting(false);
     }
   };
 
@@ -75,32 +101,10 @@ export default function ManualRecipeScreen({ navigation }: Props) {
 
     setIsSaving(true);
     try {
-      let coverImageUrl: string | null = null;
-      if (localImageUri) {
-        setIsUploadingImage(true);
-        const fileName = localImageUri.split('/').pop() ?? 'foto.jpg';
-        const extension = fileName.split('.').pop()?.toLowerCase();
-        const mimeType = extension === 'png' ? 'image/png' : 'image/jpeg';
-        try {
-          const uploadResult = await api.uploadImage('/images/upload', localImageUri, fileName, mimeType);
-          coverImageUrl = uploadResult.url;
-        } catch (uploadErr) {
-          // Bild-Upload-Fehler soll das Speichern des Rezepts selbst nicht
-          // verhindern - Rezept wird dann eben ohne Bild angelegt
-          Alert.alert(
-            'Bild-Upload fehlgeschlagen',
-            `Das Rezept wird ohne Bild gespeichert. Fehler: ${uploadErr instanceof ApiError ? uploadErr.detail : 'Unbekannt'}`,
-          );
-        } finally {
-          setIsUploadingImage(false);
-        }
-      }
-
       await api.post('/recipes/', {
         title: title.trim(),
         ingredients: cleanIngredients,
         steps: cleanSteps,
-        cover_image_url: coverImageUrl,
       });
       navigation.navigate('MainTabs');
     } catch (err) {
@@ -110,21 +114,47 @@ export default function ManualRecipeScreen({ navigation }: Props) {
     }
   };
 
+  // Schritt 1: nur der Link, solange noch nichts importiert wurde
+  if (!originUrl) {
+    return (
+      <View style={[styles.introContainer, { backgroundColor: colors.bg }]}>
+        <Text style={[styles.introTitle, { color: colors.text }]}>Rezept aus dem Web</Text>
+        <Text style={[styles.introText, { color: colors.muted }]}>
+          Link zu einem Rezept auf einer beliebigen Webseite einfügen. Die Zubereitung wird dabei{' '}
+          <Text style={{ fontWeight: '700' }}>komplett neu in eigenen Worten formuliert</Text> (Urheberrecht) - nicht
+          einfach kopiert.
+        </Text>
+        <TextInput
+          style={[styles.urlInput, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
+          placeholder="https://…"
+          placeholderTextColor={colors.muted}
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="url"
+          value={url}
+          onChangeText={setUrl}
+        />
+        <Pressable
+          onPress={handleImport}
+          disabled={isImporting}
+          style={[styles.importButton, { backgroundColor: gradient[0], borderRadius: radius.md, opacity: isImporting ? 0.7 : 1 }]}
+        >
+          {isImporting ? <ActivityIndicator color="#fff" /> : <Text style={styles.importButtonText}>Rezept importieren</Text>}
+        </Pressable>
+      </View>
+    );
+  }
+
+  // Schritt 2: importiertes Ergebnis bearbeiten und speichern
   return (
     <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
-      <Pressable onPress={handlePickImage} style={[styles.imagePicker, { backgroundColor: colors.card, borderRadius: radius.md }]}>
-        {localImageUri ? (
-          <Image source={{ uri: localImageUri }} style={[styles.imagePreview, { borderRadius: radius.md }]} />
-        ) : (
-          <Text style={[styles.imagePickerText, { color: colors.muted }]}>📷 Foto hinzufügen</Text>
-        )}
-      </Pressable>
+      <Text style={[styles.sourceHint, { color: colors.muted }]} numberOfLines={1}>
+        Quelle: {originUrl}
+      </Text>
 
       <Text style={[styles.label, { color: colors.muted }]}>Rezeptname</Text>
       <TextInput
         style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-        placeholder="z.B. Zwiebelrostbraten"
-        placeholderTextColor={colors.muted}
         value={title}
         onChangeText={setTitle}
       />
@@ -166,8 +196,6 @@ export default function ManualRecipeScreen({ navigation }: Props) {
           <Text style={[styles.stepNumber, { color: colors.muted }]}>{i + 1}.</Text>
           <TextInput
             style={[styles.input, styles.stepInput, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-            placeholder="Was ist zu tun?"
-            placeholderTextColor={colors.muted}
             multiline
             value={step.text}
             onChangeText={(v) => updateStep(i, v)}
@@ -179,24 +207,21 @@ export default function ManualRecipeScreen({ navigation }: Props) {
       </Pressable>
 
       <Pressable onPress={handleSave} disabled={isSaving} style={[styles.saveButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}>
-        {isSaving ? (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <ActivityIndicator color="#fff" />
-            {isUploadingImage && <Text style={styles.saveButtonText}>Bild wird hochgeladen…</Text>}
-          </View>
-        ) : (
-          <Text style={styles.saveButtonText}>Rezept speichern</Text>
-        )}
+        {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveButtonText}>Rezept speichern</Text>}
       </Pressable>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  introContainer: { flex: 1, padding: 22, justifyContent: 'center' },
+  introTitle: { fontSize: 20, fontWeight: '700', marginBottom: 10 },
+  introText: { fontSize: 13, lineHeight: 19, marginBottom: 22 },
+  urlInput: { height: 46, paddingHorizontal: 14, fontSize: 13.5, marginBottom: 14 },
+  importButton: { height: 48, alignItems: 'center', justifyContent: 'center' },
+  importButtonText: { color: '#fff', fontWeight: '600', fontSize: 14.5 },
   container: { padding: 18, paddingBottom: 60 },
-  imagePicker: { height: 140, alignItems: 'center', justifyContent: 'center', marginBottom: 18, overflow: 'hidden' },
-  imagePickerText: { fontSize: 13, fontWeight: '500' },
-  imagePreview: { width: '100%', height: '100%' },
+  sourceHint: { fontSize: 10.5, marginBottom: 14 },
   label: { fontSize: 11, fontWeight: '500', marginBottom: 6 },
   input: { height: 44, paddingHorizontal: 12, fontSize: 13.5 },
   sectionTitle: { fontSize: 13, fontWeight: '700', marginTop: 20, marginBottom: 10 },
