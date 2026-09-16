@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, Modal, TextInput, Linking, Alert } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import * as Speech from 'expo-speech';
 import { useTheme } from '../theme/ThemeContext';
@@ -36,6 +36,13 @@ const BRUTZEL_TIPS: Record<string, string> = {
   koecheln_lassen: 'Nicht sprudelnd kochen lassen – nur leise Bläschen, sonst wird die Suppe trüb.',
 };
 
+interface TechniqueVideoInfo {
+  keyword: string;
+  title: string;
+  youtube_video_id: string | null;
+  available: boolean;
+}
+
 interface Props {
   recipeId: string;
   isActive: boolean; // steuert Sichtbarkeit, OHNE die Komponente zu unmounten -
@@ -56,6 +63,10 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
   const [isIngredientsOpen, setIsIngredientsOpen] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [autoReadSteps, setAutoReadSteps] = useState(false);
+  const [techniqueVideo, setTechniqueVideo] = useState<TechniqueVideoInfo | null>(null);
+  const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
+  const [noteDraft, setNoteDraft] = useState('');
+  const [isSavingNote, setIsSavingNote] = useState(false);
 
   useEffect(() => {
     api
@@ -143,11 +154,60 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
   const derivedSteps = recipe ? deriveStepsForLevel(recipe.steps, level) : [];
   const currentStep = derivedSteps[currentIndex];
 
+  // Technik-Video zum aktuellen Schritt laden, falls ein technique_tag
+  // gesetzt ist. Oeffentlicher Endpoint, kein Login-Overhead noetig.
+  useEffect(() => {
+    const tag = currentStep?.technique_tag;
+    if (!tag) {
+      setTechniqueVideo(null);
+      return;
+    }
+    let cancelled = false;
+    api
+      .get<TechniqueVideoInfo>(`/technique-videos/${tag}`)
+      .then((video) => {
+        if (!cancelled) setTechniqueVideo(video);
+      })
+      .catch(() => {
+        if (!cancelled) setTechniqueVideo(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentStep?.technique_tag]);
+
   // Beim Stufenwechsel auf Schritt 1 zurueckspringen - die Indizes bedeuten
   // je Stufe etwas anderes (unterschiedliche Gruppierung).
   const handleLevelChange = (newLevel: HaubenLevel) => {
     setLevel(newLevel);
     setCurrentIndex(0);
+  };
+
+  const handleOpenNoteModal = () => {
+    setNoteDraft(currentStep.user_note ?? '');
+    setIsNoteModalOpen(true);
+  };
+
+  const handleSaveNote = async () => {
+    if (!recipe) return;
+    setIsSavingNote(true);
+    try {
+      // Notizen werden IMMER auf die Original-Schrittliste geschrieben, nicht
+      // auf die fuer Fortgeschritten/Profi zusammengefasste Ansicht - dort
+      // wuerde "order" mehrere Original-Schritte gleichzeitig meinen, das
+      // Bearbeiten ist deshalb bewusst auf die Anfaenger-Stufe beschraenkt
+      // (siehe Button-Disabled-Zustand unten).
+      const updatedSteps = recipe.steps.map((s) =>
+        s.order === currentStep.order ? { ...s, user_note: noteDraft.trim() || null } : s,
+      );
+      await api.patch(`/recipes/${recipeId}`, { steps: updatedSteps });
+      setRecipe({ ...recipe, steps: updatedSteps });
+      setIsNoteModalOpen(false);
+    } catch (err) {
+      Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Notiz konnte nicht gespeichert werden');
+    } finally {
+      setIsSavingNote(false);
+    }
   };
 
   const handleStartTimer = async () => {
@@ -300,22 +360,42 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
         </View>
       )}
 
-      {currentStep.technique_tag && BRUTZEL_TIPS[currentStep.technique_tag] && (
+      {currentStep.technique_tag && (
         <View style={[styles.brutzelCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
           <BrutzelAvatar size={26} />
-          <Text style={[styles.brutzelText, { color: colors.muted }]}>
-            <Text style={{ fontWeight: '700', color: gradient[0] }}>Brutzel: </Text>
-            {BRUTZEL_TIPS[currentStep.technique_tag]}
-          </Text>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.brutzelText, { color: colors.muted }]}>
+              <Text style={{ fontWeight: '700', color: gradient[0] }}>Brutzel: </Text>
+              {BRUTZEL_TIPS[currentStep.technique_tag] ??
+                'Bei dieser Technik lohnt sich besondere Aufmerksamkeit – nimm dir kurz Zeit dafür.'}
+            </Text>
+            {techniqueVideo?.available && techniqueVideo.youtube_video_id && (
+              <Pressable
+                onPress={() => Linking.openURL(`https://www.youtube.com/watch?v=${techniqueVideo.youtube_video_id}`)}
+                style={styles.videoLink}
+              >
+                <MaterialCommunityIcons name="youtube" size={15} color="#DC2626" />
+                <Text style={[styles.videoLinkText, { color: gradient[0] }]}>Technik-Video ansehen</Text>
+              </Pressable>
+            )}
+          </View>
         </View>
       )}
 
-      {currentStep.user_note && (
-        <View style={styles.noteCard}>
-          <Text style={styles.noteLabel}>📌 Deine Notiz</Text>
+      {currentStep.user_note ? (
+        <Pressable
+          onPress={level === 'anfaenger' ? handleOpenNoteModal : undefined}
+          style={[styles.noteCard, { opacity: level === 'anfaenger' ? 1 : 0.85 }]}
+        >
+          <Text style={styles.noteLabel}>📌 Deine Notiz {level === 'anfaenger' ? '(antippen zum Bearbeiten)' : ''}</Text>
           <Text style={styles.noteText}>{currentStep.user_note}</Text>
-        </View>
-      )}
+        </Pressable>
+      ) : level === 'anfaenger' ? (
+        <Pressable onPress={handleOpenNoteModal} style={[styles.addNoteButton, { borderColor: colors.muted, borderRadius: radius.sm }]}>
+          <MaterialCommunityIcons name="note-plus-outline" size={14} color={colors.muted} />
+          <Text style={[styles.addNoteText, { color: colors.muted }]}>Notiz zu diesem Schritt hinzufügen</Text>
+        </Pressable>
+      ) : null}
 
       {remainingSeconds !== null && (
         <View style={[styles.timerCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
@@ -344,6 +424,35 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
           <Text style={styles.navButtonPrimaryText}>{isLastStep ? 'Fertig' : 'Weiter'}</Text>
         </Pressable>
       </View>
+
+      <Modal visible={isNoteModalOpen} transparent animationType="fade" onRequestClose={() => setIsNoteModalOpen(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: colors.bg, borderRadius: radius.lg }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Notiz zu diesem Schritt</Text>
+            <TextInput
+              style={[styles.modalInput, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
+              placeholder="z.B. Beim letzten Mal weniger Salz genommen"
+              placeholderTextColor={colors.muted}
+              value={noteDraft}
+              onChangeText={setNoteDraft}
+              multiline
+              autoFocus
+            />
+            <View style={styles.modalButtonRow}>
+              <Pressable onPress={() => setIsNoteModalOpen(false)} style={styles.modalCancelButton}>
+                <Text style={[styles.modalCancelText, { color: colors.muted }]}>Abbrechen</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleSaveNote}
+                disabled={isSavingNote}
+                style={[styles.modalSaveButton, { backgroundColor: gradient[0], borderRadius: radius.sm, opacity: isSavingNote ? 0.7 : 1 }]}
+              >
+                {isSavingNote ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.modalSaveText}>Speichern</Text>}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -366,9 +475,22 @@ const styles = StyleSheet.create({
   techniqueText: { fontSize: 11, textTransform: 'capitalize' },
   brutzelCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 9, padding: 10, marginBottom: 10 },
   brutzelText: { flex: 1, fontSize: 12, lineHeight: 17 },
+  videoLink: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 },
+  videoLinkText: { fontSize: 11.5, fontWeight: '700' },
   noteCard: { backgroundColor: '#FEF3C7', borderRadius: 12, padding: 10, marginBottom: 16 },
   noteLabel: { fontSize: 10.5, fontWeight: '600', color: '#92400E', marginBottom: 3 },
   noteText: { fontSize: 11.5, fontStyle: 'italic', color: '#78350F' },
+  addNoteButton: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderStyle: 'dashed', paddingVertical: 9, paddingHorizontal: 12, marginBottom: 16, alignSelf: 'flex-start' },
+  addNoteText: { fontSize: 11.5 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 30 },
+  modalCard: { padding: 20 },
+  modalTitle: { fontSize: 16, fontWeight: '700', marginBottom: 14 },
+  modalInput: { minHeight: 80, paddingHorizontal: 14, paddingVertical: 12, fontSize: 13.5, marginBottom: 16, textAlignVertical: 'top' },
+  modalButtonRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 16, alignItems: 'center' },
+  modalCancelButton: { paddingVertical: 8, paddingHorizontal: 4 },
+  modalCancelText: { fontSize: 13, fontWeight: '600' },
+  modalSaveButton: { paddingHorizontal: 18, paddingVertical: 10, minWidth: 80, alignItems: 'center' },
+  modalSaveText: { color: '#fff', fontSize: 13, fontWeight: '700' },
   timerCard: { padding: 20, alignItems: 'center', marginBottom: 20 },
   timerLabel: { fontSize: 10, fontWeight: '600', letterSpacing: 0.5, marginBottom: 6 },
   timerValue: { fontSize: 32, fontWeight: '700', marginBottom: 12 },
