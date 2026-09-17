@@ -3,6 +3,7 @@ import { View, Text, Switch, Pressable, StyleSheet, ActivityIndicator, Alert, Sc
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme, type BackgroundStyle, type AccentColor } from '../theme/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { useServerSync } from '../context/ServerSyncContext';
 import { api, ApiError } from '../api/client';
 import { useFocusEffect, type CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -78,6 +79,7 @@ const ROWS: { key: PreferenceKey; title: string; subtitle: string; lockedWhen?: 
 export default function ProfileScreen({ navigation }: Props) {
   const { colors, gradient, radius, theme, setTheme } = useTheme();
   const { signOut, session } = useAuth();
+  const { refresh: refreshServerSync } = useServerSync();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
@@ -111,6 +113,11 @@ export default function ProfileScreen({ navigation }: Props) {
     setSavingKey(key);
     try {
       const updated = await api.patch<Preferences>('/preferences/', { [key]: value });
+      if (key === 'server_sync_enabled') {
+        // Die Pool-Knoepfe in den Listen haengen an diesem Wert - ohne
+        // Auffrischen blieben sie bis zum naechsten App-Start ausgegraut.
+        refreshServerSync();
+      }
       setPrefs(updated);
     } catch (err) {
       setPrefs(previous);

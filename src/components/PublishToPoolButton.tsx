@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
 import { api, ApiError } from '../api/client';
+import { useServerSync } from '../context/ServerSyncContext';
 
 /**
  * Kleiner Knopf "ins Gemeinschaftskochbuch stellen" - sitzt direkt an der
@@ -33,8 +34,13 @@ export default function PublishToPoolButton({
   style?: object;
 }) {
   const { colors, gradient } = useTheme();
+  const { serverSyncEnabled, isLoading: syncLoading } = useServerSync();
   const [isPublishing, setIsPublishing] = useState(false);
   const [isPublished, setIsPublished] = useState(false);
+
+  // Solange der Wert noch laedt, NICHT sperren: Ein kurz verzoegerter
+  // Ladevorgang darf nicht wie eine Sperre aussehen.
+  const isLocked = !syncLoading && !serverSyncEnabled;
 
   const publish = async () => {
     setIsPublishing(true);
@@ -62,6 +68,16 @@ export default function PublishToPoolButton({
 
   const confirm = () => {
     if (isPublished || isPublishing) return;
+    if (isLocked) {
+      // Der Knopf ist sichtbar ausgegraut - wer ihn trotzdem antippt,
+      // bekommt den Grund gesagt statt gar nichts. Ein Knopf, der auf
+      // Beruehrung schweigt, wirkt kaputt.
+      Alert.alert(
+        'Server-Sync nötig',
+        'Zum Teilen im Gemeinschaftskochbuch muss Server-Sync aktiv sein. Du findest den Schalter im Profil unter „Darstellung & Bedienung".',
+      );
+      return;
+    }
     Alert.alert(
       'Ins Gemeinschaftskochbuch stellen?',
       `"${recipeTitle}" wird für alle Nutzerinnen und Nutzer sichtbar. Andere können es übernehmen; ` +
@@ -78,8 +94,15 @@ export default function PublishToPoolButton({
       onPress={confirm}
       hitSlop={8}
       accessibilityRole="button"
-      accessibilityLabel={isPublished ? 'Bereits veröffentlicht' : 'Ins Gemeinschaftskochbuch stellen'}
-      style={[styles.button, style]}
+      accessibilityLabel={
+        isLocked
+          ? 'Ins Gemeinschaftskochbuch stellen – Server-Sync nicht aktiv'
+          : isPublished
+            ? 'Bereits veröffentlicht'
+            : 'Ins Gemeinschaftskochbuch stellen'
+      }
+      accessibilityState={{ disabled: isLocked }}
+      style={[styles.button, isLocked && styles.locked, style]}
     >
       {isPublishing ? (
         <ActivityIndicator size="small" color={colors.muted} />
@@ -96,4 +119,8 @@ export default function PublishToPoolButton({
 
 const styles = StyleSheet.create({
   button: { padding: 4 },
+  // Ausgegraut statt versteckt: Der Knopf soll erkennbar bleiben, damit
+  // klar ist, dass es die Funktion gibt - sie ist nur gerade nicht
+  // freigeschaltet.
+  locked: { opacity: 0.35 },
 });
