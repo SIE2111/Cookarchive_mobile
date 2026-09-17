@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Switch, Pressable, StyleSheet, ActivityIndicator, Alert, ScrollView, Linking, TextInput } from 'react-native';
+import { View, Text, Switch, Pressable, StyleSheet, ActivityIndicator, Alert, ScrollView, TextInput } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme, type BackgroundStyle, type AccentColor } from '../theme/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -29,18 +29,6 @@ interface Preferences {
 }
 
 type PreferenceKey = 'show_brutzel' | 'large_text' | 'auto_read_steps' | 'server_sync_enabled';
-
-const STORAGE_OPTIONS: { key: StorageMode; title: string; subtitle: string; icon: keyof typeof MaterialCommunityIcons.glyphMap }[] = [
-  { key: 'lokal', title: 'Nur lokal', subtitle: 'Verbleibt ausschließlich auf diesem Gerät.', icon: 'folder-outline' },
-  { key: 'nas', title: 'NAS', subtitle: 'Deine Rezepte, deine Daten – nur für die Anmeldung wird unser Server kontaktiert.', icon: 'nas' },
-  { key: 'eigene_cloud', title: 'Eigene Cloud', subtitle: 'Unsere Server-Infrastruktur (EU).', icon: 'cloud-outline' },
-];
-
-const CLOUD_PROVIDER_ICONS: Record<string, keyof typeof MaterialCommunityIcons.glyphMap> = {
-  google_drive: 'google-drive',
-  onedrive: 'microsoft-onedrive',
-  dropbox: 'dropbox',
-};
 
 const HAUBEN_OPTIONS: { key: HaubenLevel; title: string; hats: number }[] = [
   { key: 'anfaenger', title: 'Anfänger', hats: 1 },
@@ -73,19 +61,12 @@ const ROWS: { key: PreferenceKey; title: string; subtitle: string; lockedWhen?: 
   },
 ];
 
-const CLOUD_PROVIDERS: { key: string; apiPrefix: string; title: string; subtitle: string }[] = [
-  { key: 'google_drive', apiPrefix: '/google-auth', title: 'Google Drive', subtitle: 'Im eigenen Google Drive unter "MeinKochbuch".' },
-  { key: 'onedrive', apiPrefix: '/onedrive-auth', title: 'OneDrive', subtitle: 'Im eigenen OneDrive unter "MeinKochbuch".' },
-  { key: 'dropbox', apiPrefix: '/dropbox-auth', title: 'Dropbox', subtitle: 'In der eigenen Dropbox unter "MeinKochbuch".' },
-];
-
 export default function ProfileScreen({ navigation }: Props) {
   const { colors, gradient, radius, theme, setTheme } = useTheme();
   const { signOut } = useAuth();
   const [prefs, setPrefs] = useState<Preferences | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [savingKey, setSavingKey] = useState<PreferenceKey | 'storage_mode' | 'default_hauben_level' | 'drittanbieter_provider' | 'default_servings' | null>(null);
-  const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
+  const [savingKey, setSavingKey] = useState<PreferenceKey | 'default_hauben_level' | 'default_servings' | null>(null);
 
   const loadPrefs = () => {
     api
@@ -103,50 +84,6 @@ export default function ProfileScreen({ navigation }: Props) {
     return unsubscribe;
   }, [navigation]);
 
-  const handleConnectProvider = async (providerKey: string, apiPrefix: string) => {
-    setConnectingProvider(providerKey);
-    try {
-      const { authorize_url } = await api.get<{ authorize_url: string }>(`${apiPrefix}/connect`);
-      // BEWUSST der System-Browser (Linking.openURL), nicht unser eigener
-      // WebBrowseScreen: alle drei Anbieter verbieten OAuth-Logins in
-      // eingebetteten WebViews aus Sicherheitsgruenden.
-      await Linking.openURL(authorize_url);
-    } catch (err) {
-      Alert.alert('Verbinden fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
-    } finally {
-      setConnectingProvider(null);
-    }
-  };
-
-  // Anbieter, der schon einmal verbunden wurde (Tokens existieren noch),
-  // aber gerade nicht der aktive storage_mode ist - reaktiviert OHNE
-  // erneuten OAuth-Flow, da die Tokens im Backend unveraendert bestehen
-  // bleiben, wenn man nur auf 'lokal'/'nas' wechselt und zurueck.
-  const handleReactivateProvider = async (providerKey: string) => {
-    if (!prefs) return;
-    const previous = prefs;
-    setPrefs({ ...prefs, storage_mode: 'drittanbieter_cloud', drittanbieter_provider: providerKey });
-    setSavingKey('drittanbieter_provider');
-    try {
-      const updated = await api.patch<Preferences>('/preferences/', { drittanbieter_provider: providerKey });
-      setPrefs(updated);
-    } catch (err) {
-      setPrefs(previous);
-      Alert.alert('Reaktivieren fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
-    } finally {
-      setSavingKey(null);
-    }
-  };
-
-  const handleDisconnectProvider = async (apiPrefix: string) => {
-    try {
-      await api.post(`${apiPrefix}/disconnect`);
-      loadPrefs();
-    } catch (err) {
-      Alert.alert('Trennen fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
-    }
-  };
-
   const handleToggle = async (key: PreferenceKey, value: boolean) => {
     if (!prefs) return;
     const previous = prefs;
@@ -154,22 +91,6 @@ export default function ProfileScreen({ navigation }: Props) {
     setSavingKey(key);
     try {
       const updated = await api.patch<Preferences>('/preferences/', { [key]: value });
-      setPrefs(updated);
-    } catch (err) {
-      setPrefs(previous);
-      Alert.alert('Konnte nicht gespeichert werden', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
-    } finally {
-      setSavingKey(null);
-    }
-  };
-
-  const handleStorageSelect = async (mode: StorageMode) => {
-    if (!prefs || prefs.storage_mode === mode) return;
-    const previous = prefs;
-    setPrefs({ ...prefs, storage_mode: mode, server_sync_enabled: mode === 'eigene_cloud' ? true : prefs.server_sync_enabled });
-    setSavingKey('storage_mode');
-    try {
-      const updated = await api.patch<Preferences>('/preferences/', { storage_mode: mode });
       setPrefs(updated);
     } catch (err) {
       setPrefs(previous);
@@ -242,84 +163,6 @@ export default function ProfileScreen({ navigation }: Props) {
 
   return (
     <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
-      <Text style={[styles.sectionLabel, { color: colors.muted }]}>SPEICHER</Text>
-
-      {STORAGE_OPTIONS.map((option) => {
-        const isSelected = prefs.storage_mode === option.key;
-        return (
-          <Pressable
-            key={option.key}
-            onPress={() => handleStorageSelect(option.key)}
-            style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}
-          >
-            <MaterialCommunityIcons name={option.icon} size={20} color={colors.muted} style={styles.rowIcon} />
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.rowTitle, { color: colors.text }]}>{option.title}</Text>
-              <Text style={[styles.rowSubtitle, { color: colors.muted }]}>{option.subtitle}</Text>
-            </View>
-            {savingKey === 'storage_mode' && isSelected ? (
-              <ActivityIndicator color={colors.muted} />
-            ) : (
-              <MaterialCommunityIcons
-                name={isSelected ? 'radiobox-marked' : 'radiobox-blank'}
-                size={22}
-                color={isSelected ? gradient[0] : colors.muted}
-              />
-            )}
-          </Pressable>
-        );
-      })}
-
-      {CLOUD_PROVIDERS.map((p) => {
-        // hasTokens: Anbieter wurde schon mal verbunden, Tokens bestehen im
-        // Backend unabhaengig vom aktuellen storage_mode weiter.
-        // isActive: dieser Anbieter ist GERADE der aktive Speicherort.
-        const hasTokens = prefs.drittanbieter_provider === p.key;
-        const isActive = prefs.storage_mode === 'drittanbieter_cloud' && hasTokens;
-        return (
-          <Pressable
-            key={p.key}
-            onPress={() => {
-              if (isActive) return; // schon aktiv -> nichts tun, Trennen ist der eigene Link unten
-              if (hasTokens) {
-                handleReactivateProvider(p.key); // schon verbunden -> kein erneuter OAuth-Flow noetig
-              } else {
-                handleConnectProvider(p.key, p.apiPrefix);
-              }
-            }}
-            disabled={connectingProvider !== null || savingKey === 'drittanbieter_provider'}
-            style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md, opacity: connectingProvider && connectingProvider !== p.key ? 0.5 : 1 }]}
-          >
-            <MaterialCommunityIcons
-              name={CLOUD_PROVIDER_ICONS[p.key]}
-              size={20}
-              color={isActive ? '#16A34A' : colors.muted}
-              style={styles.rowIcon}
-            />
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.rowTitle, { color: isActive ? '#16A34A' : colors.text }]}>
-                {isActive ? `${p.title} ✓ verbunden` : hasTokens ? `${p.title} (verbunden, nicht aktiv)` : p.title}
-              </Text>
-              <Text style={[styles.rowSubtitle, { color: colors.muted }]}>{p.subtitle}</Text>
-              {hasTokens && (
-                <Pressable onPress={() => handleDisconnectProvider(p.apiPrefix)} hitSlop={8} style={{ marginTop: 6, alignSelf: 'flex-start' }}>
-                  <Text style={{ color: '#DC2626', fontSize: 11.5, fontWeight: '700' }}>Trennen</Text>
-                </Pressable>
-              )}
-            </View>
-            {connectingProvider === p.key || (savingKey === 'drittanbieter_provider' && hasTokens && !isActive) ? (
-              <ActivityIndicator color={colors.muted} />
-            ) : (
-              <MaterialCommunityIcons
-                name={isActive ? 'radiobox-marked' : 'radiobox-blank'}
-                size={22}
-                color={isActive ? '#16A34A' : colors.muted}
-              />
-            )}
-          </Pressable>
-        );
-      })}
-
       <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 20 }]}>STANDARD-STUFE IM KOCH-MODUS</Text>
       <View style={styles.chipsRow}>
         {HAUBEN_OPTIONS.map((option) => {
@@ -447,8 +290,22 @@ export default function ProfileScreen({ navigation }: Props) {
       )}
 
       <Pressable
-        onPress={() => navigation.getParent()?.navigate('Household')}
+        onPress={() => navigation.navigate('StorageSettings')}
         style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md, marginTop: 20 }]}
+      >
+        <MaterialCommunityIcons name="cloud-outline" size={20} color={colors.muted} style={styles.rowIcon} />
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.rowTitle, { color: colors.text }]}>Speicherort</Text>
+          <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
+            Lokal, NAS, eigene Cloud oder Google Drive/OneDrive/Dropbox
+          </Text>
+        </View>
+        <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>
+      </Pressable>
+
+      <Pressable
+        onPress={() => navigation.getParent()?.navigate('Household')}
+        style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md, marginTop: 8 }]}
       >
         <Text style={[styles.rowTitle, { color: colors.text, flex: 1 }]}>Haushalt</Text>
         <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>
