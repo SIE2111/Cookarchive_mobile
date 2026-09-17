@@ -26,6 +26,8 @@ interface Preferences {
   default_hauben_level: HaubenLevel;
   drittanbieter_provider: string | null;
   default_servings: number;
+  display_name: string | null;
+  household_role: string | null;
 }
 
 type PreferenceKey = 'show_brutzel' | 'large_text' | 'auto_read_steps' | 'server_sync_enabled';
@@ -66,7 +68,7 @@ export default function ProfileScreen({ navigation }: Props) {
   const { signOut } = useAuth();
   const [prefs, setPrefs] = useState<Preferences | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [savingKey, setSavingKey] = useState<PreferenceKey | 'default_hauben_level' | 'default_servings' | null>(null);
+  const [savingKey, setSavingKey] = useState<PreferenceKey | 'default_hauben_level' | 'default_servings' | 'display_name' | null>(null);
 
   const loadPrefs = () => {
     api
@@ -145,6 +147,35 @@ export default function ProfileScreen({ navigation }: Props) {
     }
   };
 
+  const [nameInput, setNameInput] = useState('');
+  useEffect(() => {
+    if (prefs) setNameInput(prefs.display_name ?? '');
+  }, [prefs?.display_name]);
+
+  const handleSaveDisplayName = async () => {
+    if (!prefs) return;
+    const trimmed = nameInput.trim();
+    if (!trimmed) {
+      Alert.alert('Name fehlt', 'Bitte einen Namen eingeben.');
+      setNameInput(prefs.display_name ?? '');
+      return;
+    }
+    if (trimmed === prefs.display_name) return;
+    const previous = prefs;
+    setPrefs({ ...prefs, display_name: trimmed });
+    setSavingKey('display_name');
+    try {
+      const updated = await api.patch<Preferences>('/preferences/', { display_name: trimmed });
+      setPrefs(updated);
+    } catch (err) {
+      setPrefs(previous);
+      setNameInput(previous.display_name ?? '');
+      Alert.alert('Konnte nicht gespeichert werden', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+    } finally {
+      setSavingKey(null);
+    }
+  };
+
   if (error) {
     return (
       <View style={[styles.centered, { backgroundColor: colors.bg }]}>
@@ -163,6 +194,43 @@ export default function ProfileScreen({ navigation }: Props) {
 
   return (
     <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
+      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 4 }]}>NAME</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+        <TextInput
+          style={[
+            { flex: 1, height: 44, paddingHorizontal: 14, fontSize: 15, backgroundColor: colors.card, color: colors.text },
+            { borderRadius: radius.md },
+          ]}
+          value={nameInput}
+          onChangeText={setNameInput}
+          onBlur={handleSaveDisplayName}
+          onSubmitEditing={handleSaveDisplayName}
+          placeholder="Dein Name"
+          placeholderTextColor={colors.muted}
+        />
+        {savingKey === 'display_name' && <ActivityIndicator color={colors.muted} size="small" />}
+      </View>
+      {prefs.household_role && (
+        <View style={[styles.adminBadge, { backgroundColor: prefs.household_role === 'owner' ? gradient[0] : colors.card, borderRadius: radius.sm }]}>
+          <MaterialCommunityIcons
+            name={prefs.household_role === 'owner' ? 'shield-crown-outline' : 'account-outline'}
+            size={13}
+            color={prefs.household_role === 'owner' ? '#fff' : colors.muted}
+          />
+          <Text style={{ color: prefs.household_role === 'owner' ? '#fff' : colors.muted, fontSize: 11.5, fontWeight: '700', marginLeft: 5 }}>
+            {prefs.household_role === 'owner' ? 'Admin (Haushalt-Ersteller)' : 'Mitglied'}
+          </Text>
+        </View>
+      )}
+
+      <Pressable
+        onPress={() => navigation.getParent()?.navigate('Household')}
+        style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md, marginTop: 16 }]}
+      >
+        <Text style={[styles.rowTitle, { color: colors.text, flex: 1 }]}>Haushalt</Text>
+        <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>
+      </Pressable>
+
       <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 20 }]}>STANDARD-STUFE IM KOCH-MODUS</Text>
       <View style={styles.chipsRow}>
         {HAUBEN_OPTIONS.map((option) => {
@@ -304,14 +372,6 @@ export default function ProfileScreen({ navigation }: Props) {
       </Pressable>
 
       <Pressable
-        onPress={() => navigation.getParent()?.navigate('Household')}
-        style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md, marginTop: 8 }]}
-      >
-        <Text style={[styles.rowTitle, { color: colors.text, flex: 1 }]}>Haushalt</Text>
-        <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>
-      </Pressable>
-
-      <Pressable
         onPress={() => navigation.getParent()?.navigate('Onboarding')}
         style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md, marginTop: 8 }]}
       >
@@ -335,6 +395,7 @@ const styles = StyleSheet.create({
   container: { padding: 18, paddingBottom: 40 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   sectionLabel: { fontSize: 10.5, fontWeight: '700', letterSpacing: 0.5, marginBottom: 10 },
+  adminBadge: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 6 },
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
   chip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 9 },
   row: { flexDirection: 'row', alignItems: 'center', padding: 14, marginBottom: 8 },

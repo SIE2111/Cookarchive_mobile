@@ -9,6 +9,7 @@ import type { AuthStackParamList } from '../navigation/AppNavigator';
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
 const AGB_URL = 'https://www.homearchive.at/meinkochbuch/agb';
+const DATENSCHUTZ_URL = 'https://www.homearchive.at/meinkochbuch/datenschutz';
 
 export default function RegisterScreen({ navigation }: Props) {
   const { colors, gradient, radius } = useTheme();
@@ -17,6 +18,7 @@ export default function RegisterScreen({ navigation }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [agbAccepted, setAgbAccepted] = useState(false);
+  const [datenschutzAccepted, setDatenschutzAccepted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleRegister = async () => {
@@ -24,8 +26,8 @@ export default function RegisterScreen({ navigation }: Props) {
       Alert.alert('Fehlt noch was', 'Bitte E-Mail und Passwort eingeben.');
       return;
     }
-    if (!agbAccepted) {
-      Alert.alert('AGB erforderlich', 'Bitte AGB und Datenschutzerklärung akzeptieren.');
+    if (!agbAccepted || !datenschutzAccepted) {
+      Alert.alert('Zustimmung erforderlich', 'Bitte AGB UND Datenschutzerklärung getrennt bestätigen.');
       return;
     }
     setIsSubmitting(true);
@@ -97,8 +99,27 @@ export default function RegisterScreen({ navigation }: Props) {
             Ich akzeptiere die{' '}
             <Text style={{ color: gradient[0], fontWeight: '600' }} onPress={() => Linking.openURL(AGB_URL)}>
               AGB
-            </Text>{' '}
-            und Datenschutzerklärung
+            </Text>
+          </Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => setDatenschutzAccepted((prev) => !prev)}
+          style={styles.checkboxRow}
+        >
+          <View
+            style={[
+              styles.checkbox,
+              { borderRadius: radius.sm, backgroundColor: datenschutzAccepted ? gradient[0] : 'transparent', borderColor: gradient[0] },
+            ]}
+          >
+            {datenschutzAccepted && <Text style={styles.checkboxMark}>✓</Text>}
+          </View>
+          <Text style={[styles.checkboxLabel, { color: colors.muted }]}>
+            Ich akzeptiere die{' '}
+            <Text style={{ color: gradient[0], fontWeight: '600' }} onPress={() => Linking.openURL(DATENSCHUTZ_URL)}>
+              Datenschutzerklärung
+            </Text>
           </Text>
         </Pressable>
 
