@@ -4,7 +4,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import * as Speech from 'expo-speech';
 import { useTheme } from '../theme/ThemeContext';
 import { api, ApiError } from '../api/client';
-import { deriveStepsForLevel, HaubenLevel, RecipeStep } from '../utils/stepLevels';
+import { pickStepsForLevel, HaubenLevel, RecipeStep } from '../utils/stepLevels';
 import { scheduleTimerNotification, cancelTimerNotification, setupNotificationChannel } from '../utils/notifications';
 import BrutzelAvatar from './BrutzelAvatar';
 
@@ -20,6 +20,8 @@ interface RecipeForCooking {
   servings: number | null;
   ingredients: Ingredient[];
   steps: RecipeStep[];
+  steps_anfaenger?: RecipeStep[] | null;
+  steps_profi?: RecipeStep[] | null;
 }
 
 const LEVEL_TO_HAT_COUNT: Record<HaubenLevel, number> = { anfaenger: 1, fortgeschritten: 2, profi: 3 };
@@ -288,7 +290,42 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recipeId]);
 
-  const derivedSteps = recipe ? deriveStepsForLevel(recipe.steps, level) : [];
+  const [isAdaptingSteps, setIsAdaptingSteps] = useState(false);
+
+  // Wenn auf Anfaenger/Profi gewechselt wird (oder das Rezept frisch in
+  // dieser Stufe geladen wurde) und noch keine generierte Variante
+  // vorliegt, jetzt beim Backend anfordern (generiert + cacht dort einmalig,
+  // siehe POST /ai/adapt-steps/{id}) und ins lokale Rezept einmischen.
+  // Fortgeschritten braucht das nie, das ist immer die Basisfassung.
+  useEffect(() => {
+    if (!recipe || level === 'fortgeschritten') return;
+    const cachedField = level === 'anfaenger' ? 'steps_anfaenger' : 'steps_profi';
+    const alreadyCached = recipe[cachedField] && recipe[cachedField]!.length > 0;
+    if (alreadyCached) return;
+
+    let cancelled = false;
+    setIsAdaptingSteps(true);
+    api
+      .post<{ steps: RecipeStep[] }>(`/ai/adapt-steps/${recipeId}`, { level })
+      .then((result) => {
+        if (cancelled) return;
+        setRecipe((prev) => (prev ? { ...prev, [cachedField]: result.steps } : prev));
+      })
+      .catch(() => {
+        // Generierung fehlgeschlagen (z.B. kein OPENAI_API_KEY) - kein
+        // Alert noetig, pickStepsForLevel faellt automatisch auf die
+        // Basisfassung zurueck, das Kochen bleibt trotzdem moeglich.
+      })
+      .finally(() => {
+        if (!cancelled) setIsAdaptingSteps(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [recipe?.id, level]);
+
+
+  const derivedSteps = recipe ? pickStepsForLevel(recipe, level) : [];
   const currentStep = derivedSteps[currentIndex];
 
   // Technik-Video zum aktuellen Schritt laden, falls ein technique_tag
@@ -659,6 +696,14 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
         })}
       </View>
 
+      {isAdaptingSteps && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+          <ActivityIndicator size="small" color={colors.muted} />
+          <Text style={{ color: colors.muted, fontSize: 11 }}>
+            Brutzel passt die Schritte für {level === 'anfaenger' ? 'Anfänger' : 'Profis'} an…
+          </Text>
+        </View>
+      )}
       <View style={styles.stepTextRow}>
         <Text style={[styles.stepText, { color: colors.text, fontSize: largeText ? 20 : 16, lineHeight: largeText ? 29 : 24 }]}>
           {currentStep.text}
