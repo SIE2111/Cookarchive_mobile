@@ -109,7 +109,13 @@ interface Props {
   // laufende Timer der inaktiven Tabs sollen weiterlaufen (siehe Konzept:
   // "Timer laeuft im Hintergrund, waehrend am anderen Rezept gearbeitet wird")
   onTitleLoaded?: (title: string) => void;
-  onFinished: () => void; // vom Elternteil gesteuert statt navigation.goBack(),
+  // completed=true: alle Schritte tatsaechlich durchlaufen (Feier + "als
+  // zubereitet markieren" sollen ausgeloest werden). completed=false: am
+  // ersten Schritt "Zurueck" gedrueckt, d.h. der Kochvorgang wird
+  // abgebrochen/verlassen - dann NICHT als zubereitet markieren und keine
+  // Guten-Appetit-Feier zeigen (war zuvor ein Bug: beides rief denselben
+  // Callback ohne Unterscheidung auf).
+  onFinished: (completed: boolean) => void; // vom Elternteil gesteuert statt navigation.goBack(),
   // da mehrere Tabs sich nicht jeweils eigenstaendig "zurueck" navigieren sollen
   // "Nur fuer diesen Kochvorgang" uebernommene Aenderungen aus dem Rezept-
   // Detail (VOR dem Kochstart bearbeitet, siehe RecipeDetailScreen) - werden
@@ -606,7 +612,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
 
   const goNext = () => {
     if (isLastStep) {
-      onFinished();
+      onFinished(true);
       return;
     }
     setCurrentIndex((i) => i + 1);
@@ -614,7 +620,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
 
   const goBackStep = () => {
     if (currentIndex === 0) {
-      onFinished();
+      onFinished(false);
       return;
     }
     setCurrentIndex((i) => i - 1);

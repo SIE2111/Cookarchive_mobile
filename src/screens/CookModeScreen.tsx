@@ -29,7 +29,15 @@ export default function CookModeScreen({ route, navigation }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleFinished = () => {
+  const handleFinished = (completed: boolean) => {
+    if (!completed) {
+      // Am ersten Schritt "Zurueck" gedrueckt = Kochvorgang abgebrochen/
+      // verlassen, nicht tatsaechlich fertig gekocht - einfach verlassen,
+      // OHNE als zubereitet zu markieren und OHNE die Guten-Appetit-Feier
+      // (war zuvor ein Bug: beides loeste dieselbe Feier aus).
+      navigation.goBack();
+      return;
+    }
     if (recipeIds.length === 1) {
       // Nur das HAUPTGERICHT (recipeIds[0]) zaehlt als "zubereitet" fuers
       // Dashboard - mitgekochte Beilagen bleiben davon bewusst ausgenommen.
