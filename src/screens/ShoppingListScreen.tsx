@@ -93,6 +93,24 @@ export default function ShoppingListScreen({}: Props) {
     }
   };
 
+  const handleClearAll = () => {
+    Alert.alert('Ganze Liste löschen?', 'Alle Einträge werden entfernt, auch nicht abgehakte.', [
+      { text: 'Abbrechen', style: 'cancel' },
+      {
+        text: 'Löschen',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await api.delete('/shopping-list/all');
+            load();
+          } catch (err) {
+            Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Konnte nicht gelöscht werden');
+          }
+        },
+      },
+    ]);
+  };
+
   const handleAddManual = async () => {
     const name = newItemName.trim();
     if (!name) return;
@@ -116,6 +134,7 @@ export default function ShoppingListScreen({}: Props) {
   };
 
   const hasCheckedItems = sections.some((s) => s.data.some((i) => i.checked));
+  const hasAnyItems = sections.some((s) => s.data.length > 0);
 
   if (isLoading) {
     return (
@@ -203,10 +222,19 @@ export default function ShoppingListScreen({}: Props) {
         )}
       />
 
-      {hasCheckedItems && (
-        <Pressable onPress={handleClearChecked} style={styles.clearButton}>
-          <Text style={[styles.clearButtonText, { color: colors.muted }]}>Abgehakte entfernen</Text>
-        </Pressable>
+      {(hasCheckedItems || hasAnyItems) && (
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          {hasCheckedItems && (
+            <Pressable onPress={handleClearChecked} style={[styles.clearButton, { flex: 1 }]}>
+              <Text style={[styles.clearButtonText, { color: colors.muted }]}>Abgehakte entfernen</Text>
+            </Pressable>
+          )}
+          {hasAnyItems && (
+            <Pressable onPress={handleClearAll} style={[styles.clearButton, { flex: 1 }]}>
+              <Text style={[styles.clearButtonText, { color: '#DC2626' }]}>Liste leeren</Text>
+            </Pressable>
+          )}
+        </View>
       )}
     </View>
   );
