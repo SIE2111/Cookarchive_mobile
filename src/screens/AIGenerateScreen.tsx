@@ -43,6 +43,7 @@ interface GeneratedRecipe {
   follow_up_question: string | null;
   allergen_warning: string | null;
   cover_image_url: string | null;
+  folder_suggestion: string | null;
 }
 
 export default function AIGenerateScreen({ navigation }: Props) {
@@ -168,6 +169,10 @@ export default function AIGenerateScreen({ navigation }: Props) {
       // manuelles Antippen mehr noetig, wenn schon eines mitkam.
       if (generated.cover_image_url) {
         setAiGeneratedImageUrl(generated.cover_image_url);
+      }
+      if (generated.folder_suggestion) {
+        const matchingFolder = folders.find((f) => f.name === generated.folder_suggestion);
+        if (matchingFolder) setSelectedFolderId(matchingFolder.id);
       }
     } catch (err) {
       Alert.alert('Generieren fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');

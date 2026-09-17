@@ -30,6 +30,7 @@ interface ImportedRecipe {
   origin_url: string;
   cover_image_url: string | null;
   cover_image_warning: string | null;
+  folder_suggestion: string | null;
 }
 
 export default function WebImportScreen({ navigation, route }: Props) {
@@ -144,6 +145,10 @@ export default function WebImportScreen({ navigation, route }: Props) {
       );
       setSteps(result.steps.sort((a, b) => a.order - b.order).map((s) => ({ text: s.text })));
       setOriginUrl(result.origin_url);
+      if (result.folder_suggestion) {
+        const matchingFolder = folders.find((f) => f.name === result.folder_suggestion);
+        if (matchingFolder) setSelectedFolderId(matchingFolder.id);
+      }
       if (result.cover_image_url) {
         setAiGeneratedImageUrl(result.cover_image_url);
       }

@@ -93,7 +93,6 @@ export default function DashboardScreen({ navigation }: Props) {
     recipes.forEach((r) => (r.tags ?? []).forEach((t) => counts.set(t, (counts.get(t) ?? 0) + 1)));
     return Array.from(counts.entries())
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 6)
       .map(([tag]) => tag);
   }, [recipes]);
 
@@ -105,6 +104,16 @@ export default function DashboardScreen({ navigation }: Props) {
         .slice(0, 10),
     [recipes],
   );
+
+  // Kategorien-Zeile: bei mehr als ~3 Zeilen zunaechst eingeklappt, mit
+  // "Mehr anzeigen" aufklappbar. Die tatsaechliche Hoehe wird per onLayout
+  // gemessen (der innere Container ist NIE selbst hoehenbegrenzt, nur der
+  // aeussere clippt visuell) - so weiss man, ob ueberhaupt etwas verborgen
+  // ist, unabhaengig von Chip-Anzahl/-Breite.
+  const CATEGORIES_COLLAPSED_HEIGHT = 116; // ca. 3 Zeilen bei dieser Chip-Groesse
+  const [categoriesExpanded, setCategoriesExpanded] = useState(false);
+  const [categoriesNaturalHeight, setCategoriesNaturalHeight] = useState(0);
+  const categoriesOverflow = categoriesNaturalHeight > CATEGORIES_COLLAPSED_HEIGHT + 4;
 
   if (isLoading) {
     return (
@@ -190,24 +199,39 @@ export default function DashboardScreen({ navigation }: Props) {
       {/* Kategorien - aus den tatsaechlich vorkommenden Tags abgeleitet, plus
           eine feste Lieblingsgerichte-Kachel, immer sichtbar */}
       <Text style={[styles.sectionLabel, { color: colors.text }]}>Kategorien</Text>
-      <View style={styles.categoriesRow}>
-        <Pressable
-          onPress={() => navigation.navigate('Rezepte', { favoritesOnly: true })}
-          style={[styles.categoryChip, { backgroundColor: colors.card, borderRadius: radius.sm }]}
-        >
-          <MaterialCommunityIcons name="heart" size={13} color={gradient[0]} style={{ marginRight: 5 }} />
-          <Text style={[styles.categoryText, { color: colors.text }]}>Lieblingsgerichte</Text>
-        </Pressable>
-        {categories.map((tag) => (
+      <View
+        style={[
+          styles.categoriesClip,
+          !categoriesOverflow && { marginBottom: 22 },
+          !categoriesExpanded && { maxHeight: CATEGORIES_COLLAPSED_HEIGHT, overflow: 'hidden' },
+        ]}
+      >
+        <View style={styles.categoriesRow} onLayout={(e) => setCategoriesNaturalHeight(e.nativeEvent.layout.height)}>
           <Pressable
-            key={tag}
-            onPress={() => navigation.navigate('Rezepte', { filterTag: tag })}
+            onPress={() => navigation.navigate('Rezepte', { favoritesOnly: true })}
             style={[styles.categoryChip, { backgroundColor: colors.card, borderRadius: radius.sm }]}
           >
-            <Text style={[styles.categoryText, { color: colors.text }]}>{tag}</Text>
+            <MaterialCommunityIcons name="heart" size={13} color={gradient[0]} style={{ marginRight: 5 }} />
+            <Text style={[styles.categoryText, { color: colors.text }]}>Lieblingsgerichte</Text>
           </Pressable>
-        ))}
+          {categories.map((tag) => (
+            <Pressable
+              key={tag}
+              onPress={() => navigation.navigate('Rezepte', { filterTag: tag })}
+              style={[styles.categoryChip, { backgroundColor: colors.card, borderRadius: radius.sm }]}
+            >
+              <Text style={[styles.categoryText, { color: colors.text }]}>{tag}</Text>
+            </Pressable>
+          ))}
+        </View>
       </View>
+      {categoriesOverflow && (
+        <Pressable onPress={() => setCategoriesExpanded((prev) => !prev)} style={styles.categoriesToggle}>
+          <Text style={[styles.categoriesToggleText, { color: gradient[0] }]}>
+            {categoriesExpanded ? 'Weniger anzeigen ▲' : 'Mehr anzeigen ▼'}
+          </Text>
+        </Pressable>
+      )}
 
       {/* Zuletzt zubereitet (nur Hauptgerichte, keine mitgekochten Beilagen -
           siehe CookModeScreen.tsx, ruft mark-cooked nur fuer recipeIds[0] auf) */}
@@ -267,9 +291,12 @@ const styles = StyleSheet.create({
   actionButton: { flex: 1, flexDirection: 'row', gap: 7, alignItems: 'center', justifyContent: 'center', height: 46 },
   actionText: { color: '#fff', fontWeight: '600', fontSize: 12.5 },
   sectionLabel: { fontSize: 15, fontWeight: '700', marginBottom: 10 },
-  categoriesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 22 },
+  categoriesClip: { marginBottom: 6 },
+  categoriesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   categoryChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 8 },
   categoryText: { fontSize: 12, fontWeight: '600' },
+  categoriesToggle: { alignSelf: 'flex-start', marginBottom: 22, paddingVertical: 4 },
+  categoriesToggleText: { fontSize: 12, fontWeight: '700' },
   emptyText: { fontSize: 12.5, lineHeight: 19 },
   recentCard: { paddingHorizontal: 4 },
   recentRow: { flexDirection: 'row', alignItems: 'center', gap: 11, paddingVertical: 12, paddingHorizontal: 10 },
