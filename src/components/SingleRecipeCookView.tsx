@@ -499,7 +499,7 @@ const styles = StyleSheet.create({
   techniqueBadge: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 6, marginBottom: 10 },
   techniqueText: { fontSize: 11, textTransform: 'capitalize' },
   brutzelCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, marginBottom: 10 },
-  brutzelText: { flex: 1, fontSize: 12, lineHeight: 17 },
+  brutzelText: { flex: 1, fontSize: 12.5, lineHeight: 18, fontWeight: '600' },
   videoLink: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 },
   videoLinkText: { fontSize: 11.5, fontWeight: '700' },
   noteCard: { backgroundColor: '#FEF3C7', borderRadius: 12, padding: 10, marginBottom: 16 },
