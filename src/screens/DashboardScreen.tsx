@@ -21,6 +21,7 @@ type Props = CompositeScreenProps<
 interface RecipeSummary {
   id: string;
   title: string;
+  folder_id: string | null;
   tags: string[] | null;
   prep_time_minutes: number | null;
   servings: number | null;
@@ -41,6 +42,7 @@ export default function DashboardScreen({ navigation }: Props) {
   const { colors, gradient, radius } = useTheme();
   const { session } = useAuth();
   const [recipes, setRecipes] = useState<RecipeSummary[]>([]);
+  const [folders, setFolders] = useState<{ id: string; name: string }[]>([]);
   const [folderCount, setFolderCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -73,9 +75,13 @@ export default function DashboardScreen({ navigation }: Props) {
     try {
       const [recipeData, folderData] = await Promise.all([
         api.get<RecipeSummary[]>('/recipes/'),
-        api.get<{ id: string }[]>('/folders/'),
+        // Ordnernamen, nicht nur die Anzahl: Sie entscheiden, welche
+        // Rezepte als Hauptspeise fuer das Rezept des Tages in Frage
+        // kommen (siehe mainCourseCandidates).
+        api.get<{ id: string; name: string }[]>('/folders/'),
       ]);
       setRecipes(recipeData);
+      setFolders(folderData);
       setFolderCount(folderData.length);
       setError(null);
     } catch (err) {
@@ -112,13 +118,38 @@ export default function DashboardScreen({ navigation }: Props) {
 
   // "Rezept des Tages" - deterministisch nach Kalendertag, damit es sich
   // nicht bei jedem App-Start aendert, aber trotzdem taeglich wechselt.
+  // Rezept des Tages: NUR Hauptspeisen. Vorher wurde aus allen Rezepten
+  // gewaehlt, weshalb hier auch schon mal ein Kaiserschmarrn, eine Suppe
+  // oder ein Cocktail als Vorschlag fuers Abendessen stand.
+  //
+  // Die Zuordnung laeuft ueber den ORDNER, nicht ueber die Kategorien:
+  // Ein Kaiserschmarrn traegt oft nur "Klassiker", liegt aber in
+  // "Backen & Desserts". Umbenannte oder eigene Ordner faengt der
+  // zweistufige Rueckfall ab.
+  const mainCourseCandidates = useMemo(() => {
+    const folderName = (id: string | null) =>
+      (folders.find((f) => f.id === id)?.name ?? '').toLowerCase();
+
+    const primary = recipes.filter((r) => folderName(r.folder_id).includes('hauptgericht'));
+    if (primary.length > 0) return primary;
+
+    // Kein Ordner heisst "Hauptgerichte" (umbenannt oder eigene Struktur):
+    // dann wenigstens alles ausschliessen, was sicher keine Hauptspeise ist.
+    const notMain = ['dessert', 'backen', 'getränk', 'getraenk', 'vorspeise', 'suppe', 'beilage'];
+    const fallback = recipes.filter((r) => {
+      const name = folderName(r.folder_id);
+      return name === '' ? false : !notMain.some((n) => name.includes(n));
+    });
+    return fallback.length > 0 ? fallback : recipes;
+  }, [recipes, folders]);
+
   const recipeOfTheDay = useMemo(() => {
-    if (recipes.length === 0) return null;
+    if (mainCourseCandidates.length === 0) return null;
     const dayOfYear = Math.floor(
       (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / (24 * 60 * 60 * 1000),
     );
-    return recipes[dayOfYear % recipes.length];
-  }, [recipes]);
+    return mainCourseCandidates[dayOfYear % mainCourseCandidates.length];
+  }, [mainCourseCandidates]);
 
   const categories = useMemo(() => {
     const counts = new Map<string, number>();
