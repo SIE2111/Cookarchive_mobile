@@ -29,6 +29,8 @@ export default function ShoppingListScreen({}: Props) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [newItemName, setNewItemName] = useState('');
+  const [newItemAmount, setNewItemAmount] = useState('');
+  const [newItemUnit, setNewItemUnit] = useState('');
   const [isAdding, setIsAdding] = useState(false);
 
   const load = useCallback(async () => {
@@ -56,7 +58,13 @@ export default function ShoppingListScreen({}: Props) {
     try {
       await api.patch(`/shopping-list/${item.id}/toggle`);
     } catch (err) {
-      // Bei Fehler zurueckrollen und neu laden, statt einen falschen Stand stehen zu lassen
+      // 404 bedeutet meist nur eine harmlose Race Condition (z.B. der
+      // Eintrag wurde kurz zuvor per Long-Press geloescht, bevor die Liste
+      // neu geladen war) - dann reicht stilles Neuladen, kein Alert noetig.
+      if (err instanceof ApiError && err.status === 404) {
+        load();
+        return;
+      }
       Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Konnte nicht aktualisiert werden');
       load();
     }
@@ -67,6 +75,10 @@ export default function ShoppingListScreen({}: Props) {
     try {
       await api.delete(`/shopping-list/${item.id}`);
     } catch (err) {
+      if (err instanceof ApiError && err.status === 404) {
+        load();
+        return;
+      }
       Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Konnte nicht gelöscht werden');
       load();
     }
@@ -86,8 +98,14 @@ export default function ShoppingListScreen({}: Props) {
     if (!name) return;
     setIsAdding(true);
     try {
-      await api.post('/shopping-list/manual', { ingredient_name: name });
+      await api.post('/shopping-list/manual', {
+        ingredient_name: name,
+        amount: newItemAmount.trim() ? Number(newItemAmount.trim()) : null,
+        unit: newItemUnit.trim() || null,
+      });
       setNewItemName('');
+      setNewItemAmount('');
+      setNewItemUnit('');
       await load();
     } catch (err) {
       Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Konnte nicht hinzugefügt werden');
@@ -118,6 +136,23 @@ export default function ShoppingListScreen({}: Props) {
           placeholderTextColor={colors.muted}
           onSubmitEditing={handleAddManual}
           style={[styles.addInput, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
+        />
+        <TextInput
+          value={newItemAmount}
+          onChangeText={setNewItemAmount}
+          placeholder="Menge"
+          placeholderTextColor={colors.muted}
+          keyboardType="numeric"
+          onSubmitEditing={handleAddManual}
+          style={[styles.addAmountInput, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
+        />
+        <TextInput
+          value={newItemUnit}
+          onChangeText={setNewItemUnit}
+          placeholder="Einh."
+          placeholderTextColor={colors.muted}
+          onSubmitEditing={handleAddManual}
+          style={[styles.addUnitInput, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
         />
         <Pressable
           onPress={handleAddManual}
@@ -182,6 +217,8 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 12, marginBottom: 12 },
   addRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
   addInput: { flex: 1, height: 44, paddingHorizontal: 14, fontSize: 13.5 },
+  addAmountInput: { width: 56, height: 44, paddingHorizontal: 8, fontSize: 13.5, textAlign: 'center' },
+  addUnitInput: { width: 52, height: 44, paddingHorizontal: 8, fontSize: 13.5, textAlign: 'center' },
   addButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   sectionHeader: { fontSize: 10.5, fontWeight: '700', letterSpacing: 0.5, marginTop: 14, marginBottom: 8 },
   itemRow: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, marginBottom: 6 },

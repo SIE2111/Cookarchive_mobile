@@ -48,6 +48,7 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
   const [isSaving, setIsSaving] = useState(false);
 
   const [title, setTitle] = useState('');
+  const [servings, setServings] = useState('');
   const [ingredientLines, setIngredientLines] = useState<string[]>([]);
   const [stepLines, setStepLines] = useState<string[]>([]);
   const [folders, setFolders] = useState<{ id: string; name: string }[]>([]);
@@ -57,6 +58,11 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
     api.get<{ id: string; name: string }[]>('/folders/').then(setFolders).catch(() => {
       // Ordner sind hier nur "nice to have" - schlaegt das Laden fehl,
       // bleibt die Auswahl einfach leer, das Speichern selbst funktioniert trotzdem
+    });
+    api.get<{ default_servings: number }>('/preferences/').then((prefs) => {
+      setServings(String(prefs.default_servings));
+    }).catch(() => {
+      // Vorlage konnte nicht geladen werden - Feld bleibt einfach leer
     });
   }, []);
 
@@ -163,7 +169,7 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
         }
       }
 
-      await api.post('/recipes/', { title: title.trim(), ingredients, steps, cover_image_url: coverImageUrl, folder_id: selectedFolderId, source_type: 'photo_scan' });
+      await api.post('/recipes/', { title: title.trim(), servings: servings ? Number(servings) : null, ingredients, steps, cover_image_url: coverImageUrl, folder_id: selectedFolderId, source_type: 'photo_scan' });
       navigation.navigate('MainTabs');
     } catch (err) {
       Alert.alert('Speichern fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
@@ -230,6 +236,14 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
         style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
         value={title}
         onChangeText={setTitle}
+      />
+
+      <Text style={[styles.label, { color: colors.muted, marginTop: 16 }]}>Portionen</Text>
+      <TextInput
+        style={[styles.input, { width: 90, backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
+        keyboardType="numeric"
+        value={servings}
+        onChangeText={setServings}
       />
 
       {folders.length > 0 && (

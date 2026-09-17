@@ -55,6 +55,19 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
   }, []);
 
   useEffect(() => {
+    // Portionen-Vorlage nur beim NEU-Erstellen vorausfuellen - im Edit-
+    // Modus laedt der andere useEffect (editingRecipeId) den echten,
+    // bereits gespeicherten Wert, der soll nicht ueberschrieben werden.
+    if (editingRecipeId) return;
+    api.get<{ default_servings: number }>('/preferences/').then((prefs) => {
+      setServings(String(prefs.default_servings));
+    }).catch(() => {
+      // Vorlage konnte nicht geladen werden - Feld bleibt einfach leer,
+      // Nutzer kann es manuell eintragen
+    });
+  }, [editingRecipeId]);
+
+  useEffect(() => {
     if (!editingRecipeId) return;
     api
       .get<{

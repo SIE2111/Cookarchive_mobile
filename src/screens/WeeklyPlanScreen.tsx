@@ -23,6 +23,7 @@ interface PlanEntry {
   recipe_id: string;
   recipe_title: string;
   recipe_cover_image_url: string | null;
+  servings: number | null;
 }
 
 interface RecipeSummary {
@@ -60,6 +61,18 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
   const [pickerTarget, setPickerTarget] = useState<{ dateKey: string; slot: MealSlot } | null>(null);
   const [allRecipes, setAllRecipes] = useState<RecipeSummary[]>([]);
   const [recipeSearch, setRecipeSearch] = useState('');
+  const [defaultServings, setDefaultServings] = useState(4);
+  const [servingsInput, setServingsInput] = useState('4');
+
+  useEffect(() => {
+    api
+      .get<{ default_servings: number }>('/preferences/')
+      .then((prefs) => setDefaultServings(prefs.default_servings))
+      .catch(() => {
+        // Vorgabe konnte nicht geladen werden - bleibt beim Fallback 4,
+        // kein Grund den Wochenplan zu blockieren
+      });
+  }, []);
 
   const monday = getMondayOfWeek(new Date(), weekOffset);
   const weekDays = Array.from({ length: 7 }, (_, i) => {
@@ -86,6 +99,7 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
   const openPicker = (dateKey: string, slot: MealSlot) => {
     setPickerTarget({ dateKey, slot });
     setRecipeSearch('');
+    setServingsInput(String(defaultServings));
     if (allRecipes.length === 0) {
       api.get<RecipeSummary[]>('/recipes/').then(setAllRecipes).catch(() => {});
     }
@@ -93,8 +107,14 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
 
   const assignRecipe = async (recipeId: string) => {
     if (!pickerTarget) return;
+    const servings = servingsInput.trim() ? Number(servingsInput.trim()) : null;
     try {
-      await api.post('/weekly-plan/', { plan_date: pickerTarget.dateKey, meal_slot: pickerTarget.slot, recipe_id: recipeId });
+      await api.post('/weekly-plan/', {
+        plan_date: pickerTarget.dateKey,
+        meal_slot: pickerTarget.slot,
+        recipe_id: recipeId,
+        servings,
+      });
       setPickerTarget(null);
       loadWeek();
     } catch (err) {
@@ -215,6 +235,7 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
                         <View style={styles.slotFilled}>
                           <Text style={[styles.slotRecipeTitle, { color: colors.text }]} numberOfLines={1}>
                             {entry.recipe_title}
+                            {entry.servings ? ` · ${entry.servings} Port.` : ''}
                           </Text>
                           <MaterialCommunityIcons name="close-circle-outline" size={16} color={colors.muted} />
                         </View>
@@ -237,6 +258,15 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
             <Pressable onPress={() => setPickerTarget(null)} hitSlop={10}>
               <MaterialCommunityIcons name="close" size={24} color={colors.text} />
             </Pressable>
+          </View>
+          <View style={styles.servingsRow}>
+            <Text style={{ color: colors.muted, fontSize: 12.5 }}>Portionen:</Text>
+            <TextInput
+              value={servingsInput}
+              onChangeText={setServingsInput}
+              keyboardType="numeric"
+              style={[styles.servingsInput, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.sm }]}
+            />
           </View>
           <TextInput
             style={[styles.pickerSearch, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
@@ -284,5 +314,7 @@ const styles = StyleSheet.create({
   pickerHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   pickerTitle: { fontSize: 17, fontWeight: '700' },
   pickerSearch: { height: 44, paddingHorizontal: 14, fontSize: 13.5, marginBottom: 14 },
+  servingsRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
+  servingsInput: { width: 60, height: 38, paddingHorizontal: 10, fontSize: 13.5, textAlign: 'center' },
   pickerRow: { padding: 13, marginBottom: 7 },
 });

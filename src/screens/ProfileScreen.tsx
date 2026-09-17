@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Switch, Pressable, StyleSheet, ActivityIndicator, Alert, ScrollView, Linking } from 'react-native';
+import { View, Text, Switch, Pressable, StyleSheet, ActivityIndicator, Alert, ScrollView, Linking, TextInput } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme, type BackgroundStyle, type AccentColor } from '../theme/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -25,6 +25,7 @@ interface Preferences {
   storage_mode: StorageMode;
   default_hauben_level: HaubenLevel;
   drittanbieter_provider: string | null;
+  default_servings: number;
 }
 
 type PreferenceKey = 'show_brutzel' | 'large_text' | 'auto_read_steps' | 'server_sync_enabled';
@@ -83,7 +84,7 @@ export default function ProfileScreen({ navigation }: Props) {
   const { signOut } = useAuth();
   const [prefs, setPrefs] = useState<Preferences | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [savingKey, setSavingKey] = useState<PreferenceKey | 'storage_mode' | 'default_hauben_level' | 'drittanbieter_provider' | null>(null);
+  const [savingKey, setSavingKey] = useState<PreferenceKey | 'storage_mode' | 'default_hauben_level' | 'drittanbieter_provider' | 'default_servings' | null>(null);
   const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
 
   const loadPrefs = () => {
@@ -188,6 +189,35 @@ export default function ProfileScreen({ navigation }: Props) {
       setPrefs(updated);
     } catch (err) {
       setPrefs(previous);
+      Alert.alert('Konnte nicht gespeichert werden', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+    } finally {
+      setSavingKey(null);
+    }
+  };
+
+  const [servingsInput, setServingsInput] = useState('');
+  useEffect(() => {
+    if (prefs) setServingsInput(String(prefs.default_servings));
+  }, [prefs?.default_servings]);
+
+  const handleSaveDefaultServings = async () => {
+    if (!prefs) return;
+    const value = Number(servingsInput);
+    if (!value || value < 1 || value > 20) {
+      Alert.alert('Ungültiger Wert', 'Bitte eine Zahl zwischen 1 und 20 eingeben.');
+      setServingsInput(String(prefs.default_servings));
+      return;
+    }
+    if (value === prefs.default_servings) return;
+    const previous = prefs;
+    setPrefs({ ...prefs, default_servings: value });
+    setSavingKey('default_servings');
+    try {
+      const updated = await api.patch<Preferences>('/preferences/', { default_servings: value });
+      setPrefs(updated);
+    } catch (err) {
+      setPrefs(previous);
+      setServingsInput(String(previous.default_servings));
       Alert.alert('Konnte nicht gespeichert werden', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
     } finally {
       setSavingKey(null);
@@ -321,6 +351,25 @@ export default function ProfileScreen({ navigation }: Props) {
       </View>
       <Text style={[styles.hint, { color: colors.muted, marginBottom: 8 }]}>
         Wird beim Start des Koch-Modus vorausgewählt, kannst du dort jederzeit ändern.
+      </Text>
+
+      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 12 }]}>STANDARD-PORTIONENZAHL</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+        <TextInput
+          style={[
+            { width: 70, height: 40, paddingHorizontal: 12, fontSize: 14, backgroundColor: colors.card, color: colors.text },
+            { borderRadius: radius.sm },
+          ]}
+          keyboardType="numeric"
+          value={servingsInput}
+          onChangeText={setServingsInput}
+          onBlur={handleSaveDefaultServings}
+          onSubmitEditing={handleSaveDefaultServings}
+        />
+        {savingKey === 'default_servings' && <ActivityIndicator color={colors.muted} size="small" />}
+      </View>
+      <Text style={[styles.hint, { color: colors.muted, marginBottom: 8 }]}>
+        Wird bei neuen Rezepten und im Wochenplan vorgeschlagen, kann jederzeit angepasst werden.
       </Text>
 
       <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 12 }]}>AKZENTFARBE</Text>
