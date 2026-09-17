@@ -160,7 +160,9 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
     return unsubscribe;
   }, [navigation, editingRecipeId]);
 
-  const handlePickImage = async () => {
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+
+  const handlePickFromGallery = async () => {
     if (!(await ensureMediaLibraryAccess())) return;
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
@@ -171,6 +173,53 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
     if (!result.canceled && result.assets[0]) {
       setLocalImageUri(result.assets[0].uri);
     }
+  };
+
+  const handleTakePhoto = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Zugriff verweigert', 'Ohne Kamera-Zugriff kann kein Foto aufgenommen werden.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.7, allowsEditing: true, aspect: [4, 3] });
+    if (!result.canceled && result.assets[0]) {
+      setLocalImageUri(result.assets[0].uri);
+    }
+  };
+
+  const handleGenerateAiImage = async () => {
+    if (!title.trim()) {
+      Alert.alert('Rezeptname fehlt', 'Bitte zuerst einen Rezeptnamen eingeben, damit das Bild dazu passt.');
+      return;
+    }
+    setIsGeneratingImage(true);
+    try {
+      const result = await api.post<{ url: string; storage_warning?: string | null }>('/ai/generate-recipe-image', {
+        title: title.trim(),
+        context: tagsText.trim() || undefined,
+      });
+      // Wie ein bereits gespeichertes Bild behandeln (existingCoverUrl) -
+      // beim Speichern wird es dann NICHT erneut hochgeladen, ist ja schon
+      // im richtigen Speicherort gelandet.
+      setLocalImageUri(null);
+      setExistingCoverUrl(result.url);
+      if (result.storage_warning) {
+        Alert.alert('Hinweis', result.storage_warning);
+      }
+    } catch (err) {
+      Alert.alert('Bildgenerierung fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+    } finally {
+      setIsGeneratingImage(false);
+    }
+  };
+
+  const handleAddImagePress = () => {
+    Alert.alert('Titelbild hinzufügen', undefined, [
+      { text: 'Aus Galerie wählen', onPress: handlePickFromGallery },
+      { text: 'Foto aufnehmen', onPress: handleTakePhoto },
+      { text: 'KI-Bild generieren', onPress: handleGenerateAiImage },
+      { text: 'Abbrechen', style: 'cancel' },
+    ]);
   };
 
   const updateIngredient = (index: number, field: keyof IngredientDraft, value: string) => {
@@ -317,11 +366,16 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
 
   return (
     <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
-      <Pressable onPress={handlePickImage} style={[styles.imagePicker, { backgroundColor: colors.card, borderRadius: radius.md }]}>
-        {localImageUri || existingCoverUrl ? (
+      <Pressable onPress={handleAddImagePress} disabled={isGeneratingImage} style={[styles.imagePicker, { backgroundColor: colors.card, borderRadius: radius.md }]}>
+        {isGeneratingImage ? (
+          <>
+            <ActivityIndicator color={colors.muted} />
+            <Text style={[styles.imagePickerText, { color: colors.muted, marginTop: 8 }]}>Brutzel malt ein Bild…</Text>
+          </>
+        ) : localImageUri || existingCoverUrl ? (
           <Image source={{ uri: localImageUri ?? existingCoverUrl! }} style={[styles.imagePreview, { borderRadius: radius.md }]} />
         ) : (
-          <Text style={[styles.imagePickerText, { color: colors.muted }]}>📷 Foto hinzufügen</Text>
+          <Text style={[styles.imagePickerText, { color: colors.muted }]}>📷 Titelbild hinzufügen</Text>
         )}
       </Pressable>
 

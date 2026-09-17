@@ -63,8 +63,10 @@ export default function AIGenerateScreen({ navigation }: Props) {
   const [steps, setSteps] = useState<StepDraft[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [localImageUri, setLocalImageUri] = useState<string | null>(null);
+  const [aiGeneratedImageUrl, setAiGeneratedImageUrl] = useState<string | null>(null);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
-  const handlePickImage = async () => {
+  const handlePickFromGallery = async () => {
     if (!(await ensureMediaLibraryAccess())) return;
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
@@ -73,8 +75,51 @@ export default function AIGenerateScreen({ navigation }: Props) {
       aspect: [4, 3],
     });
     if (!result.canceled && result.assets[0]) {
+      setAiGeneratedImageUrl(null);
       setLocalImageUri(result.assets[0].uri);
     }
+  };
+
+  const handleTakePhoto = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Zugriff verweigert', 'Ohne Kamera-Zugriff kann kein Foto aufgenommen werden.');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.7, allowsEditing: true, aspect: [4, 3] });
+    if (!result.canceled && result.assets[0]) {
+      setAiGeneratedImageUrl(null);
+      setLocalImageUri(result.assets[0].uri);
+    }
+  };
+
+  const handleGenerateAiImage = async () => {
+    if (!title.trim()) {
+      Alert.alert('Rezeptname fehlt', 'Bitte zuerst einen Rezeptnamen eingeben, damit das Bild dazu passt.');
+      return;
+    }
+    setIsGeneratingImage(true);
+    try {
+      const result = await api.post<{ url: string; storage_warning?: string | null }>('/ai/generate-recipe-image', {
+        title: title.trim(),
+      });
+      setLocalImageUri(null);
+      setAiGeneratedImageUrl(result.url);
+      if (result.storage_warning) Alert.alert('Hinweis', result.storage_warning);
+    } catch (err) {
+      Alert.alert('Bildgenerierung fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+    } finally {
+      setIsGeneratingImage(false);
+    }
+  };
+
+  const handleAddImagePress = () => {
+    Alert.alert('Titelbild hinzufügen', undefined, [
+      { text: 'Aus Galerie wählen', onPress: handlePickFromGallery },
+      { text: 'Foto aufnehmen', onPress: handleTakePhoto },
+      { text: 'KI-Bild generieren', onPress: handleGenerateAiImage },
+      { text: 'Abbrechen', style: 'cancel' },
+    ]);
   };
 
   const handleGenerate = async () => {
@@ -145,7 +190,7 @@ export default function AIGenerateScreen({ navigation }: Props) {
 
     setIsSaving(true);
     try {
-      let coverImageUrl: string | null = null;
+      let coverImageUrl: string | null = aiGeneratedImageUrl;
       if (localImageUri) {
         const fileName = localImageUri.split('/').pop() ?? 'foto.jpg';
         const extension = fileName.split('.').pop()?.toLowerCase();
@@ -260,9 +305,14 @@ export default function AIGenerateScreen({ navigation }: Props) {
   // Schritt 2: generiertes Ergebnis bearbeiten und speichern
   return (
     <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
-      <Pressable onPress={handlePickImage} style={[styles.imagePicker, { backgroundColor: colors.card, borderRadius: radius.md }]}>
-        {localImageUri ? (
-          <Image source={{ uri: localImageUri }} style={[styles.imagePreview, { borderRadius: radius.md }]} />
+      <Pressable onPress={handleAddImagePress} disabled={isGeneratingImage} style={[styles.imagePicker, { backgroundColor: colors.card, borderRadius: radius.md }]}>
+        {isGeneratingImage ? (
+          <>
+            <ActivityIndicator color={colors.muted} />
+            <Text style={[styles.imagePickerText, { color: colors.muted, marginTop: 8 }]}>Brutzel malt ein Bild…</Text>
+          </>
+        ) : localImageUri || aiGeneratedImageUrl ? (
+          <Image source={{ uri: localImageUri ?? aiGeneratedImageUrl! }} style={[styles.imagePreview, { borderRadius: radius.md }]} />
         ) : (
           <Text style={[styles.imagePickerText, { color: colors.muted }]}>📷 Titelbild hinzufügen (optional)</Text>
         )}
