@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Pressable, Image, Alert, Modal, TextInput } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Pressable, Image, Alert, Modal, TextInput, Keyboard } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
 import { api, ApiError } from '../api/client';
@@ -203,6 +203,128 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
     Alert.alert('Vorgemerkt', 'Wird beim Start der Zubereitung einmalig angezeigt, aber nicht dauerhaft im Rezept gespeichert.');
   };
 
+  // Zutaten/Schritte VOR dem Kochstart bearbeiten - gleiche Abfrage wie im
+  // Koch-Modus selbst (SingleRecipeCookView). "Nur diesmal" speichert
+  // NICHTS im Rezept, sondern merkt die Aenderung lokal vor und gibt sie
+  // beim Kochstart als sessionOverrides an CookMode mit (nur fuers
+  // Hauptgericht, recipeIds[0] - siehe CookModeScreen.tsx).
+  const [sessionIngredientsOverride, setSessionIngredientsOverride] = useState<Ingredient[] | null>(null);
+  const [sessionStepsOverride, setSessionStepsOverride] = useState<Step[] | null>(null);
+  const [isEditingStepIndex, setIsEditingStepIndex] = useState<number | null>(null);
+  const [stepTextDraft, setStepTextDraft] = useState('');
+  const [isSavingStepText, setIsSavingStepText] = useState(false);
+  const [editingIngredientIndex, setEditingIngredientIndex] = useState<number | null>(null);
+  const [ingredientDraft, setIngredientDraft] = useState({ name: '', amount: '', unit: '' });
+  const [isSavingIngredient, setIsSavingIngredient] = useState(false);
+
+  const currentIngredients = sessionIngredientsOverride ?? recipe?.ingredients ?? [];
+  const currentSteps = sessionStepsOverride ?? recipe?.steps ?? [];
+
+  const saveRecipeChangeWithScope = (
+    updatedFields: { ingredients?: Ingredient[]; steps?: Step[] },
+    applyLocally: () => void,
+    applySessionOnly: () => void,
+    setSaving: (v: boolean) => void,
+    onDone: () => void,
+  ) => {
+    Keyboard.dismiss();
+    Alert.alert(
+      'Änderung speichern',
+      'Soll das dauerhaft im Rezept gespeichert werden (auch bei künftigen Malen sichtbar) oder gilt es nur für diesen einen Kochvorgang?',
+      [
+        { text: 'Abbrechen', style: 'cancel' },
+        { text: 'Nur diesmal', onPress: () => { applySessionOnly(); onDone(); } },
+        {
+          text: 'Dauerhaft im Rezept',
+          onPress: async () => {
+            setSaving(true);
+            try {
+              const updated = await api.patch<RecipeDetail>(`/recipes/${recipeId}`, updatedFields);
+              setRecipe(updated);
+              applyLocally();
+              onDone();
+            } catch (err) {
+              Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Konnte nicht gespeichert werden');
+            } finally {
+              setSaving(false);
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleOpenStepEdit = (index: number) => {
+    setStepTextDraft(currentSteps[index].text);
+    setIsEditingStepIndex(index);
+  };
+
+  const handleSaveStepEdit = () => {
+    if (isEditingStepIndex === null || !stepTextDraft.trim()) return;
+    const updated = currentSteps.map((s, i) => (i === isEditingStepIndex ? { ...s, text: stepTextDraft.trim() } : s));
+    saveRecipeChangeWithScope(
+      { steps: updated },
+      () => {},
+      () => setSessionStepsOverride(updated),
+      setIsSavingStepText,
+      () => setIsEditingStepIndex(null),
+    );
+  };
+
+  const handleDeleteStep = () => {
+    if (isEditingStepIndex === null) return;
+    if (currentSteps.length <= 1) {
+      Alert.alert('Nicht möglich', 'Ein Rezept braucht mindestens einen Schritt.');
+      return;
+    }
+    const updated = currentSteps.filter((_, i) => i !== isEditingStepIndex);
+    saveRecipeChangeWithScope(
+      { steps: updated },
+      () => {},
+      () => setSessionStepsOverride(updated),
+      setIsSavingStepText,
+      () => setIsEditingStepIndex(null),
+    );
+  };
+
+  const handleOpenIngredientEdit = (index: number) => {
+    const ing = currentIngredients[index];
+    setIngredientDraft({ name: ing.name, amount: ing.amount != null ? String(ing.amount) : '', unit: ing.unit ?? '' });
+    setEditingIngredientIndex(index);
+  };
+
+  const handleSaveIngredientEdit = () => {
+    if (editingIngredientIndex === null || !ingredientDraft.name.trim()) return;
+    const updated = currentIngredients.map((ing, i) =>
+      i === editingIngredientIndex
+        ? {
+            name: ingredientDraft.name.trim(),
+            amount: ingredientDraft.amount.trim() ? Number(ingredientDraft.amount.trim()) : null,
+            unit: ingredientDraft.unit.trim() || null,
+          }
+        : ing,
+    );
+    saveRecipeChangeWithScope(
+      { ingredients: updated },
+      () => {},
+      () => setSessionIngredientsOverride(updated),
+      setIsSavingIngredient,
+      () => setEditingIngredientIndex(null),
+    );
+  };
+
+  const handleDeleteIngredient = () => {
+    if (editingIngredientIndex === null) return;
+    const updated = currentIngredients.filter((_, i) => i !== editingIngredientIndex);
+    saveRecipeChangeWithScope(
+      { ingredients: updated },
+      () => {},
+      () => setSessionIngredientsOverride(updated),
+      setIsSavingIngredient,
+      () => setEditingIngredientIndex(null),
+    );
+  };
+
   const filteredPickerRecipes = (recipeSearch.trim()
     ? allRecipes.filter((r) => r.title.toLowerCase().includes(recipeSearch.trim().toLowerCase()))
     : allRecipes
@@ -354,7 +476,16 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
       </View>
 
       <Pressable
-        onPress={() => navigation.navigate('CookMode', { recipeIds: [recipeId, ...selectedSideIds], sessionNote: sessionOnlyNote ?? undefined })}
+        onPress={() =>
+          navigation.navigate('CookMode', {
+            recipeIds: [recipeId, ...selectedSideIds],
+            sessionNote: sessionOnlyNote ?? undefined,
+            sessionOverrides:
+              sessionIngredientsOverride || sessionStepsOverride
+                ? { ingredients: sessionIngredientsOverride ?? undefined, steps: sessionStepsOverride ?? undefined }
+                : undefined,
+          })
+        }
         style={[styles.cookButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}
       >
         <Text style={styles.cookButtonText}>Zubereitung starten</Text>
@@ -510,17 +641,25 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
       </View>
 
       <Text style={[styles.sectionTitle, { color: colors.text }]}>Zutaten</Text>
-      {recipe.ingredients.map((ing, i) => (
-        <Text key={i} style={[styles.ingredient, { color: colors.text, fontSize: largeText ? 16.5 : 13.5 }]}>
-          {ing.amount ? `${ing.amount} ${ing.unit ?? ''} ` : ''}
-          {ing.name}
-        </Text>
+      {currentIngredients.map((ing, i) => (
+        <Pressable key={i} onPress={() => handleOpenIngredientEdit(i)} style={styles.ingredientRow}>
+          <Text style={[styles.ingredient, { color: colors.text, fontSize: largeText ? 16.5 : 13.5, flex: 1 }]}>
+            {ing.amount ? `${ing.amount} ${ing.unit ?? ''} ` : ''}
+            {ing.name}
+          </Text>
+          <MaterialCommunityIcons name="pencil-outline" size={15} color={colors.muted} />
+        </Pressable>
       ))}
 
       <Text style={[styles.sectionTitle, { color: colors.text }]}>Zubereitung</Text>
-      {recipe.steps.map((step) => (
+      {currentSteps.map((step, i) => (
         <View key={step.order} style={[styles.stepCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
-          <Text style={[styles.stepNumber, { color: colors.muted }]}>Schritt {step.order}</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={[styles.stepNumber, { color: colors.muted }]}>Schritt {step.order}</Text>
+            <Pressable onPress={() => handleOpenStepEdit(i)} hitSlop={8}>
+              <MaterialCommunityIcons name="pencil-outline" size={15} color={colors.muted} />
+            </Pressable>
+          </View>
           <Text style={[styles.stepText, { color: colors.text, fontSize: largeText ? 17 : 14, lineHeight: largeText ? 25 : 21 }]}>{step.text}</Text>
         </View>
       ))}
@@ -561,11 +700,102 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
         </ScrollView>
       </View>
     </Modal>
+
+    <Modal visible={isEditingStepIndex !== null} transparent animationType="fade" onRequestClose={() => setIsEditingStepIndex(null)}>
+      <View style={styles.modalOverlay}>
+        <View style={[styles.modalCard, { backgroundColor: colors.bg, borderRadius: radius.lg }]}>
+          <Text style={[styles.modalTitle, { color: colors.text }]}>Kochschritt bearbeiten</Text>
+          <TextInput
+            style={[styles.modalInput, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
+            value={stepTextDraft}
+            onChangeText={setStepTextDraft}
+            multiline
+            autoFocus
+          />
+          <View style={[styles.modalButtonRow, { justifyContent: 'space-between' }]}>
+            <Pressable onPress={handleDeleteStep} hitSlop={8}>
+              <MaterialCommunityIcons name="trash-can-outline" size={22} color="#DC2626" />
+            </Pressable>
+            <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
+              <Pressable onPress={() => { Keyboard.dismiss(); setIsEditingStepIndex(null); }} style={styles.modalCancelButton}>
+                <Text style={[styles.modalCancelText, { color: colors.muted }]}>Abbrechen</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleSaveStepEdit}
+                disabled={isSavingStepText}
+                style={[styles.modalSaveButton, { backgroundColor: gradient[0], borderRadius: radius.sm, opacity: isSavingStepText ? 0.7 : 1 }]}
+              >
+                {isSavingStepText ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.modalSaveText}>Speichern</Text>}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </View>
+    </Modal>
+
+    <Modal visible={editingIngredientIndex !== null} transparent animationType="fade" onRequestClose={() => setEditingIngredientIndex(null)}>
+      <View style={styles.modalOverlay}>
+        <View style={[styles.modalCard, { backgroundColor: colors.bg, borderRadius: radius.lg }]}>
+          <Text style={[styles.modalTitle, { color: colors.text }]}>Zutat bearbeiten</Text>
+          <TextInput
+            style={[styles.modalInput, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md, marginBottom: 8 }]}
+            placeholder="Name"
+            placeholderTextColor={colors.muted}
+            value={ingredientDraft.name}
+            onChangeText={(v) => setIngredientDraft((prev) => ({ ...prev, name: v }))}
+            autoFocus
+          />
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TextInput
+              style={[styles.modalInput, { flex: 1, backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
+              placeholder="Menge"
+              placeholderTextColor={colors.muted}
+              keyboardType="numeric"
+              value={ingredientDraft.amount}
+              onChangeText={(v) => setIngredientDraft((prev) => ({ ...prev, amount: v }))}
+            />
+            <TextInput
+              style={[styles.modalInput, { flex: 1, backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
+              placeholder="Einheit"
+              placeholderTextColor={colors.muted}
+              value={ingredientDraft.unit}
+              onChangeText={(v) => setIngredientDraft((prev) => ({ ...prev, unit: v }))}
+            />
+          </View>
+          <View style={[styles.modalButtonRow, { justifyContent: 'space-between' }]}>
+            <Pressable onPress={handleDeleteIngredient} hitSlop={8}>
+              <MaterialCommunityIcons name="trash-can-outline" size={22} color="#DC2626" />
+            </Pressable>
+            <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
+              <Pressable onPress={() => { Keyboard.dismiss(); setEditingIngredientIndex(null); }} style={styles.modalCancelButton}>
+                <Text style={[styles.modalCancelText, { color: colors.muted }]}>Abbrechen</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleSaveIngredientEdit}
+                disabled={isSavingIngredient}
+                style={[styles.modalSaveButton, { backgroundColor: gradient[0], borderRadius: radius.sm, opacity: isSavingIngredient ? 0.7 : 1 }]}
+              >
+                {isSavingIngredient ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.modalSaveText}>Speichern</Text>}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </View>
+    </Modal>
     </>
   );
 }
 
 const styles = StyleSheet.create({
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 },
+  modalCard: { padding: 20 },
+  modalTitle: { fontSize: 15, fontWeight: '700', marginBottom: 12 },
+  modalInput: { minHeight: 44, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14 },
+  modalButtonRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 16, alignItems: 'center', marginTop: 14 },
+  modalCancelButton: { paddingVertical: 8 },
+  modalCancelText: { fontSize: 13, fontWeight: '600' },
+  modalSaveButton: { paddingHorizontal: 20, paddingVertical: 10 },
+  modalSaveText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   container: { padding: 18, paddingBottom: 60 },
   heroImage: { width: '100%', height: 180, marginBottom: 14 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
@@ -602,6 +832,7 @@ const styles = StyleSheet.create({
   cookButtonText: { color: '#fff', fontWeight: '700', fontSize: 14 },
   sectionTitle: { fontSize: 13, fontWeight: '700', marginTop: 8, marginBottom: 10 },
   ingredient: { fontSize: 13.5, lineHeight: 22 },
+  ingredientRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 2 },
   stepCard: { padding: 14, marginBottom: 10 },
   stepNumber: { fontSize: 10, fontWeight: '600', marginBottom: 4 },
   stepText: { fontSize: 14, lineHeight: 21 },

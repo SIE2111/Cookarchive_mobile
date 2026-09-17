@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, Modal, TextInput, Linking, Alert, ScrollView } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, Modal, TextInput, Linking, Alert, ScrollView, Keyboard } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import * as Speech from 'expo-speech';
 import { useTheme } from '../theme/ThemeContext';
@@ -109,9 +109,13 @@ interface Props {
   onTitleLoaded?: (title: string) => void;
   onFinished: () => void; // vom Elternteil gesteuert statt navigation.goBack(),
   // da mehrere Tabs sich nicht jeweils eigenstaendig "zurueck" navigieren sollen
+  // "Nur fuer diesen Kochvorgang" uebernommene Aenderungen aus dem Rezept-
+  // Detail (VOR dem Kochstart bearbeitet, siehe RecipeDetailScreen) - werden
+  // NACH dem Laden ueber das Rezept vom Server gelegt, nie gespeichert.
+  sessionOverrides?: { ingredients?: Ingredient[]; steps?: RecipeStep[] };
 }
 
-export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded, onFinished }: Props) {
+export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded, onFinished, sessionOverrides }: Props) {
   const { colors, gradient, radius } = useTheme();
 
   const [recipe, setRecipe] = useState<RecipeForCooking | null>(null);
@@ -145,6 +149,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
     setSaving: (v: boolean) => void,
     onDone: () => void,
   ) => {
+    Keyboard.dismiss();
     Alert.alert(
       'Änderung speichern',
       'Soll das dauerhaft im Rezept gespeichert werden (auch bei künftigen Malen sichtbar) oder gilt es nur für diesen einen Kochvorgang?',
@@ -239,6 +244,8 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
   // und der Nutzer ihn gestartet hat. Echtes setInterval, keine Attrappe.
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [isEditingTimer, setIsEditingTimer] = useState(false);
+  const [timerEditDraft, setTimerEditDraft] = useState('');
   // Welcher SCHRITT (Index) gerade einen laufenden/gestarteten Timer hat -
   // getrennt von currentIndex (welcher Schritt gerade ANGEZEIGT wird).
   // Ohne diese Trennung wurde der Timer bei jedem Weiter/Zurueck
@@ -260,13 +267,24 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
     api
       .get<RecipeForCooking>(`/recipes/${recipeId}`)
       .then((data) => {
-        setRecipe(data);
-        onTitleLoaded?.(data.title);
+        // "Nur diesmal"-Aenderungen aus dem Rezept-Detail ueberschreiben
+        // die vom Server geladenen Daten NUR fuer diese Session - werden
+        // nirgends gespeichert.
+        const merged = sessionOverrides
+          ? {
+              ...data,
+              ingredients: sessionOverrides.ingredients ?? data.ingredients,
+              steps: sessionOverrides.steps ?? data.steps,
+            }
+          : data;
+        setRecipe(merged);
+        onTitleLoaded?.(merged.title);
       })
       .catch((err) => setError(err instanceof ApiError ? err.detail : 'Rezept konnte nicht geladen werden'));
-    // onTitleLoaded bewusst nicht in den Dependencies - waere bei jedem
-    // Render eine neue Funktionsreferenz vom Elternteil, wuerde den Ladevorgang
-    // unnoetig wiederholen. recipeId ist der einzige relevante Trigger.
+    // onTitleLoaded/sessionOverrides bewusst nicht in den Dependencies -
+    // waeren bei jedem Render neue Referenzen vom Elternteil, wuerden den
+    // Ladevorgang unnoetig wiederholen. recipeId ist der einzige relevante
+    // Trigger.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recipeId]);
 
@@ -394,6 +412,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
       s.order === currentStep.order ? { ...s, user_note: noteDraft.trim() || null } : s,
     );
 
+    Keyboard.dismiss();
     Alert.alert(
       'Notiz speichern',
       'Soll die Notiz dauerhaft im Rezept gespeichert werden (auch bei künftigen Malen sichtbar) oder gilt sie nur für diesen einen Kochvorgang?',
@@ -426,6 +445,21 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
         },
       ],
     );
+  };
+
+  const handleOpenTimerEdit = () => {
+    setTimerEditDraft(displayedRemainingSeconds !== null ? String(Math.round(displayedRemainingSeconds / 60)) : '');
+    setIsEditingTimer(true);
+  };
+
+  const handleSaveTimerEdit = () => {
+    const minutes = Number(timerEditDraft.trim());
+    if (!minutes || minutes <= 0) {
+      Alert.alert('Ungültige Zeit', 'Bitte eine Zahl in Minuten größer als 0 eingeben.');
+      return;
+    }
+    setRemainingSeconds(Math.round(minutes * 60));
+    setIsEditingTimer(false);
   };
 
   const handleStartTimer = async () => {
@@ -474,6 +508,11 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
         if (prev <= 1) {
           if (intervalRef.current) clearInterval(intervalRef.current);
           setIsTimerRunning(false);
+          // Zuverlaessiges Tonsignal ueber Sprachausgabe (funktioniert
+          // sicher im Vordergrund, unabhaengig davon, ob Benachrichtigungs-
+          // Berechtigung erteilt wurde - die geplante Push-Benachrichtigung
+          // allein reichte offenbar nicht als verlaessliches Signal).
+          Speech.speak('Timer fertig!', { language: 'de-DE' });
           return 0;
         }
         return prev - 1;
@@ -693,7 +732,14 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
           <Text style={[styles.timerLabel, { color: colors.muted }]}>
             {displayedIsTimerRunning ? 'TIMER LÄUFT' : displayedRemainingSeconds === 0 ? 'FERTIG' : 'TIMER'}
           </Text>
-          <Text style={[styles.timerValue, { color: gradient[0] }]}>{formatTime(displayedRemainingSeconds)}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Text style={[styles.timerValue, { color: gradient[0] }]}>{formatTime(displayedRemainingSeconds)}</Text>
+            {!isTimerRunningElsewhere && (
+              <Pressable onPress={handleOpenTimerEdit} hitSlop={10}>
+                <MaterialCommunityIcons name="pencil-outline" size={18} color={colors.muted} />
+              </Pressable>
+            )}
+          </View>
           {!displayedIsTimerRunning && displayedRemainingSeconds > 0 && (
             <Pressable onPress={handleStartTimer} style={[styles.timerButton, { backgroundColor: gradient[0], borderRadius: radius.sm }]}>
               <Text style={styles.timerButtonText}>Timer starten</Text>
@@ -731,7 +777,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
               autoFocus
             />
             <View style={styles.modalButtonRow}>
-              <Pressable onPress={() => setIsNoteModalOpen(false)} style={styles.modalCancelButton}>
+              <Pressable onPress={() => { Keyboard.dismiss(); setIsNoteModalOpen(false); }} style={styles.modalCancelButton}>
                 <Text style={[styles.modalCancelText, { color: colors.muted }]}>Abbrechen</Text>
               </Pressable>
               <Pressable
@@ -762,7 +808,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
                 <MaterialCommunityIcons name="trash-can-outline" size={22} color="#DC2626" />
               </Pressable>
               <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
-                <Pressable onPress={() => setIsStepTextModalOpen(false)} style={styles.modalCancelButton}>
+                <Pressable onPress={() => { Keyboard.dismiss(); setIsStepTextModalOpen(false); }} style={styles.modalCancelButton}>
                   <Text style={[styles.modalCancelText, { color: colors.muted }]}>Abbrechen</Text>
                 </Pressable>
                 <Pressable
@@ -812,7 +858,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
                 <MaterialCommunityIcons name="trash-can-outline" size={22} color="#DC2626" />
               </Pressable>
               <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
-                <Pressable onPress={() => setEditingIngredientIndex(null)} style={styles.modalCancelButton}>
+                <Pressable onPress={() => { Keyboard.dismiss(); setEditingIngredientIndex(null); }} style={styles.modalCancelButton}>
                   <Text style={[styles.modalCancelText, { color: colors.muted }]}>Abbrechen</Text>
                 </Pressable>
                 <Pressable
@@ -823,6 +869,35 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
                   {isSavingIngredient ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.modalSaveText}>Speichern</Text>}
                 </Pressable>
               </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={isEditingTimer} transparent animationType="fade" onRequestClose={() => setIsEditingTimer(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: colors.bg, borderRadius: radius.lg }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Timer-Zeit ändern</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <TextInput
+                style={[styles.modalInput, { flex: 1, backgroundColor: colors.card, color: colors.text, borderRadius: radius.md, textAlign: 'center', fontSize: 20 }]}
+                keyboardType="numeric"
+                value={timerEditDraft}
+                onChangeText={setTimerEditDraft}
+                autoFocus
+              />
+              <Text style={{ color: colors.muted, fontSize: 13 }}>Minuten</Text>
+            </View>
+            <View style={styles.modalButtonRow}>
+              <Pressable onPress={() => { Keyboard.dismiss(); setIsEditingTimer(false); }} style={styles.modalCancelButton}>
+                <Text style={[styles.modalCancelText, { color: colors.muted }]}>Abbrechen</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => { Keyboard.dismiss(); handleSaveTimerEdit(); }}
+                style={[styles.modalSaveButton, { backgroundColor: gradient[0], borderRadius: radius.sm }]}
+              >
+                <Text style={styles.modalSaveText}>Übernehmen</Text>
+              </Pressable>
             </View>
           </View>
         </View>
