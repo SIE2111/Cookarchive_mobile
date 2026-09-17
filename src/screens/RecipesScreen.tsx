@@ -201,7 +201,7 @@ export default function RecipesScreen({ navigation, route }: Props) {
         </Pressable>
       )}
 
-      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12, flexGrow: 0, flexShrink: 0 }}>
         <Pressable
           onPress={() => setFavoritesOnly((prev) => !prev)}
           style={[
@@ -316,6 +316,9 @@ export default function RecipesScreen({ navigation, route }: Props) {
         data={visibleRecipes}
         keyExtractor={(item) => item.id}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
+        // Nimmt den restlichen Platz auf, damit er nicht an die
+        // Filterleisten darueber verteilt wird (siehe styles.folderBar).
+        style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: 100 }}
         ListEmptyComponent={
           !error ? (
@@ -398,14 +401,22 @@ export default function RecipesScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: 18, paddingTop: 26 },
-  searchBar: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, height: 42, marginBottom: 12 },
+  searchBar: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, height: 42, marginBottom: 12, flexGrow: 0, flexShrink: 0 },
   searchInput: { flex: 1, fontSize: 13.5 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   errorText: { fontSize: 12, marginBottom: 12 },
   filterPill: { alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 7, marginBottom: 12 },
   filterPillText: { color: '#fff', fontSize: 12, fontWeight: '600' },
-  folderBar: { height: 60, marginBottom: 14 },
-  categoryBar: { height: 60, marginBottom: 14 },
+  // flexGrow/flexShrink 0 ist hier das Entscheidende, nicht die Hoehe:
+  // Der Bildschirm ist eine Flex-Spalte (container: flex 1). Bleibt unten
+  // Platz frei - also genau dann, wenn WENIGE Rezepte gefunden wurden -,
+  // verteilt Flexbox diesen Rest auf alle Kinder, die wachsen duerfen.
+  // Eine horizontale ScrollView darf das standardmaessig, und 'height'
+  // wirkt dabei nur als Ausgangsgroesse, nicht als Obergrenze. Ergebnis
+  // war die auseinandergezogene Filterleiste bei wenig Ergebnissen.
+  // Jetzt bleiben die Leisten fest und die FlatList nimmt den Rest.
+  folderBar: { height: 60, marginBottom: 14, flexGrow: 0, flexShrink: 0 },
+  categoryBar: { height: 60, marginBottom: 14, flexGrow: 0, flexShrink: 0 },
   favoritesChip: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 7, marginBottom: 12 },
   folderChip: { height: 38, paddingHorizontal: 13, justifyContent: 'center', alignItems: 'center' },
   folderChipText: { fontSize: 12, fontWeight: '600', lineHeight: 16 },
