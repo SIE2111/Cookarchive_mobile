@@ -27,6 +27,8 @@ interface ImportedRecipe {
   steps: { order: number; text: string }[];
   tags: string[] | null;
   origin_url: string;
+  cover_image_url: string | null;
+  cover_image_warning: string | null;
 }
 
 export default function WebImportScreen({ navigation, route }: Props) {
@@ -47,12 +49,22 @@ export default function WebImportScreen({ navigation, route }: Props) {
   // Backend legt bewusst noch KEIN Rezept an, das passiert erst hier beim
   // "Speichern" (siehe routers/web_import.py).
   const [title, setTitle] = useState('');
+  const [tagsText, setTagsText] = useState('');
+  const [folders, setFolders] = useState<{ id: string; name: string }[]>([]);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [ingredients, setIngredients] = useState<IngredientDraft[]>([]);
   const [steps, setSteps] = useState<StepDraft[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [localImageUri, setLocalImageUri] = useState<string | null>(null);
   const [aiGeneratedImageUrl, setAiGeneratedImageUrl] = useState<string | null>(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+
+  useEffect(() => {
+    api.get<{ id: string; name: string }[]>('/folders/').then(setFolders).catch(() => {
+      // Ordner sind hier nur "nice to have" - schlaegt das Laden fehl,
+      // bleibt die Auswahl einfach leer, das Speichern funktioniert trotzdem
+    });
+  }, []);
 
   const handlePickFromGallery = async () => {
     if (!(await ensureMediaLibraryAccess())) return;
@@ -120,6 +132,7 @@ export default function WebImportScreen({ navigation, route }: Props) {
     try {
       const result = await api.post<ImportedRecipe>('/web-import/import-recipe', { url: trimmedUrl });
       setTitle(result.title);
+      setTagsText((result.tags ?? []).join(', '));
       setIngredients(
         result.ingredients.map((ing) => ({
           name: ing.name,
@@ -129,6 +142,12 @@ export default function WebImportScreen({ navigation, route }: Props) {
       );
       setSteps(result.steps.sort((a, b) => a.order - b.order).map((s) => ({ text: s.text })));
       setOriginUrl(result.origin_url);
+      if (result.cover_image_url) {
+        setAiGeneratedImageUrl(result.cover_image_url);
+      }
+      if (result.cover_image_warning) {
+        Alert.alert('Hinweis', result.cover_image_warning);
+      }
     } catch (err) {
       // Backend liefert bereits gut lesbare Fehlertexte (z.B. "Auf dieser
       // Seite wurde kein Rezept erkannt.", Timeout, fehlender API-Key) -
@@ -193,12 +212,19 @@ export default function WebImportScreen({ navigation, route }: Props) {
         }
       }
 
+      const tags = tagsText
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean);
+
       await api.post('/recipes/', {
         title: title.trim(),
         ingredients: cleanIngredients,
         steps: cleanSteps,
         cover_image_url: coverImageUrl,
         source_type: 'web_import',
+        tags: tags.length > 0 ? tags : undefined,
+        folder_id: selectedFolderId,
       });
       navigation.navigate('MainTabs');
     } catch (err) {
@@ -278,6 +304,40 @@ export default function WebImportScreen({ navigation, route }: Props) {
         onChangeText={setTitle}
       />
 
+      <Text style={[styles.label, { color: colors.muted, marginTop: 16 }]}>Kategorien (mit Komma getrennt)</Text>
+      <TextInput
+        style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
+        placeholder="z.B. vegetarisch, schnell, warm"
+        placeholderTextColor={colors.muted}
+        value={tagsText}
+        onChangeText={setTagsText}
+      />
+
+      {folders.length > 0 && (
+        <>
+          <Text style={[styles.label, { color: colors.muted, marginTop: 16 }]}>Ordner (optional)</Text>
+          <View style={styles.folderChipsRow}>
+            {folders.map((folder) => {
+              const isSelected = selectedFolderId === folder.id;
+              return (
+                <Pressable
+                  key={folder.id}
+                  onPress={() => setSelectedFolderId(isSelected ? null : folder.id)}
+                  style={[
+                    styles.folderChip,
+                    { backgroundColor: isSelected ? gradient[0] : colors.card, borderRadius: radius.sm },
+                  ]}
+                >
+                  <Text style={{ color: isSelected ? '#fff' : colors.text, fontSize: 12, fontWeight: '600' }}>
+                    {folder.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </>
+      )}
+
       <Text style={[styles.sectionTitle, { color: colors.text }]}>Zutaten</Text>
       {ingredients.map((ing, i) => (
         <View key={i} style={styles.ingredientRow}>
@@ -348,6 +408,8 @@ const styles = StyleSheet.create({
   imagePickerText: { fontSize: 12.5, fontWeight: '500' },
   imagePreview: { width: '100%', height: '100%' },
   label: { fontSize: 11, fontWeight: '500', marginBottom: 6 },
+  folderChipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
+  folderChip: { paddingHorizontal: 12, paddingVertical: 8 },
   input: { minHeight: 44, paddingHorizontal: 12, fontSize: 13.5 },
   sectionTitle: { fontSize: 13, fontWeight: '700', marginTop: 20, marginBottom: 10 },
   ingredientRow: { flexDirection: 'row', gap: 6, marginBottom: 7 },

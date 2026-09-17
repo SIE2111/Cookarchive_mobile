@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Pressable, Image, Alert, Modal, TextInput, Keyboard } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
@@ -344,23 +344,32 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
   };
 
   const [isSavingServings, setIsSavingServings] = useState(false);
-  const handleChangeServings = async (delta: number) => {
-    if (!recipe) return;
-    const newValue = Math.max(1, (recipe.servings ?? 1) + delta);
-    if (newValue === recipe.servings) return;
-    const previous = recipe;
-    // Direkt speichern, kein Zwischenschritt ueber "Bearbeiten" noetig -
-    // sofort bei jedem Antippen von +/-, wie gewuenscht.
-    setRecipe({ ...recipe, servings: newValue });
-    setIsSavingServings(true);
-    try {
-      await api.patch(`/recipes/${recipeId}`, { servings: newValue });
-    } catch (err) {
-      setRecipe(previous);
-      Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Portionenzahl konnte nicht gespeichert werden.');
-    } finally {
-      setIsSavingServings(false);
-    }
+  const servingsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleChangeServings = (delta: number) => {
+    setRecipe((prev) => {
+      if (!prev) return prev;
+      const newValue = Math.max(1, (prev.servings ?? 1) + delta);
+      if (newValue === prev.servings) return prev;
+
+      // Entprellen: bei schnell mehrfachem Antippen von +/- nicht bei jedem
+      // einzelnen Tap sofort speichern (das liess den Ladekreis dazwischen
+      // aufblitzen und wirkte hakelig) - erst 500ms nach dem letzten Tap
+      // tatsaechlich einen PATCH schicken, die Anzeige zaehlt zwischendurch
+      // aber weiterhin sofort optimistisch mit.
+      if (servingsDebounceRef.current) clearTimeout(servingsDebounceRef.current);
+      servingsDebounceRef.current = setTimeout(async () => {
+        setIsSavingServings(true);
+        try {
+          await api.patch(`/recipes/${recipeId}`, { servings: newValue });
+        } catch (err) {
+          Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Portionenzahl konnte nicht gespeichert werden.');
+        } finally {
+          setIsSavingServings(false);
+        }
+      }, 500);
+
+      return { ...prev, servings: newValue };
+    });
   };
 
   const [isSavingFavorite, setIsSavingFavorite] = useState(false);
