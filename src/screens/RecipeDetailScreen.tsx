@@ -317,12 +317,12 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
         <Text style={[styles.meta, { color: colors.muted }]}>
           {recipe.prep_time_minutes ? `${recipe.prep_time_minutes} min` : ''}
         </Text>
-        <View style={{ flexDirection: 'row', gap: 16 }}>
+        <View style={{ flexDirection: 'row', gap: 18 }}>
           <Pressable onPress={() => navigation.navigate('ManualRecipe', { recipeId: recipe.id })} hitSlop={8}>
-            <Text style={[styles.editLink, { color: gradient[0] }]}>Bearbeiten</Text>
+            <MaterialCommunityIcons name="pencil-outline" size={22} color="#16A34A" />
           </Pressable>
           <Pressable onPress={handleDelete} hitSlop={8}>
-            <Text style={[styles.editLink, { color: '#DC2626' }]}>Löschen</Text>
+            <MaterialCommunityIcons name="trash-can-outline" size={22} color="#DC2626" />
           </Pressable>
         </View>
       </View>
@@ -573,7 +573,6 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, fontWeight: '700' },
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4, marginBottom: 20 },
   meta: { fontSize: 12 },
-  editLink: { fontSize: 12.5, fontWeight: '700' },
   sourceHint: { fontSize: 10.5, marginTop: -12, marginBottom: 18 },
   servingsCard: { alignItems: 'center', padding: 16, marginBottom: 14 },
   servingsLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginBottom: 10, textTransform: 'uppercase' },

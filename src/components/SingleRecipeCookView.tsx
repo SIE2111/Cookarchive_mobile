@@ -322,6 +322,26 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
     );
   };
 
+  const handleDeleteStep = () => {
+    if (!recipe) return;
+    if (recipe.steps.length <= 1) {
+      Alert.alert('Nicht möglich', 'Ein Rezept braucht mindestens einen Schritt.');
+      return;
+    }
+    const updatedSteps = recipe.steps.filter((s) => s.order !== currentStep.order);
+    saveRecipeChangeWithScope(
+      { steps: updatedSteps },
+      () => {
+        setRecipe({ ...recipe, steps: updatedSteps });
+        // Wurde der letzte Schritt geloescht, auf den jetzt letzten
+        // verbleibenden zurueckspringen statt ins Leere zu zeigen.
+        setCurrentIndex((prev) => Math.min(prev, updatedSteps.length - 1));
+      },
+      setIsSavingStepText,
+      () => setIsStepTextModalOpen(false),
+    );
+  };
+
   const handleOpenIngredientModal = (index: number) => {
     const ing = recipe!.ingredients[index];
     setIngredientDraft({ name: ing.name, amount: ing.amount != null ? String(ing.amount) : '', unit: ing.unit ?? '' });
@@ -339,6 +359,17 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
           }
         : ing,
     );
+    saveRecipeChangeWithScope(
+      { ingredients: updatedIngredients },
+      () => setRecipe({ ...recipe, ingredients: updatedIngredients }),
+      setIsSavingIngredient,
+      () => setEditingIngredientIndex(null),
+    );
+  };
+
+  const handleDeleteIngredient = () => {
+    if (!recipe || editingIngredientIndex === null) return;
+    const updatedIngredients = recipe.ingredients.filter((_, i) => i !== editingIngredientIndex);
     saveRecipeChangeWithScope(
       { ingredients: updatedIngredients },
       () => setRecipe({ ...recipe, ingredients: updatedIngredients }),
@@ -726,17 +757,22 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
               multiline
               autoFocus
             />
-            <View style={styles.modalButtonRow}>
-              <Pressable onPress={() => setIsStepTextModalOpen(false)} style={styles.modalCancelButton}>
-                <Text style={[styles.modalCancelText, { color: colors.muted }]}>Abbrechen</Text>
+            <View style={[styles.modalButtonRow, { justifyContent: 'space-between' }]}>
+              <Pressable onPress={handleDeleteStep} hitSlop={8}>
+                <MaterialCommunityIcons name="trash-can-outline" size={22} color="#DC2626" />
               </Pressable>
-              <Pressable
-                onPress={handleSaveStepText}
-                disabled={isSavingStepText}
-                style={[styles.modalSaveButton, { backgroundColor: gradient[0], borderRadius: radius.sm, opacity: isSavingStepText ? 0.7 : 1 }]}
-              >
-                {isSavingStepText ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.modalSaveText}>Speichern</Text>}
-              </Pressable>
+              <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
+                <Pressable onPress={() => setIsStepTextModalOpen(false)} style={styles.modalCancelButton}>
+                  <Text style={[styles.modalCancelText, { color: colors.muted }]}>Abbrechen</Text>
+                </Pressable>
+                <Pressable
+                  onPress={handleSaveStepText}
+                  disabled={isSavingStepText}
+                  style={[styles.modalSaveButton, { backgroundColor: gradient[0], borderRadius: radius.sm, opacity: isSavingStepText ? 0.7 : 1 }]}
+                >
+                  {isSavingStepText ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.modalSaveText}>Speichern</Text>}
+                </Pressable>
+              </View>
             </View>
           </View>
         </View>
@@ -771,17 +807,22 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
                 onChangeText={(v) => setIngredientDraft((prev) => ({ ...prev, unit: v }))}
               />
             </View>
-            <View style={styles.modalButtonRow}>
-              <Pressable onPress={() => setEditingIngredientIndex(null)} style={styles.modalCancelButton}>
-                <Text style={[styles.modalCancelText, { color: colors.muted }]}>Abbrechen</Text>
+            <View style={[styles.modalButtonRow, { justifyContent: 'space-between' }]}>
+              <Pressable onPress={handleDeleteIngredient} hitSlop={8}>
+                <MaterialCommunityIcons name="trash-can-outline" size={22} color="#DC2626" />
               </Pressable>
-              <Pressable
-                onPress={handleSaveIngredient}
-                disabled={isSavingIngredient}
-                style={[styles.modalSaveButton, { backgroundColor: gradient[0], borderRadius: radius.sm, opacity: isSavingIngredient ? 0.7 : 1 }]}
-              >
-                {isSavingIngredient ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.modalSaveText}>Speichern</Text>}
-              </Pressable>
+              <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
+                <Pressable onPress={() => setEditingIngredientIndex(null)} style={styles.modalCancelButton}>
+                  <Text style={[styles.modalCancelText, { color: colors.muted }]}>Abbrechen</Text>
+                </Pressable>
+                <Pressable
+                  onPress={handleSaveIngredient}
+                  disabled={isSavingIngredient}
+                  style={[styles.modalSaveButton, { backgroundColor: gradient[0], borderRadius: radius.sm, opacity: isSavingIngredient ? 0.7 : 1 }]}
+                >
+                  {isSavingIngredient ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.modalSaveText}>Speichern</Text>}
+                </Pressable>
+              </View>
             </View>
           </View>
         </View>

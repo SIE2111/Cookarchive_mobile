@@ -466,6 +466,14 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
               value={ing.unit}
               onChangeText={(v) => updateIngredient(i, 'unit', v)}
             />
+            <Pressable
+              onPress={() => setIngredients((prev) => prev.filter((_, idx) => idx !== i))}
+              disabled={ingredients.length === 1}
+              hitSlop={8}
+              style={{ opacity: ingredients.length === 1 ? 0.3 : 1, marginLeft: 6 }}
+            >
+              <MaterialCommunityIcons name="trash-can-outline" size={20} color="#DC2626" />
+            </Pressable>
           </View>
           {focusedIngredientIndex === i && suggestions.length > 0 && (
             <View style={[styles.suggestionsBox, { backgroundColor: colors.card, borderRadius: radius.sm }]}>
@@ -495,6 +503,14 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
             value={step.text}
             onChangeText={(v) => updateStep(i, v)}
           />
+          <Pressable
+            onPress={() => setSteps((prev) => prev.filter((_, idx) => idx !== i))}
+            disabled={steps.length === 1}
+            hitSlop={8}
+            style={{ opacity: steps.length === 1 ? 0.3 : 1, marginLeft: 6, alignSelf: 'flex-start', marginTop: 12 }}
+          >
+            <MaterialCommunityIcons name="trash-can-outline" size={20} color="#DC2626" />
+          </Pressable>
         </View>
       ))}
       <Pressable onPress={() => setSteps((prev) => [...prev, { text: '' }])}>
