@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
+import { api } from '../api/client';
 import SingleRecipeCookView from '../components/SingleRecipeCookView';
 import CookingFinishedCelebration from '../components/CookingFinishedCelebration';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -20,12 +21,19 @@ export default function CookModeScreen({ route, navigation }: Props) {
 
   const handleFinished = () => {
     if (recipeIds.length === 1) {
+      // Nur das HAUPTGERICHT (recipeIds[0]) zaehlt als "zubereitet" fuers
+      // Dashboard - mitgekochte Beilagen bleiben davon bewusst ausgenommen.
+      api.post(`/recipes/${recipeIds[0]}/mark-cooked`).catch(() => {
+        // Nicht kritisch fuers eigentliche Kochen - Fehler hier soll die
+        // Feier/den Abschluss nicht blockieren
+      });
       setShowCelebration(true);
       return;
     }
     if (activeIndex < recipeIds.length - 1) {
       setActiveIndex((i) => i + 1);
     } else {
+      api.post(`/recipes/${recipeIds[0]}/mark-cooked`).catch(() => {});
       setShowCelebration(true);
     }
   };

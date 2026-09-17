@@ -23,6 +23,7 @@ interface RecipeSummary {
   servings: number | null;
   cover_image_url: string | null;
   created_at: string;
+  last_cooked_at: string | null;
 }
 
 const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -96,8 +97,12 @@ export default function DashboardScreen({ navigation }: Props) {
       .map(([tag]) => tag);
   }, [recipes]);
 
-  const recentlyAdded = useMemo(
-    () => [...recipes].sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at)).slice(0, 4),
+  const recentlyCooked = useMemo(
+    () =>
+      recipes
+        .filter((r) => r.last_cooked_at)
+        .sort((a, b) => +new Date(b.last_cooked_at!) - +new Date(a.last_cooked_at!))
+        .slice(0, 10),
     [recipes],
   );
 
@@ -200,21 +205,26 @@ export default function DashboardScreen({ navigation }: Props) {
         </>
       )}
 
-      {/* Zuletzt hinzugefuegt */}
-      <Text style={[styles.sectionLabel, { color: colors.text }]}>Zuletzt hinzugefügt</Text>
-      {recentlyAdded.length === 0 ? (
+      {/* Zuletzt zubereitet (nur Hauptgerichte, keine mitgekochten Beilagen -
+          siehe CookModeScreen.tsx, ruft mark-cooked nur fuer recipeIds[0] auf) */}
+      <Text style={[styles.sectionLabel, { color: colors.text }]}>Zuletzt zubereitet</Text>
+      {recentlyCooked.length === 0 ? (
         <Text style={[styles.emptyText, { color: colors.muted }]}>
-          Noch keine Rezepte – leg dein erstes über "Scan" oder "Rezepte" an.
+          Noch nichts zubereitet – starte die Zubereitung eines Rezepts, dann erscheint es hier.
         </Text>
       ) : (
         <View style={[styles.recentCard, { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.cardBorder }]}>
-          {recentlyAdded.map((r, i) => (
+          {recentlyCooked.map((r, i) => (
             <Pressable
               key={r.id}
               onPress={() => navigation.navigate('RecipeDetail', { recipeId: r.id, title: r.title })}
-              style={[styles.recentRow, i < recentlyAdded.length - 1 && styles.recentRowBorder, { borderColor: colors.bg }]}
+              style={[styles.recentRow, i < recentlyCooked.length - 1 && styles.recentRowBorder, { borderColor: colors.bg }]}
             >
-              <View style={[styles.recentDot, { backgroundColor: gradient[i % 2 === 0 ? 0 : 1] }]} />
+              {r.cover_image_url ? (
+                <Image source={{ uri: r.cover_image_url }} style={styles.recentThumb} />
+              ) : (
+                <View style={[styles.recentThumb, styles.recentThumbPlaceholder, { backgroundColor: gradient[i % 2 === 0 ? 0 : 1] }]} />
+              )}
               <View style={{ flex: 1 }}>
                 <Text style={[styles.recentTitle, { color: colors.text }]} numberOfLines={1}>
                   {r.title}
@@ -260,7 +270,8 @@ const styles = StyleSheet.create({
   recentCard: { paddingHorizontal: 4 },
   recentRow: { flexDirection: 'row', alignItems: 'center', gap: 11, paddingVertical: 12, paddingHorizontal: 10 },
   recentRowBorder: { borderBottomWidth: 1 },
-  recentDot: { width: 10, height: 10, borderRadius: 5 },
+  recentThumb: { width: 40, height: 40, borderRadius: 8 },
+  recentThumbPlaceholder: {},
   recentTitle: { fontSize: 13, fontWeight: '600' },
   recentMeta: { fontSize: 10.5, marginTop: 2 },
 });
