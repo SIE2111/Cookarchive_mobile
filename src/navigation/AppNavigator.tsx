@@ -58,7 +58,7 @@ export type MainStackParamList = {
   WebBrowse: { initialQuery?: string } | undefined;
   AIGenerate: undefined;
   WeeklyPlan: undefined;
-  CookMode: { recipeIds: string[] };
+  CookMode: { recipeIds: string[]; sessionNote?: string };
   CommunityPool: undefined;
   Household: undefined;
   Onboarding: undefined;

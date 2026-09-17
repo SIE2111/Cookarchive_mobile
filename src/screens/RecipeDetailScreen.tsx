@@ -178,12 +178,29 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
       setRecipe(updated);
       setReviewSuggestions(null);
       setSelectedSuggestionIndices([]);
+      setSessionOnlyNote(null); // dauerhaft uebernommen -> ersetzt eine evtl. vorher gewaehlte Nur-diesmal-Notiz
       Alert.alert('Übernommen', 'Die ausgewählten Vorschläge wurden als Notiz ins Rezept übernommen.');
     } catch (err) {
       Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Konnte nicht übernommen werden.');
     } finally {
       setIsApplyingSuggestions(false);
     }
+  };
+
+  // "Nur fuer diesen Kochvorgang": KEIN Speichern im Rezept - die gewaehlten
+  // Vorschlaege werden stattdessen beim Kochstart als sessionNote an den
+  // Koch-Modus mitgegeben (siehe navigation.navigate('CookMode', ...) unten)
+  // und dort nur einmalig angezeigt, das gespeicherte Rezept bleibt unberuehrt.
+  const [sessionOnlyNote, setSessionOnlyNote] = useState<string | null>(null);
+  const handleApplySuggestionsForThisCookOnly = () => {
+    if (!reviewSuggestions || selectedSuggestionIndices.length === 0) return;
+    const chosenText = selectedSuggestionIndices
+      .map((i) => `${reviewSuggestions[i].title}: ${reviewSuggestions[i].detail}`)
+      .join('\n');
+    setSessionOnlyNote(chosenText);
+    setReviewSuggestions(null);
+    setSelectedSuggestionIndices([]);
+    Alert.alert('Vorgemerkt', 'Wird beim Start der Zubereitung einmalig angezeigt, aber nicht dauerhaft im Rezept gespeichert.');
   };
 
   const filteredPickerRecipes = (recipeSearch.trim()
@@ -337,7 +354,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
       </View>
 
       <Pressable
-        onPress={() => navigation.navigate('CookMode', { recipeIds: [recipeId, ...selectedSideIds] })}
+        onPress={() => navigation.navigate('CookMode', { recipeIds: [recipeId, ...selectedSideIds], sessionNote: sessionOnlyNote ?? undefined })}
         style={[styles.cookButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}
       >
         <Text style={styles.cookButtonText}>Zubereitung starten</Text>
@@ -481,6 +498,13 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
                 </Text>
               )}
             </Pressable>
+            <Pressable
+              onPress={handleApplySuggestionsForThisCookOnly}
+              disabled={selectedSuggestionIndices.length === 0}
+              style={[styles.secondaryReviewButton, { borderColor: gradient[0], borderRadius: radius.sm, opacity: selectedSuggestionIndices.length === 0 ? 0.5 : 1 }]}
+            >
+              <Text style={[styles.secondaryReviewButtonText, { color: gradient[0] }]}>Nur für diesen Kochvorgang</Text>
+            </Pressable>
           </>
         )}
       </View>
@@ -560,6 +584,8 @@ const styles = StyleSheet.create({
   sidesCard: { padding: 14, marginBottom: 14 },
   reviewButton: { height: 42, alignItems: 'center', justifyContent: 'center' },
   reviewButtonText: { color: '#fff', fontWeight: '700', fontSize: 12.5 },
+  secondaryReviewButton: { height: 40, alignItems: 'center', justifyContent: 'center', marginTop: 8, borderWidth: 1.5 },
+  secondaryReviewButtonText: { fontWeight: '700', fontSize: 12 },
   sidesHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
   sidesTitle: { fontSize: 14, fontWeight: '700', flex: 1 },
   sideRow: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, marginBottom: 8 },

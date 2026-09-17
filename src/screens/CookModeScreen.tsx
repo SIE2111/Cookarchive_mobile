@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { api } from '../api/client';
 import SingleRecipeCookView from '../components/SingleRecipeCookView';
@@ -18,6 +18,16 @@ export default function CookModeScreen({ route, navigation }: Props) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [titles, setTitles] = useState<Record<string, string>>({});
   const [showCelebration, setShowCelebration] = useState(false);
+
+  // "Nur fuer diesen Kochvorgang" uebernommene Verbesserungsvorschlaege
+  // (siehe RecipeDetailScreen) - werden NICHT im Rezept gespeichert, nur
+  // hier einmalig beim Betreten des Koch-Modus angezeigt.
+  useEffect(() => {
+    if (route.params.sessionNote) {
+      Alert.alert('Für diesen Kochvorgang', route.params.sessionNote);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleFinished = () => {
     if (recipeIds.length === 1) {
