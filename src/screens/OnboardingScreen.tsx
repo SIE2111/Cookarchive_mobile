@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
@@ -9,18 +9,27 @@ import type { MainStackParamList } from '../navigation/AppNavigator';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'Onboarding'>;
 
-const PACK_SIZES = [
-  { size: 50, label: '50 Rezepte', sublabel: 'Vollständig verfügbar' },
-  { size: 100, label: '100 Rezepte', sublabel: 'Noch nicht vollständig befüllt' },
-] as const;
-
 export default function OnboardingScreen({ navigation }: Props) {
   const { colors, gradient, radius } = useTheme();
   const { clearJustRegistered } = useAuth();
   const [createFolders, setCreateFolders] = useState(true);
-  const [selectedPackSize, setSelectedPackSize] = useState<number | null>(50);
+  // Keine 50/100-Paketgroessen mehr - fuehrte bei wachsendem Rezept-Pool
+  // dazu, dass neu hinzugefuegte Rezepte (hoeherer popularity_rank) beim
+  // Import schlicht nie mitkamen. Stattdessen nur noch "alle" oder "keine".
+  const [importAll, setImportAll] = useState(true);
+  const [totalAvailable, setTotalAvailable] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    api
+      .get<{ total_curated_recipes_available: number }>('/onboarding/starter-pack-options')
+      .then((res) => setTotalAvailable(res.total_curated_recipes_available))
+      .catch(() => {
+        // Nur fuer die Anzeige der Rezeptanzahl - schlaegt das Laden fehl,
+        // bleibt der Text generisch, der Import selbst funktioniert trotzdem
+      });
+  }, []);
 
   const handleContinue = async () => {
     setIsSubmitting(true);
@@ -28,7 +37,7 @@ export default function OnboardingScreen({ navigation }: Props) {
     try {
       await api.post('/onboarding/setup', {
         create_standard_folders: createFolders,
-        starter_pack_size: selectedPackSize,
+        starter_pack_size: importAll ? totalAvailable ?? 1000 : null,
       });
       clearJustRegistered();
       navigation.replace('MainTabs');
@@ -47,39 +56,35 @@ export default function OnboardingScreen({ navigation }: Props) {
       <View style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}>
         <View style={{ flex: 1 }}>
           <Text style={[styles.rowTitle, { color: colors.text }]}>Standard-Ordner anlegen</Text>
-          <Text style={[styles.rowSubtitle, { color: colors.muted }]}>Vorspeisen, Hauptgerichte, Backen, Vegan, Getränke</Text>
+          <Text style={[styles.rowSubtitle, { color: colors.muted }]}>Vorspeisen, Hauptgerichte, Beilagen, Backen, Vegan, Getränke</Text>
         </View>
         <Switch value={createFolders} onValueChange={setCreateFolders} trackColor={{ false: '#E7E1D4', true: gradient[0] }} thumbColor="#fff" />
       </View>
 
       <Text style={[styles.sectionLabel, { color: colors.muted }]}>STARTER-REZEPTE IMPORTIEREN</Text>
 
-      {PACK_SIZES.map((pack) => {
-        const isSelected = selectedPackSize === pack.size;
-        return (
-          <Pressable
-            key={pack.size}
-            onPress={() => setSelectedPackSize(pack.size)}
-            style={[
-              styles.row,
-              { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: isSelected ? 1.5 : 0, borderColor: gradient[0] },
-            ]}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.rowTitle, { color: colors.text }]}>{pack.label}</Text>
-              <Text style={[styles.rowSubtitle, { color: colors.muted }]}>{pack.sublabel}</Text>
-            </View>
-            {isSelected && <Text style={{ color: gradient[0], fontSize: 18 }}>✓</Text>}
-          </Pressable>
-        );
-      })}
+      <Pressable
+        onPress={() => setImportAll(true)}
+        style={[
+          styles.row,
+          { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: importAll ? 1.5 : 0, borderColor: gradient[0] },
+        ]}
+      >
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.rowTitle, { color: colors.text }]}>
+            Alle importieren{totalAvailable !== null ? ` (${totalAvailable})` : ''}
+          </Text>
+          <Text style={[styles.rowSubtitle, { color: colors.muted }]}>Bereits importierte werden übersprungen, keine Duplikate</Text>
+        </View>
+        {importAll && <Text style={{ color: gradient[0], fontSize: 18 }}>✓</Text>}
+      </Pressable>
 
       <Pressable
-        onPress={() => setSelectedPackSize(null)}
-        style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: selectedPackSize === null ? 1.5 : 0, borderColor: gradient[0] }]}
+        onPress={() => setImportAll(false)}
+        style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: !importAll ? 1.5 : 0, borderColor: gradient[0] }]}
       >
         <Text style={[styles.rowTitle, { color: colors.text, flex: 1 }]}>Keine Starter-Rezepte importieren</Text>
-        {selectedPackSize === null && <Text style={{ color: gradient[0], fontSize: 18 }}>✓</Text>}
+        {!importAll && <Text style={{ color: gradient[0], fontSize: 18 }}>✓</Text>}
       </Pressable>
 
       {error && <Text style={[styles.errorText, { color: '#DC2626' }]}>{error}</Text>}
