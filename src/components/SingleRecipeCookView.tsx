@@ -385,7 +385,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
       )}
 
       <View style={[styles.brutzelCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
-        <BrutzelAvatar size={26} />
+        <BrutzelAvatar size={52} />
         <View style={{ flex: 1 }}>
           <Text style={[styles.brutzelText, { color: colors.muted }]}>
             <Text style={{ fontWeight: '700', color: gradient[0] }}>Brutzel: </Text>
@@ -498,7 +498,7 @@ const styles = StyleSheet.create({
   speakButton: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
   techniqueBadge: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 6, marginBottom: 10 },
   techniqueText: { fontSize: 11, textTransform: 'capitalize' },
-  brutzelCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 9, padding: 10, marginBottom: 10 },
+  brutzelCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, marginBottom: 10 },
   brutzelText: { flex: 1, fontSize: 12, lineHeight: 17 },
   videoLink: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 },
   videoLinkText: { fontSize: 11.5, fontWeight: '700' },
