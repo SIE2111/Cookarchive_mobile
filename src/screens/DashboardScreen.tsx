@@ -212,7 +212,7 @@ export default function DashboardScreen({ navigation }: Props) {
             style={[styles.categoryChip, { backgroundColor: colors.card, borderRadius: radius.sm }]}
           >
             <MaterialCommunityIcons name="heart" size={13} color={gradient[0]} style={{ marginRight: 5 }} />
-            <Text style={[styles.categoryText, { color: colors.text }]}>Lieblingsgerichte</Text>
+            <Text style={[styles.categoryText, { color: colors.text }]}>Favoriten</Text>
           </Pressable>
           {categories.map((tag) => (
             <Pressable
