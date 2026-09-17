@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
   filterPillText: { color: '#fff', fontSize: 12, fontWeight: '600' },
   folderBar: { height: 60, marginBottom: 14 },
   favoritesChip: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 7, marginBottom: 12 },
-  folderChip: { paddingHorizontal: 13, paddingVertical: 8, justifyContent: 'center' },
+  folderChip: { height: 38, paddingHorizontal: 13, justifyContent: 'center', alignItems: 'center' },
   folderChipText: { fontSize: 12, fontWeight: '600', lineHeight: 16 },
   newFolderChip: { borderWidth: 1.3, paddingHorizontal: 10 },
   emptyText: { fontSize: 13, textAlign: 'center', marginTop: 40, lineHeight: 20 },
