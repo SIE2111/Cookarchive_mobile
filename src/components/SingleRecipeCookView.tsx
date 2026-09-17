@@ -588,11 +588,19 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
 
   // Was fuer den JETZT sichtbaren Schritt anzuzeigen ist: laeuft dessen
   // eigener Timer, zeigt sich der echte Live-Countdown; sonst dessen
-  // eigene (nicht laufende) Dauer. remainingSeconds/isTimerRunning selbst
-  // bleiben unabhaengig davon fuer den aktiven Timer-Schritt im Hintergrund
-  // bestehen, auch waehrend ein anderer Schritt angezeigt wird.
+  // eigene (nicht laufende) Dauer - inklusive einer manuellen Bearbeitung
+  // ueber "Timer-Zeit aendern", auch wenn der Timer noch gar nicht
+  // gestartet wurde (Bug: vorher wurde in dem Fall IMMER die urspruengliche
+  // Schritt-Dauer neu aus dem Rezepttext abgeleitet, eine Bearbeitung VOR
+  // dem Start ging dadurch sofort wieder verloren). Nur wenn fuer einen
+  // ANDEREN Schritt gerade ein Timer im Hintergrund aktiv ist, wird bewusst
+  // dessen eigene (unbearbeitete) Dauer gezeigt statt remainingSeconds, das
+  // ja dem Hintergrund-Timer gehoert.
   const isViewingActiveTimerStep = activeTimerStepIndex === currentIndex;
-  const displayedRemainingSeconds = isViewingActiveTimerStep ? remainingSeconds : (currentStep ? getEffectiveTimerSeconds(currentStep) : null);
+  const isTimerActiveOnOtherStep = activeTimerStepIndex !== null && activeTimerStepIndex !== currentIndex;
+  const displayedRemainingSeconds = isTimerActiveOnOtherStep
+    ? (currentStep ? getEffectiveTimerSeconds(currentStep) : null)
+    : remainingSeconds;
   const displayedIsTimerRunning = isViewingActiveTimerStep && isTimerRunning;
   const isTimerRunningElsewhere = !isViewingActiveTimerStep && activeTimerStepIndex !== null && isTimerRunning;
 
