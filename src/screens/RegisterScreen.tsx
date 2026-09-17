@@ -13,7 +13,7 @@ const DATENSCHUTZ_URL = 'https://www.homearchive.at/meinkochbuch/datenschutz';
 
 export default function RegisterScreen({ navigation }: Props) {
   const { colors, gradient, radius } = useTheme();
-  const { signUpWithPassword } = useAuth();
+  const { registerWithCode } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -32,13 +32,12 @@ export default function RegisterScreen({ navigation }: Props) {
     }
     setIsSubmitting(true);
     try {
-      const { needsEmailConfirmation } = await signUpWithPassword(email, password);
-      if (needsEmailConfirmation) {
-        navigation.navigate('ConfirmEmail', { email });
-      }
-      // Falls keine Bestaetigung noetig war, wechselt der AppNavigator
-      // automatisch zum Onboarding, sobald die Session gesetzt ist -
-      // hier ist dann nichts weiter zu tun.
+      // Laeuft ueber das eigene Backend, nicht ueber supabase.auth.signUp:
+      // Das Konto wird angelegt und ein 4-stelliger Code per Mail
+      // verschickt. Bestaetigt wird auf dem naechsten Screen durch
+      // Abtippen des Codes - ohne Link, ohne Ruecksprung in die App.
+      await registerWithCode(email, password);
+      navigation.navigate('ConfirmEmail', { email: email.trim().toLowerCase() });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Registrierung fehlgeschlagen';
       Alert.alert('Registrierung fehlgeschlagen', message);

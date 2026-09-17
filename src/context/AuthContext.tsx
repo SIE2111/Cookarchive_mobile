@@ -1,12 +1,30 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../api/supabaseClient';
+import { api } from '../api/client';
 
 /**
  * Kochbuch nutzt bewusst Pflicht-Login (kein Kein-Kontozwang-Prinzip wie
  * beim portablen HomeArchive-Auth-Modul aus dem Weinkeller-Projekt) - der
  * Community-Pool erfordert ohnehin ein echtes Konto. Siehe Umsetzungs-
  * konzept Abschnitt 7b fuer die Begruendung.
+ *
+ * REGISTRIERUNG laeuft NICHT mehr ueber supabase.auth.signUp(), sondern
+ * ueber das eigene Backend (/auth/register + /auth/verify):
+ *
+ *   Grund 1 - Supabase verschickt Bestaetigungsmails ueber SMTP; dieser
+ *   Weg war ueber Stunden nicht zum Laufen zu bringen (535-Fehler durch
+ *   ungueltige Keys). Das Backend verschickt stattdessen direkt ueber die
+ *   Resend-HTTP-API.
+ *
+ *   Grund 2 - und das ist der eigentliche: Supabases Bestaetigungs-MAIL
+ *   enthaelt einen LINK. Ein Link braucht ein Ziel, das zurueck in die App
+ *   fuehrt - in Expo Go mit wechselnder Entwicklungs-IP ein Dauerthema,
+ *   und beim ersten Versuch landete der Nutzer prompt auf einer
+ *   Fehlerseite (Site URL zeigte auf localhost:3000). Ein 4-stelliger
+ *   Code braucht kein Ziel: er wird abgetippt, fertig.
+ *
+ * LOGIN laeuft unveraendert direkt ueber Supabase.
  */
 
 interface AuthContextValue {
@@ -15,8 +33,12 @@ interface AuthContextValue {
   justRegistered: boolean;
   clearJustRegistered: () => void;
   signInWithPassword: (email: string, password: string) => Promise<void>;
-  signUpWithPassword: (email: string, password: string) => Promise<{ needsEmailConfirmation: boolean }>;
-  resendConfirmationEmail: (email: string) => Promise<void>;
+  /** Legt das Konto an und schickt den 4-stelligen Code per Mail. */
+  registerWithCode: (email: string, password: string) => Promise<void>;
+  /** Prueft den Code und loggt den Nutzer direkt ein. */
+  verifyCode: (email: string, code: string) => Promise<void>;
+  /** Fordert einen neuen Code an. */
+  resendCode: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -26,6 +48,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [justRegistered, setJustRegistered] = useState(false);
+
+  // Das bei der Registrierung eingegebene Passwort, damit nach der
+  // Code-Bestaetigung sofort eingeloggt werden kann, ohne es erneut
+  // abzufragen. Bewusst als useRef und NICHT als Navigations-Parameter:
+  // Navigations-State kann von React Navigation persistiert und in
+  // Entwickler-Werkzeugen angezeigt werden, ein Ref lebt nur im
+  // Arbeitsspeicher und ist beim naechsten App-Start weg.
+  const pendingPassword = useRef<{ email: string; password: string } | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -50,28 +80,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       },
-      signUpWithPassword: async (email, password) => {
-        const { data, error } = await supabase.auth.signUp({ email, password });
-        if (error) throw error;
-        if (data.session) {
-          // Bestaetigung war nicht noetig (z.B. "Confirm email" deaktiviert,
-          // oder Nutzer wurde bereits vorher per Admin-API bestaetigt) -
-          // Session ist sofort da, normaler Weg zum Onboarding.
-          setJustRegistered(true);
-          return { needsEmailConfirmation: false };
-        }
-        // Kein Fehler, aber auch keine Session: Supabase hat den Nutzer
-        // angelegt und wartet auf Bestaetigung der E-Mail. Bisher blieb die
-        // App hier im Login/Register-Bereich haengen, ohne dass sichtbar
-        // war, woran es lag - deshalb jetzt explizit erkannt und an die
-        // aufrufende Stelle (RegisterScreen) zurueckgemeldet.
-        return { needsEmailConfirmation: true };
+      registerWithCode: async (email, password) => {
+        const normalized = email.trim().toLowerCase();
+        await api.post('/auth/register', { email: normalized, password });
+        pendingPassword.current = { email: normalized, password };
       },
-      resendConfirmationEmail: async (email) => {
-        const { error } = await supabase.auth.resend({ type: 'signup', email });
+      verifyCode: async (email, code) => {
+        const normalized = email.trim().toLowerCase();
+        await api.post('/auth/verify', { email: normalized, code: code.trim() });
+
+        // Konto ist jetzt freigeschaltet - direkt einloggen, damit der
+        // Nutzer nicht sein gerade vergebenes Passwort noch einmal
+        // eintippen muss. Nur moeglich, wenn die Registrierung in dieser
+        // App-Sitzung passiert ist (siehe pendingPassword); wurde die App
+        // zwischendurch neu gestartet, fuehrt der Aufrufer zum Login.
+        const pending = pendingPassword.current;
+        if (!pending || pending.email !== normalized) {
+          throw new Error('BESTAETIGT_BITTE_ANMELDEN');
+        }
+        const { error } = await supabase.auth.signInWithPassword({
+          email: normalized,
+          password: pending.password,
+        });
         if (error) throw error;
+        pendingPassword.current = null;
+        setJustRegistered(true);
+      },
+      resendCode: async (email) => {
+        await api.post('/auth/resend-code', { email: email.trim().toLowerCase() });
       },
       signOut: async () => {
+        pendingPassword.current = null;
         await supabase.auth.signOut();
       },
     }),
