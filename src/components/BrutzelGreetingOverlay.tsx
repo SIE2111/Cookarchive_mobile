@@ -1,7 +1,7 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, Pressable, StyleSheet, Animated, Easing } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, Pressable, StyleSheet, Animated } from 'react-native';
+import { VideoView, useVideoPlayer } from 'expo-video';
 import * as Speech from 'expo-speech';
-import BrutzelAvatar from './BrutzelAvatar';
 import { useTheme } from '../theme/ThemeContext';
 
 interface Props {
@@ -13,37 +13,43 @@ interface Props {
 // wirklich eigene, individuelle KI-Stimme fuer Brutzel ist mit den vom
 // Betriebssystem mitgelieferten Text-zu-Sprache-Stimmen nicht moeglich,
 // nur eine Auswahl UNTER diesen. expo-speech liefert kein Geschlechts-Feld
-// mit, deshalb ueber bekannte Namen gefiltert statt eines Attributs.
-const GERMAN_MALE_VOICE_HINTS = ['markus', 'martin', 'yannick', 'conrad', 'de-de-wavenet-b', 'de-de-wavenet-d'];
+// mit, deshalb ueber bekannte Namen gefiltert statt eines Attributs -
+// deckt aeltere UND neuere iOS-Stimmenpakete ab, da sich Apples Namen
+// zwischen iOS-Versionen unterscheiden koennen.
+const GERMAN_MALE_VOICE_HINTS = [
+  'markus', 'martin', 'yannick', 'conrad', 'de-de-wavenet-b', 'de-de-wavenet-d',
+  'male', 'mann', 'herr',
+];
 
 /**
  * Animierte Begruessung beim Start (Profil-Schalter "Begruessungs-
- * Animation") - Brutzel kommt von unten hereingehuepft, eine Sprechblase
- * fragt, was heute gekocht werden soll, UND liest den Text vor (zweiter
- * Profil-Schalter "Begruessungs-Animation" deckt beides ab). Kein echtes
- * Video (dafuer gibt es in diesem Rahmen keine Moeglichkeit, Videomaterial
- * zu erzeugen), sondern eine reine RN-Animated-Sequenz - Bounce-Einflug +
- * sanftes Aus-/Einblenden der Sprechblase, ohne zusaetzliche Abhaengigkeit.
- * Verschwindet automatisch nach ein paar Sekunden oder bei Antippen.
+ * Animation") - nutzt dasselbe echte Brutzel-Video wie die Guten-Appetit-
+ * Feier am Ende (siehe CookingFinishedCelebration.tsx), nicht mehr eine
+ * reine Bounce-Animation mit dem statischen Bild. Liest den
+ * Begruessungstext zusaetzlich vor, bevorzugt mit einer deutschen
+ * maennlichen Systemstimme UND merklich abgesenkter Tonhoehe (pitch) -
+ * letzteres sorgt auch dann fuer einen hoerbar maennlicheren Klang, wenn
+ * keine passend benannte maennliche Stimme gefunden wird (die reine
+ * Namenssuche ist nicht zuverlaessig, da sich Apples Stimmennamen
+ * zwischen iOS-Versionen unterscheiden koennen).
  */
 export default function BrutzelGreetingOverlay({ name, onDismiss }: Props) {
   const { colors, gradient, radius } = useTheme();
-  const translateY = useRef(new Animated.Value(120)).current;
-  const avatarOpacity = useRef(new Animated.Value(0)).current;
-  const bubbleOpacity = useRef(new Animated.Value(0)).current;
-  const overlayOpacity = useRef(new Animated.Value(0)).current;
+  const [showText, setShowText] = useState(false);
+  const textOpacity = React.useRef(new Animated.Value(0)).current;
 
   const greetingText = `Hallo ${name}! Was möchtest du heute kochen?`;
 
+  const player = useVideoPlayer(require('../../assets/brutzel-celebration.mp4'), (p) => {
+    p.loop = false;
+    p.play();
+  });
+
   useEffect(() => {
-    Animated.sequence([
-      Animated.timing(overlayOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
-      Animated.parallel([
-        Animated.spring(translateY, { toValue: 0, friction: 5, tension: 60, useNativeDriver: true }),
-        Animated.timing(avatarOpacity, { toValue: 1, duration: 300, useNativeDriver: true }),
-      ]),
-      Animated.timing(bubbleOpacity, { toValue: 1, duration: 250, delay: 150, easing: Easing.out(Easing.ease), useNativeDriver: true }),
-    ]).start();
+    const timer = setTimeout(() => {
+      setShowText(true);
+      Animated.timing(textOpacity, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+    }, 3500);
 
     Speech.getAvailableVoicesAsync()
       .then((voices) => {
@@ -54,15 +60,14 @@ export default function BrutzelGreetingOverlay({ name, onDismiss }: Props) {
         Speech.speak(greetingText, {
           language: 'de-DE',
           voice: (germanMale ?? germanVoices[0])?.identifier,
-          pitch: 1.05,
+          pitch: 0.8,
           rate: 0.98,
         });
       })
       .catch(() => {
-        Speech.speak(greetingText, { language: 'de-DE', pitch: 1.05 });
+        Speech.speak(greetingText, { language: 'de-DE', pitch: 0.8 });
       });
 
-    const timer = setTimeout(() => handleDismiss(), 4200);
     return () => {
       clearTimeout(timer);
       Speech.stop();
@@ -72,44 +77,31 @@ export default function BrutzelGreetingOverlay({ name, onDismiss }: Props) {
 
   const handleDismiss = () => {
     Speech.stop();
-    Animated.timing(overlayOpacity, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => onDismiss());
+    onDismiss();
   };
 
   return (
-    <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}>
-      <Pressable style={StyleSheet.absoluteFill} onPress={handleDismiss} />
-      <View style={styles.content} pointerEvents="box-none">
-        <Animated.View
-          style={[
-            styles.bubble,
-            { backgroundColor: colors.card, borderRadius: radius.lg, opacity: bubbleOpacity, borderColor: gradient[0] },
-          ]}
-        >
-          <Text style={[styles.bubbleText, { color: colors.text }]}>
-            Hallo {name}! 👋{'\n'}Was möchtest du heute kochen?
-          </Text>
+    <View style={[styles.overlay, { backgroundColor: colors.bg }]}>
+      <VideoView player={player} style={styles.video} contentFit="contain" nativeControls={false} />
+
+      {showText && (
+        <Animated.View style={{ opacity: textOpacity, alignItems: 'center' }}>
+          <Text style={[styles.title, { color: colors.text }]}>Hallo {name}! 👋</Text>
+          <Text style={[styles.subtitle, { color: colors.muted }]}>Was möchtest du heute kochen?</Text>
+          <Pressable onPress={handleDismiss} style={[styles.doneButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}>
+            <Text style={styles.doneButtonText}>Los geht's</Text>
+          </Pressable>
         </Animated.View>
-        <Animated.View style={{ opacity: avatarOpacity, transform: [{ translateY }] }}>
-          <BrutzelAvatar size={130} variant="full" />
-        </Animated.View>
-      </View>
-    </Animated.View>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    zIndex: 50,
-  },
-  content: { alignItems: 'center', marginBottom: 60 },
-  bubble: { paddingHorizontal: 20, paddingVertical: 14, marginBottom: 14, borderWidth: 1.5, maxWidth: 280 },
-  bubbleText: { fontSize: 14.5, fontWeight: '600', textAlign: 'center', lineHeight: 20 },
+  overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', padding: 24, zIndex: 50 },
+  video: { width: '100%', height: 260, marginBottom: 20 },
+  title: { fontSize: 22, fontWeight: '700', marginBottom: 6 },
+  subtitle: { fontSize: 13, marginBottom: 22, textAlign: 'center' },
+  doneButton: { paddingHorizontal: 40, paddingVertical: 13 },
+  doneButtonText: { color: '#fff', fontWeight: '700', fontSize: 15 },
 });
