@@ -31,6 +31,7 @@ interface RecipeDetail {
   personal_note: string | null;
   cover_image_url: string | null;
   source_type: string;
+  is_favorite: boolean;
 }
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -168,6 +169,23 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
     }
   };
 
+  const [isSavingFavorite, setIsSavingFavorite] = useState(false);
+  const handleToggleFavorite = async () => {
+    if (!recipe || isSavingFavorite) return;
+    const previous = recipe;
+    const newValue = !recipe.is_favorite;
+    setRecipe({ ...recipe, is_favorite: newValue });
+    setIsSavingFavorite(true);
+    try {
+      await api.patch(`/recipes/${recipeId}`, { is_favorite: newValue });
+    } catch (err) {
+      setRecipe(previous);
+      Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Konnte nicht gespeichert werden.');
+    } finally {
+      setIsSavingFavorite(false);
+    }
+  };
+
   const handleDelete = () => {
     if (!recipe) return;
     Alert.alert(
@@ -213,7 +231,16 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
       {recipe.cover_image_url && (
         <Image source={{ uri: recipe.cover_image_url }} style={[styles.heroImage, { borderRadius: radius.md }]} />
       )}
-      <Text style={[styles.title, { color: colors.text }]}>{recipe.title}</Text>
+      <View style={styles.titleRow}>
+        <Text style={[styles.title, { color: colors.text, flex: 1 }]}>{recipe.title}</Text>
+        <Pressable onPress={handleToggleFavorite} disabled={isSavingFavorite} hitSlop={10} style={{ paddingLeft: 8 }}>
+          <MaterialCommunityIcons
+            name={recipe.is_favorite ? 'heart' : 'heart-outline'}
+            size={26}
+            color={recipe.is_favorite ? '#DC2626' : colors.muted}
+          />
+        </Pressable>
+      </View>
       <View style={styles.metaRow}>
         <Text style={[styles.meta, { color: colors.muted }]}>
           {recipe.prep_time_minutes ? `${recipe.prep_time_minutes} min` : ''}
@@ -390,6 +417,7 @@ const styles = StyleSheet.create({
   container: { padding: 18, paddingBottom: 60 },
   heroImage: { width: '100%', height: 180, marginBottom: 14 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  titleRow: { flexDirection: 'row', alignItems: 'center' },
   title: { fontSize: 20, fontWeight: '700' },
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4, marginBottom: 20 },
   meta: { fontSize: 12 },

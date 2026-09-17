@@ -34,6 +34,7 @@ interface RecipeSummary {
   cover_image_url: string | null;
   folder_id: string | null;
   source_type: string;
+  is_favorite: boolean;
 }
 
 const SOURCE_ICONS: Record<string, keyof typeof MaterialCommunityIcons.glyphMap> = {
@@ -58,6 +59,7 @@ export default function RecipesScreen({ navigation, route }: Props) {
   const [recipes, setRecipes] = useState<RecipeSummary[]>([]);
   const [folders, setFolders] = useState<FolderSummary[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -134,6 +136,9 @@ export default function RecipesScreen({ navigation, route }: Props) {
   if (filterTag) {
     visibleRecipes = visibleRecipes.filter((r) => r.tags?.includes(filterTag));
   }
+  if (favoritesOnly) {
+    visibleRecipes = visibleRecipes.filter((r) => r.is_favorite);
+  }
 
   if (isLoading) {
     return (
@@ -172,6 +177,19 @@ export default function RecipesScreen({ navigation, route }: Props) {
           <Text style={styles.filterPillText}>{filterTag} ✕</Text>
         </Pressable>
       )}
+
+      <Pressable
+        onPress={() => setFavoritesOnly((prev) => !prev)}
+        style={[
+          styles.favoritesChip,
+          { backgroundColor: favoritesOnly ? '#DC2626' : colors.card, borderRadius: radius.sm },
+        ]}
+      >
+        <MaterialCommunityIcons name={favoritesOnly ? 'heart' : 'heart-outline'} size={14} color={favoritesOnly ? '#fff' : colors.text} />
+        <Text style={{ color: favoritesOnly ? '#fff' : colors.text, fontSize: 12, fontWeight: '600', marginLeft: 5 }}>
+          Nur Favoriten
+        </Text>
+      </Pressable>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.folderBar} contentContainerStyle={{ gap: 8 }}>
         <Pressable
@@ -217,11 +235,13 @@ export default function RecipesScreen({ navigation, route }: Props) {
             <Text style={[styles.emptyText, { color: colors.muted }]}>
               {searchText.trim()
                 ? `Keine Treffer für "${searchText.trim()}".`
-                : filterTag
-                  ? `Keine Rezepte mit "${filterTag}" gefunden.`
-                  : selectedFolderId
-                    ? 'Dieser Ordner ist noch leer.'
-                    : 'Noch keine Rezepte – leg dein erstes über den Button unten an.'}
+                : favoritesOnly
+                  ? 'Noch keine Favoriten markiert.'
+                  : filterTag
+                    ? `Keine Rezepte mit "${filterTag}" gefunden.`
+                    : selectedFolderId
+                      ? 'Dieser Ordner ist noch leer.'
+                      : 'Noch keine Rezepte – leg dein erstes über den Button unten an.'}
             </Text>
           ) : null
         }
@@ -243,6 +263,7 @@ export default function RecipesScreen({ navigation, route }: Props) {
                   size={12}
                   color={colors.muted}
                 />
+                {item.is_favorite && <MaterialCommunityIcons name="heart" size={12} color="#DC2626" />}
               </View>
               {item.tags && item.tags.length > 0 && (
                 <Text style={[styles.recipeTags, { color: colors.muted }]}>{item.tags.join(' · ')}</Text>
@@ -297,6 +318,7 @@ const styles = StyleSheet.create({
   filterPill: { alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 7, marginBottom: 12 },
   filterPillText: { color: '#fff', fontSize: 12, fontWeight: '600' },
   folderBar: { marginBottom: 14, maxHeight: 36 },
+  favoritesChip: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 7, marginBottom: 12 },
   folderChip: { paddingHorizontal: 13, paddingVertical: 8, justifyContent: 'center' },
   folderChipText: { fontSize: 12, fontWeight: '600' },
   newFolderChip: { borderWidth: 1.3, paddingHorizontal: 10 },
