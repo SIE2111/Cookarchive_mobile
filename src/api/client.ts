@@ -56,7 +56,11 @@ export const api = {
     apiFetch<T>(path, { method: 'POST', body: body ? JSON.stringify(body) : undefined }),
   patch: <T>(path: string, body?: unknown) =>
     apiFetch<T>(path, { method: 'PATCH', body: body ? JSON.stringify(body) : undefined }),
-  delete: <T>(path: string) => apiFetch<T>(path, { method: 'DELETE' }),
+  // DELETE mit optionalem Body - braucht z.B. /account, das die eigene
+  // E-Mail als Bestaetigung erwartet. HTTP erlaubt einen Body bei DELETE,
+  // FastAPI liest ihn auch; nur wurde er hier bisher nicht durchgereicht.
+  delete: <T>(path: string, body?: unknown) =>
+    apiFetch<T>(path, { method: 'DELETE', body: body ? JSON.stringify(body) : undefined }),
 
   /**
    * Multipart-Upload fuer Bilder (siehe routers/images.py). Nutzt bewusst

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Switch, Pressable, StyleSheet, ActivityIndicator, Alert, ScrollView, TextInput } from 'react-native';
+import { View, Text, Switch, Pressable, StyleSheet, ActivityIndicator, Alert, ScrollView, TextInput, Modal } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme, type BackgroundStyle, type AccentColor } from '../theme/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -67,7 +67,10 @@ const ROWS: { key: PreferenceKey; title: string; subtitle: string; lockedWhen?: 
 
 export default function ProfileScreen({ navigation }: Props) {
   const { colors, gradient, radius, theme, setTheme } = useTheme();
-  const { signOut } = useAuth();
+  const { signOut, session } = useAuth();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
   const [prefs, setPrefs] = useState<Preferences | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [savingKey, setSavingKey] = useState<PreferenceKey | 'default_hauben_level' | 'default_servings' | 'display_name' | null>(null);
@@ -193,6 +196,36 @@ export default function ProfileScreen({ navigation }: Props) {
       </View>
     );
   }
+
+  const accountEmail = session?.user?.email ?? '';
+
+  // Konto loeschen ist zweistufig: erst die Warnung, dann muss die eigene
+  // E-Mail abgetippt werden. Ein einzelner "Wirklich?"-Dialog ist bei
+  // einer unwiderruflichen Aktion zu wenig - der wird weggetippt, ohne
+  // gelesen zu werden. Apple verlangt die Funktion in der App (Guideline
+  // 5.1.1(v)), die DSGVO ohnehin.
+  //
+  // Bewusst ein eigenes Modal statt Alert.prompt: Alert.prompt gibt es
+  // NUR auf iOS, unter Android passiert damit gar nichts.
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText.trim().toLowerCase() !== accountEmail.toLowerCase()) {
+      Alert.alert('Nicht gelöscht', 'Die eingegebene Adresse stimmt nicht überein.');
+      return;
+    }
+    setIsDeleting(true);
+    try {
+      await api.delete('/account', { confirm_email: accountEmail });
+      setShowDeleteDialog(false);
+      // Kein Erfolgs-Dialog noetig: Die Abmeldung wirft den Nutzer direkt
+      // auf den Login-Screen, das ist Rueckmeldung genug.
+      await signOut();
+    } catch (err) {
+      const message = err instanceof ApiError ? err.detail : 'Löschen fehlgeschlagen';
+      Alert.alert('Löschen fehlgeschlagen', message);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
@@ -389,6 +422,58 @@ export default function ProfileScreen({ navigation }: Props) {
       <Pressable onPress={() => signOut()} style={[styles.signOutButton, { borderColor: '#DC2626', borderRadius: radius.md }]}>
         <Text style={styles.signOutText}>Abmelden</Text>
       </Pressable>
+
+      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 30 }]}>KONTO</Text>
+      <Pressable
+        onPress={() => { setDeleteConfirmText(''); setShowDeleteDialog(true); }}
+        style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}
+      >
+        <MaterialCommunityIcons name="account-remove-outline" size={20} color="#DC2626" style={styles.rowIcon} />
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.rowTitle, { color: '#DC2626' }]}>Konto löschen</Text>
+          <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
+            Entfernt dauerhaft alle Rezepte, Ordner, Wochenpläne und Einkaufslisten
+          </Text>
+        </View>
+        <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>
+      </Pressable>
+
+      <Modal visible={showDeleteDialog} transparent animationType="fade" onRequestClose={() => setShowDeleteDialog(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalCard, { backgroundColor: colors.bg, borderRadius: radius.lg }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Konto endgültig löschen</Text>
+            <Text style={[styles.modalBody, { color: colors.muted }]}>
+              Alle deine Rezepte, Ordner, Wochenpläne und Einkaufslisten werden dauerhaft gelöscht.
+              Das lässt sich nicht rückgängig machen.
+              {'\n\n'}Tippe zur Bestätigung deine E-Mail-Adresse ein:
+              {'\n'}<Text style={{ color: colors.text, fontWeight: '600' }}>{accountEmail}</Text>
+            </Text>
+            <TextInput
+              value={deleteConfirmText}
+              onChangeText={setDeleteConfirmText}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              placeholder="deine@email.at"
+              placeholderTextColor={colors.muted}
+              style={[styles.modalInput, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
+            />
+            <Pressable
+              onPress={handleDeleteAccount}
+              disabled={isDeleting}
+              style={[styles.modalDanger, { borderRadius: radius.md, opacity: isDeleting ? 0.6 : 1 }]}
+            >
+              {isDeleting ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.modalDangerText}>Endgültig löschen</Text>
+              )}
+            </Pressable>
+            <Pressable onPress={() => setShowDeleteDialog(false)} disabled={isDeleting} style={{ marginTop: 14 }}>
+              <Text style={[styles.modalCancel, { color: colors.muted }]}>Abbrechen</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -407,4 +492,12 @@ const styles = StyleSheet.create({
   hint: { fontSize: 10.5, lineHeight: 15, marginTop: 6, marginBottom: 20 },
   signOutButton: { height: 46, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginTop: 12 },
   signOutText: { color: '#DC2626', fontWeight: '600', fontSize: 14 },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  modalCard: { width: '100%', maxWidth: 380, padding: 22 },
+  modalTitle: { fontSize: 17, fontWeight: '700' },
+  modalBody: { fontSize: 12.5, lineHeight: 18, marginTop: 10 },
+  modalInput: { height: 44, paddingHorizontal: 14, fontSize: 14, marginTop: 16 },
+  modalDanger: { height: 46, backgroundColor: '#DC2626', alignItems: 'center', justifyContent: 'center', marginTop: 16 },
+  modalDangerText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  modalCancel: { fontSize: 12.5, textAlign: 'center' },
 });
