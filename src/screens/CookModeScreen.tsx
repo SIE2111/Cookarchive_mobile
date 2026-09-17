@@ -60,7 +60,17 @@ export default function CookModeScreen({ route, navigation }: Props) {
     // Bei mehreren parallel gekochten Rezepten alle Titel zusammenfassen,
     // statt willkuerlich nur eines zu nennen.
     const finishedTitles = recipeIds.map((id) => titles[id]).filter(Boolean).join(', ');
-    return <CookingFinishedCelebration recipeTitle={finishedTitles || undefined} onDone={() => navigation.goBack()} />;
+    // Nach dem Kochen aufs Dashboard, nicht nur einen Schritt zurueck:
+    // goBack() landete je nach Weg im Rezept-Detail oder im Beilagen-
+    // Screen - also mitten im gerade beendeten Vorgang. Das Dashboard ist
+    // der natuerliche Abschluss, dort steht das Gericht dann auch als
+    // zuletzt gekocht.
+    return (
+      <CookingFinishedCelebration
+        recipeTitle={finishedTitles || undefined}
+        onDone={() => navigation.navigate('MainTabs', { screen: 'Home' })}
+      />
+    );
   }
 
   return (

@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, type NavigatorScreenParams } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
@@ -51,7 +51,9 @@ export type MainTabParamList = {
 // Details, Koch-Modus, Formulare, ...). MainTabs ist selbst nur einer der
 // Screens hier drin.
 export type MainStackParamList = {
-  MainTabs: undefined;
+  // Parametrisiert, damit von einem Stack-Screen aus gezielt ein Tab
+  // angesprungen werden kann (z.B. nach dem Kochen zurueck aufs Dashboard).
+  MainTabs: NavigatorScreenParams<MainTabParamList> | undefined;
   RecipeDetail: { recipeId: string; title: string };
   RecipeSourceMenu: undefined;
   ManualRecipe: { recipeId?: string } | undefined;
@@ -164,6 +166,10 @@ function MainNavigator() {
         headerStyle: { backgroundColor: colors.bg },
         headerTintColor: colors.text,
         headerShadowVisible: false,
+        // Ohne das zeigt iOS den ROUTENNAMEN des vorherigen Screens neben
+        // dem Pfeil - beim Sprung von den Tabs also woertlich "MainTabs".
+        // Ein interner Bezeichner hat in der Oberflaeche nichts verloren.
+        headerBackTitle: 'Zurück',
       }}
     >
       <MainStack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />

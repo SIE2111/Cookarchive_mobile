@@ -4,7 +4,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme, type BackgroundStyle, type AccentColor } from '../theme/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { api, ApiError } from '../api/client';
-import type { CompositeScreenProps } from '@react-navigation/native';
+import { useFocusEffect, type CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { MainTabParamList, MainStackParamList } from '../navigation/AppNavigator';
@@ -32,6 +32,16 @@ interface Preferences {
 }
 
 type PreferenceKey = 'show_brutzel' | 'large_text' | 'auto_read_steps' | 'server_sync_enabled' | 'show_greeting_animation';
+
+// Kurzbezeichnungen der Speicherorte fuer die Profil-Zeile. Bewusst nur
+// die Modi - welcher Drittanbieter verbunden ist, steht im Speicherort-
+// Screen selbst; hier wuerde es die Zeile ueberfrachten.
+const STORAGE_MODE_LABELS: Record<string, string> = {
+  lokal: 'Nur lokal – bleibt auf diesem Gerät',
+  nas: 'NAS',
+  eigene_cloud: 'Eigene Cloud',
+  drittanbieter_cloud: 'Google Drive / OneDrive / Dropbox',
+};
 
 const HAUBEN_OPTIONS: { key: HaubenLevel; title: string; hats: number }[] = [
   { key: 'anfaenger', title: 'Anfänger', hats: 1 },
@@ -82,14 +92,17 @@ export default function ProfileScreen({ navigation }: Props) {
       .catch((err) => setError(err instanceof ApiError ? err.detail : 'Einstellungen konnten nicht geladen werden'));
   };
 
-  useEffect(() => {
-    loadPrefs();
-    // Bei Rueckkehr aus dem System-Browser (nach der Anbieter-Anmeldung) ist
-    // die App noch dieselbe Instanz, nur der Fokus wechselt zurueck - hier
-    // neu laden, damit "Verbunden" ohne manuelles Neuladen erscheint.
-    const unsubscribe = navigation.addListener('focus', loadPrefs);
-    return unsubscribe;
-  }, [navigation]);
+  // Bei jeder Rueckkehr auf diesen Screen neu laden - nach der Anbieter-
+  // Anmeldung im System-Browser ebenso wie nach einer Aenderung im
+  // Speicherort-Screen. useFocusEffect statt navigation.addListener('focus'):
+  // Profil ist ein Tab-Screen UNTER einem Stack-Screen, und in dieser
+  // Verschachtelung ist useFocusEffect die verlaessliche Variante.
+  useFocusEffect(
+    React.useCallback(() => {
+      loadPrefs();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []),
+  );
 
   const handleToggle = async (key: PreferenceKey, value: boolean) => {
     if (!prefs) return;
@@ -399,8 +412,12 @@ export default function ProfileScreen({ navigation }: Props) {
         <MaterialCommunityIcons name="cloud-outline" size={20} color={colors.muted} style={styles.rowIcon} />
         <View style={{ flex: 1 }}>
           <Text style={[styles.rowTitle, { color: colors.text }]}>Speicherort</Text>
+          {/* Zeigt den AKTUELL gewaehlten Ort statt einer Aufzaehlung aller
+              moeglichen. Vorher stand hier immer derselbe Text - eine
+              Aenderung im Speicherort-Screen blieb danach unsichtbar, man
+              musste erneut hineinnavigieren, um sie zu sehen. */}
           <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
-            Lokal, NAS, eigene Cloud oder Google Drive/OneDrive/Dropbox
+            {STORAGE_MODE_LABELS[prefs.storage_mode] ?? 'Noch nicht gewählt'}
           </Text>
         </View>
         <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>
