@@ -218,6 +218,28 @@ export default function RecipesScreen({ navigation, route }: Props) {
             <Pressable
               key={folder.id}
               onPress={() => setSelectedFolderId(isSelected ? null : folder.id)}
+              onLongPress={() => {
+                Alert.alert(
+                  'Ordner löschen?',
+                  `"${folder.name}" wird entfernt. Die ${folder.recipe_count} Rezepte darin bleiben erhalten, landen aber ohne Ordner.`,
+                  [
+                    { text: 'Abbrechen', style: 'cancel' },
+                    {
+                      text: 'Löschen',
+                      style: 'destructive',
+                      onPress: async () => {
+                        try {
+                          await api.delete(`/folders/${folder.id}`);
+                          if (selectedFolderId === folder.id) setSelectedFolderId(null);
+                          loadAll();
+                        } catch (err) {
+                          Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Ordner konnte nicht gelöscht werden');
+                        }
+                      },
+                    },
+                  ],
+                );
+              }}
               style={[styles.folderChip, { backgroundColor: isSelected ? gradient[0] : colors.card, borderRadius: radius.sm }]}
             >
               <Text style={[styles.folderChipText, { color: isSelected ? '#fff' : colors.text }]}>

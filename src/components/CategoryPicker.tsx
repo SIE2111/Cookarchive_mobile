@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, Alert } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
-import { api } from '../api/client';
+import { api, ApiError } from '../api/client';
 
 interface Props {
   selected: string[];
@@ -56,6 +56,29 @@ export default function CategoryPicker({ selected, onChange }: Props) {
     setNewCategoryText('');
   };
 
+  const handleDeleteCategory = (tag: string) => {
+    Alert.alert(
+      'Kategorie löschen?',
+      `"${tag}" wird aus ALLEN Rezepten entfernt, die diese Kategorie haben - nicht nur hier. Die Rezepte selbst bleiben erhalten.`,
+      [
+        { text: 'Abbrechen', style: 'cancel' },
+        {
+          text: 'Löschen',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.delete(`/recipes/tags/${encodeURIComponent(tag)}`);
+              setExistingCategories((prev) => prev.filter((t) => t !== tag));
+              if (selected.includes(tag)) onChange(selected.filter((t) => t !== tag));
+            } catch (err) {
+              Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Kategorie konnte nicht gelöscht werden');
+            }
+          },
+        },
+      ],
+    );
+  };
+
   // Bereits ausgewaehlte Kategorien zuerst, auch wenn sie (weil gerade neu
   // angelegt) noch nicht in existingCategories stehen - direkt sichtbares
   // Feedback statt "wo ist meine Auswahl hin".
@@ -64,20 +87,24 @@ export default function CategoryPicker({ selected, onChange }: Props) {
   return (
     <View>
       {allChips.length > 0 && (
-        <View style={styles.chipsRow}>
-          {allChips.map((tag) => {
-            const isSelected = selected.includes(tag);
-            return (
-              <Pressable
-                key={tag}
-                onPress={() => toggle(tag)}
-                style={[styles.chip, { backgroundColor: isSelected ? gradient[0] : colors.card, borderRadius: radius.sm }]}
-              >
-                <Text style={{ color: isSelected ? '#fff' : colors.text, fontSize: 12, fontWeight: '600' }}>{tag}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        <>
+          <View style={styles.chipsRow}>
+            {allChips.map((tag) => {
+              const isSelected = selected.includes(tag);
+              return (
+                <Pressable
+                  key={tag}
+                  onPress={() => toggle(tag)}
+                  onLongPress={() => handleDeleteCategory(tag)}
+                  style={[styles.chip, { backgroundColor: isSelected ? gradient[0] : colors.card, borderRadius: radius.sm }]}
+                >
+                  <Text style={{ color: isSelected ? '#fff' : colors.text, fontSize: 12, fontWeight: '600' }}>{tag}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <Text style={{ color: colors.muted, fontSize: 10, marginBottom: 8 }}>Lange drücken, um eine Kategorie ganz zu löschen.</Text>
+        </>
       )}
       <View style={styles.addRow}>
         <TextInput
