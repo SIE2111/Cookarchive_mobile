@@ -713,7 +713,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
         </View>
       )}
       <View style={styles.stepTextRow}>
-        <Text style={[styles.stepText, { color: colors.text, fontSize: largeText ? 23 : 20, lineHeight: largeText ? 32 : 29 }]}>
+        <Text style={[styles.stepText, { color: colors.text, fontSize: largeText ? 19 : 17, lineHeight: largeText ? 26 : 24 }]}>
           {currentStep.text}
         </Text>
         {level === 'anfaenger' && (
