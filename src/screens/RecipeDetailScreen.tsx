@@ -33,6 +33,7 @@ interface RecipeDetail {
   cover_image_url: string | null;
   source_type: string;
   is_favorite: boolean;
+  equipment: string[] | null;
 }
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -81,6 +82,23 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
     const unsubscribe = navigation.addListener('focus', load);
     return unsubscribe;
   }, [recipeId, navigation]);
+
+  // Utensilien lazy nachladen, falls das Rezept noch keine hat (z.B. vor
+  // Einfuehrung dieser Funktion erfasst) - genau wie steps_anfaenger/
+  // steps_profi wird das einmalig generiert und am Rezept gecacht, danach
+  // liefert das Backend bei jedem weiteren Aufruf sofort die gecachte
+  // Fassung. Kein sichtbarer Ladezustand noetig, die Karte erscheint
+  // einfach, sobald die Antwort da ist.
+  useEffect(() => {
+    if (!recipe || recipe.equipment) return;
+    api
+      .post<{ equipment: string[] }>(`/ai/infer-equipment/${recipe.id}`, {})
+      .then((result) => setRecipe((prev) => (prev ? { ...prev, equipment: result.equipment } : prev)))
+      .catch(() => {
+        // Utensilien sind rein informativ - schlaegt die Ableitung fehl,
+        // bleibt die Karte einfach weg, kein Alert noetig
+      });
+  }, [recipe?.id, recipe?.equipment]);
 
 
 
@@ -503,6 +521,16 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
         </View>
       </View>
 
+      {recipe.equipment && recipe.equipment.length > 0 && (
+        <View style={[styles.equipmentCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
+          <MaterialCommunityIcons name="pot-steam-outline" size={18} color={colors.muted} style={{ marginRight: 8 }} />
+          <Text style={[styles.equipmentText, { color: colors.text }]}>
+            <Text style={{ fontWeight: '700' }}>Du benötigst: </Text>
+            {recipe.equipment.join(', ')}
+          </Text>
+        </View>
+      )}
+
       <Pressable
         onPress={() =>
           navigation.navigate('CookMode', {
@@ -852,6 +880,8 @@ const styles = StyleSheet.create({
   servingsControlRow: { flexDirection: 'row', alignItems: 'center', gap: 20 },
   servingsButton: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
   servingsValue: { fontSize: 34, fontWeight: '800', minWidth: 50, textAlign: 'center' },
+  equipmentCard: { flexDirection: 'row', alignItems: 'flex-start', padding: 12, marginBottom: 12 },
+  equipmentText: { flex: 1, fontSize: 12.5, lineHeight: 18 },
   cookButton: { height: 46, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
   sidesCard: { padding: 14, marginBottom: 14 },
   reviewButton: { height: 42, alignItems: 'center', justifyContent: 'center' },
