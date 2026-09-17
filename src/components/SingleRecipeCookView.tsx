@@ -125,6 +125,56 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
   const [techniqueVideo, setTechniqueVideo] = useState<TechniqueVideoInfo | null>(null);
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
   const [noteDraft, setNoteDraft] = useState('');
+  const [isStepTextModalOpen, setIsStepTextModalOpen] = useState(false);
+  const [stepTextDraft, setStepTextDraft] = useState('');
+  const [isSavingStepText, setIsSavingStepText] = useState(false);
+  const [editingIngredientIndex, setEditingIngredientIndex] = useState<number | null>(null);
+  const [ingredientDraft, setIngredientDraft] = useState({ name: '', amount: '', unit: '' });
+  const [isSavingIngredient, setIsSavingIngredient] = useState(false);
+
+  // Gemeinsame Abfrage fuer jede Aenderung an Zutaten/Kochschritten waehrend
+  // des Kochens: dauerhaft im Rezept speichern (PATCH ans Backend, gilt auch
+  // kuenftig) oder nur fuer den aktuellen Kochvorgang uebernehmen (rein
+  // lokaler State, das gespeicherte Rezept bleibt unveraendert). Bewusst
+  // getrennt von der Notiz-Funktion (die hat ihre eigene, gleichartige
+  // Abfrage), da Notiz ein eigenes Feld ist, hier geht es um die
+  // eigentlichen Zutaten/Schritt-Daten.
+  const saveRecipeChangeWithScope = (
+    updatedFields: { ingredients?: Ingredient[]; steps?: RecipeStep[] },
+    applyLocally: () => void,
+    setSaving: (v: boolean) => void,
+    onDone: () => void,
+  ) => {
+    Alert.alert(
+      'Änderung speichern',
+      'Soll das dauerhaft im Rezept gespeichert werden (auch bei künftigen Malen sichtbar) oder gilt es nur für diesen einen Kochvorgang?',
+      [
+        { text: 'Abbrechen', style: 'cancel' },
+        {
+          text: 'Nur diesmal',
+          onPress: () => {
+            applyLocally();
+            onDone();
+          },
+        },
+        {
+          text: 'Dauerhaft im Rezept',
+          onPress: async () => {
+            setSaving(true);
+            try {
+              await api.patch(`/recipes/${recipeId}`, updatedFields);
+              applyLocally();
+              onDone();
+            } catch (err) {
+              Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Konnte nicht gespeichert werden');
+            } finally {
+              setSaving(false);
+            }
+          },
+        },
+      ],
+    );
+  };
   const [isSavingNote, setIsSavingNote] = useState(false);
 
   useEffect(() => {
@@ -252,31 +302,99 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
     setCurrentIndex(0);
   };
 
+  const handleOpenStepTextModal = () => {
+    setStepTextDraft(currentStep.text);
+    setIsStepTextModalOpen(true);
+  };
+
+  const handleSaveStepText = () => {
+    if (!recipe || !stepTextDraft.trim()) return;
+    // Wie bei der Notiz: immer auf die Original-Schrittliste anwenden, daher
+    // nur im Anfaenger-Modus bearbeitbar (siehe Button-Disabled-Zustand).
+    const updatedSteps = recipe.steps.map((s) =>
+      s.order === currentStep.order ? { ...s, text: stepTextDraft.trim() } : s,
+    );
+    saveRecipeChangeWithScope(
+      { steps: updatedSteps },
+      () => setRecipe({ ...recipe, steps: updatedSteps }),
+      setIsSavingStepText,
+      () => setIsStepTextModalOpen(false),
+    );
+  };
+
+  const handleOpenIngredientModal = (index: number) => {
+    const ing = recipe!.ingredients[index];
+    setIngredientDraft({ name: ing.name, amount: ing.amount != null ? String(ing.amount) : '', unit: ing.unit ?? '' });
+    setEditingIngredientIndex(index);
+  };
+
+  const handleSaveIngredient = () => {
+    if (!recipe || editingIngredientIndex === null || !ingredientDraft.name.trim()) return;
+    const updatedIngredients = recipe.ingredients.map((ing, i) =>
+      i === editingIngredientIndex
+        ? {
+            name: ingredientDraft.name.trim(),
+            amount: ingredientDraft.amount.trim() ? Number(ingredientDraft.amount.trim()) : null,
+            unit: ingredientDraft.unit.trim() || null,
+          }
+        : ing,
+    );
+    saveRecipeChangeWithScope(
+      { ingredients: updatedIngredients },
+      () => setRecipe({ ...recipe, ingredients: updatedIngredients }),
+      setIsSavingIngredient,
+      () => setEditingIngredientIndex(null),
+    );
+  };
+
   const handleOpenNoteModal = () => {
     setNoteDraft(currentStep.user_note ?? '');
     setIsNoteModalOpen(true);
   };
 
-  const handleSaveNote = async () => {
+  const handleSaveNote = () => {
     if (!recipe) return;
-    setIsSavingNote(true);
-    try {
-      // Notizen werden IMMER auf die Original-Schrittliste geschrieben, nicht
-      // auf die fuer Fortgeschritten/Profi zusammengefasste Ansicht - dort
-      // wuerde "order" mehrere Original-Schritte gleichzeitig meinen, das
-      // Bearbeiten ist deshalb bewusst auf die Anfaenger-Stufe beschraenkt
-      // (siehe Button-Disabled-Zustand unten).
-      const updatedSteps = recipe.steps.map((s) =>
-        s.order === currentStep.order ? { ...s, user_note: noteDraft.trim() || null } : s,
-      );
-      await api.patch(`/recipes/${recipeId}`, { steps: updatedSteps });
-      setRecipe({ ...recipe, steps: updatedSteps });
-      setIsNoteModalOpen(false);
-    } catch (err) {
-      Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Notiz konnte nicht gespeichert werden');
-    } finally {
-      setIsSavingNote(false);
-    }
+    // Notizen werden IMMER auf die Original-Schrittliste geschrieben, nicht
+    // auf die fuer Fortgeschritten/Profi zusammengefasste Ansicht - dort
+    // wuerde "order" mehrere Original-Schritte gleichzeitig meinen, das
+    // Bearbeiten ist deshalb bewusst auf die Anfaenger-Stufe beschraenkt
+    // (siehe Button-Disabled-Zustand unten).
+    const updatedSteps = recipe.steps.map((s) =>
+      s.order === currentStep.order ? { ...s, user_note: noteDraft.trim() || null } : s,
+    );
+
+    Alert.alert(
+      'Notiz speichern',
+      'Soll die Notiz dauerhaft im Rezept gespeichert werden (auch bei künftigen Malen sichtbar) oder gilt sie nur für diesen einen Kochvorgang?',
+      [
+        { text: 'Abbrechen', style: 'cancel' },
+        {
+          text: 'Nur diesmal',
+          onPress: () => {
+            // NICHT ans Backend schicken - nur lokal fuer die aktuelle
+            // Kochsession uebernehmen, das gespeicherte Rezept bleibt
+            // unveraendert.
+            setRecipe({ ...recipe, steps: updatedSteps });
+            setIsNoteModalOpen(false);
+          },
+        },
+        {
+          text: 'Dauerhaft im Rezept',
+          onPress: async () => {
+            setIsSavingNote(true);
+            try {
+              await api.patch(`/recipes/${recipeId}`, { steps: updatedSteps });
+              setRecipe({ ...recipe, steps: updatedSteps });
+              setIsNoteModalOpen(false);
+            } catch (err) {
+              Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Notiz konnte nicht gespeichert werden');
+            } finally {
+              setIsSavingNote(false);
+            }
+          },
+        },
+      ],
+    );
   };
 
   const handleStartTimer = async () => {
@@ -420,10 +538,17 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
       {isIngredientsOpen && (
         <View style={[styles.ingredientsList, { backgroundColor: colors.card, borderRadius: radius.sm }]}>
           {recipe.ingredients.map((ing, i) => (
-            <Text key={i} style={[styles.ingredientLine, { color: colors.text, fontSize: largeText ? 16 : 13.5 }]}>
-              {ing.amount ? `${ing.amount} ${ing.unit ?? ''} ` : ''}
-              {ing.name}
-            </Text>
+            <Pressable
+              key={i}
+              onPress={level === 'anfaenger' ? () => handleOpenIngredientModal(i) : undefined}
+              style={styles.ingredientRow}
+            >
+              <Text style={[styles.ingredientLine, { color: colors.text, fontSize: largeText ? 16 : 13.5, flex: 1 }]}>
+                {ing.amount ? `${ing.amount} ${ing.unit ?? ''} ` : ''}
+                {ing.name}
+              </Text>
+              {level === 'anfaenger' && <MaterialCommunityIcons name="pencil-outline" size={14} color={colors.muted} />}
+            </Pressable>
           ))}
         </View>
       )}
@@ -468,6 +593,11 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
         <Text style={[styles.stepText, { color: colors.text, fontSize: largeText ? 20 : 16, lineHeight: largeText ? 29 : 24 }]}>
           {currentStep.text}
         </Text>
+        {level === 'anfaenger' && (
+          <Pressable onPress={handleOpenStepTextModal} style={[styles.speakButton, { backgroundColor: colors.card }]}>
+            <MaterialCommunityIcons name="pencil-outline" size={15} color={colors.text} />
+          </Pressable>
+        )}
         <Pressable onPress={handleSpeak} style={[styles.speakButton, { backgroundColor: isSpeaking ? '#DC2626' : gradient[0] }]}>
           <MaterialCommunityIcons name={isSpeaking ? 'stop' : 'volume-high'} size={16} color="#fff" />
         </Pressable>
@@ -584,6 +714,78 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
           </View>
         </View>
       </Modal>
+
+      <Modal visible={isStepTextModalOpen} transparent animationType="fade" onRequestClose={() => setIsStepTextModalOpen(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: colors.bg, borderRadius: radius.lg }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Kochschritt bearbeiten</Text>
+            <TextInput
+              style={[styles.modalInput, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
+              value={stepTextDraft}
+              onChangeText={setStepTextDraft}
+              multiline
+              autoFocus
+            />
+            <View style={styles.modalButtonRow}>
+              <Pressable onPress={() => setIsStepTextModalOpen(false)} style={styles.modalCancelButton}>
+                <Text style={[styles.modalCancelText, { color: colors.muted }]}>Abbrechen</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleSaveStepText}
+                disabled={isSavingStepText}
+                style={[styles.modalSaveButton, { backgroundColor: gradient[0], borderRadius: radius.sm, opacity: isSavingStepText ? 0.7 : 1 }]}
+              >
+                {isSavingStepText ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.modalSaveText}>Speichern</Text>}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={editingIngredientIndex !== null} transparent animationType="fade" onRequestClose={() => setEditingIngredientIndex(null)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: colors.bg, borderRadius: radius.lg }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Zutat bearbeiten</Text>
+            <TextInput
+              style={[styles.modalInput, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md, marginBottom: 8 }]}
+              placeholder="Name"
+              placeholderTextColor={colors.muted}
+              value={ingredientDraft.name}
+              onChangeText={(v) => setIngredientDraft((prev) => ({ ...prev, name: v }))}
+              autoFocus
+            />
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <TextInput
+                style={[styles.modalInput, { flex: 1, backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
+                placeholder="Menge"
+                placeholderTextColor={colors.muted}
+                keyboardType="numeric"
+                value={ingredientDraft.amount}
+                onChangeText={(v) => setIngredientDraft((prev) => ({ ...prev, amount: v }))}
+              />
+              <TextInput
+                style={[styles.modalInput, { flex: 1, backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
+                placeholder="Einheit"
+                placeholderTextColor={colors.muted}
+                value={ingredientDraft.unit}
+                onChangeText={(v) => setIngredientDraft((prev) => ({ ...prev, unit: v }))}
+              />
+            </View>
+            <View style={styles.modalButtonRow}>
+              <Pressable onPress={() => setEditingIngredientIndex(null)} style={styles.modalCancelButton}>
+                <Text style={[styles.modalCancelText, { color: colors.muted }]}>Abbrechen</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleSaveIngredient}
+                disabled={isSavingIngredient}
+                style={[styles.modalSaveButton, { backgroundColor: gradient[0], borderRadius: radius.sm, opacity: isSavingIngredient ? 0.7 : 1 }]}
+              >
+                {isSavingIngredient ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.modalSaveText}>Speichern</Text>}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -596,6 +798,7 @@ const styles = StyleSheet.create({
   ingredientsToggleText: { fontSize: 12.5, fontWeight: '600' },
   ingredientsList: { padding: 12, marginBottom: 16 },
   ingredientLine: { fontSize: 12.5, lineHeight: 20 },
+  ingredientRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 4 },
   stepIndicator: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginBottom: 10 },
   progressSegmentsRow: { flexDirection: 'row', gap: 4, marginBottom: 24 },
   progressSegment: { flex: 1, height: 6, borderRadius: 3 },
