@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, SectionList, Pressable, StyleSheet, ActivityIndicator, TextInput, Alert, Keyboard } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
+import ScanFab from '../components/ScanFab';
 import { api, ApiError } from '../api/client';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -236,6 +237,7 @@ export default function ShoppingListScreen({}: Props) {
           )}
         </View>
       )}
+      <ScanFab />
     </View>
   );
 }

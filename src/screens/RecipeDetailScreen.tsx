@@ -3,6 +3,7 @@ import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Pressable, Image
 import * as Sharing from 'expo-sharing';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
+import PublishToPoolButton from '../components/PublishToPoolButton';
 import { api, ApiError } from '../api/client';
 import BrutzelAvatar from '../components/BrutzelAvatar';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -473,6 +474,11 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
       )}
       <View style={styles.titleRow}>
         <Text style={[styles.title, { color: colors.text, flex: 1 }]}>{recipe.title}</Text>
+        {/* Veroeffentlichen sitzt bewusst direkt neben dem Favoriten-Herz:
+            beides sind Entscheidungen ueber DIESES Rezept, und wer es
+            gerade gekocht hat, entscheidet hier, ob es andere sehen
+            sollen. */}
+        <PublishToPoolButton recipeId={recipe.id} recipeTitle={recipe.title} size={24} style={{ paddingLeft: 8 }} />
         <Pressable onPress={handleToggleFavorite} disabled={isSavingFavorite} hitSlop={10} style={{ paddingLeft: 8 }}>
           <MaterialCommunityIcons
             name={recipe.is_favorite ? 'heart' : 'heart-outline'}

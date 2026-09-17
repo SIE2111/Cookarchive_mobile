@@ -2,7 +2,7 @@ import React from 'react';
 import { NavigationContainer, type NavigatorScreenParams } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useAuth } from '../context/AuthContext';
@@ -34,15 +34,17 @@ export type AuthStackParamList = {
   ConfirmEmail: { email: string };
 };
 
-// Die 5 dauerhaft sichtbaren Bereiche (Bottom-Tab-Leiste). "Scan" hat
-// bewusst keinen eigenen Screen-Inhalt - der Tab-Button oeffnet
-// stattdessen das RecipeSourceMenu als Modal (siehe tabBarButton unten),
-// daher hier ebenfalls als Route vorhanden, aber nie tatsaechlich
-// dargestellt.
+// Die 5 dauerhaft sichtbaren Bereiche (Bottom-Tab-Leiste).
+//
+// Frueher stand hier "Scan" - ein Tab ohne eigenen Inhalt, der nur das
+// RecipeSourceMenu oeffnete, also eine Aktion im Gewand eines Ortes. Der
+// Platz gehoert einem echten Bereich: dem Community-Pool. Das Erfassen
+// uebernimmt jetzt der schwebende Knopf (components/ScanFab.tsx), der auf
+// allen Hauptscreens sitzt.
 export type MainTabParamList = {
   Home: undefined;
   Rezepte: { filterTag?: string; favoritesOnly?: boolean } | undefined;
-  Scan: undefined;
+  Pool: undefined;
   Einkauf: undefined;
   Profil: undefined;
 };
@@ -62,6 +64,10 @@ export type MainStackParamList = {
   AIGenerate: undefined;
   WeeklyPlan: undefined;
   CookMode: { recipeIds: string[]; sessionNote?: string; sessionOverrides?: { ingredients?: { name: string; amount: number | null; unit: string | null }[]; steps?: { order: number; text: string; timer_seconds?: number | null; user_note?: string | null; technique_tag?: string | null }[] } };
+  // Derselbe Screen ist auch ein Tab. Der Stack-Eintrag bleibt, weil das
+  // RecipeSourceMenu ihn als Quelle anbietet und dann als Seite ueber den
+  // Tabs oeffnen soll - der Tab ist der Bereich, dieser hier der gezielte
+  // Aufruf aus dem Erfassen-Menue.
   CommunityPool: undefined;
   Household: undefined;
   Onboarding: undefined;
@@ -83,19 +89,10 @@ function AuthNavigator() {
   );
 }
 
-// Reiner Platzhalter fuer den Scan-Tab - wird nie tatsaechlich angezeigt
-// (siehe tabPress-Listener unten, der sofort das RecipeSourceMenu-Modal
-// oeffnet), muss aber als Komponente existieren, damit Tab.Screen einen
-// eigenen, passend typisierten Eintrag bekommt statt einen anderen Screen
-// zweckzuentfremden.
-function ScanTabPlaceholder() {
-  return <View />;
-}
-
 const TAB_ICONS: Record<keyof MainTabParamList, keyof typeof MaterialCommunityIcons.glyphMap> = {
   Home: 'home-variant-outline',
   Rezepte: 'book-open-variant',
-  Scan: 'camera-plus-outline',
+  Pool: 'account-group-outline',
   Einkauf: 'cart-outline',
   Profil: 'account-circle-outline',
 };
@@ -125,28 +122,7 @@ function MainTabs() {
     >
       <Tab.Screen name="Home" component={DashboardScreen} options={{ title: 'Home' }} />
       <Tab.Screen name="Rezepte" component={RecipesScreen} />
-      <Tab.Screen
-        name="Scan"
-        component={ScanTabPlaceholder}
-        options={({ navigation }) => ({
-          // Der Scan-Tab zeigt nie eigenen Inhalt - "listeners" faengt den
-          // Tab-Press ab (preventDefault stoppt den normalen Tab-Wechsel)
-          // und oeffnet stattdessen das RecipeSourceMenu als Modal, aus dem
-          // "Foto erfassen" erreichbar ist.
-          tabBarButton: (props) => (
-            <Pressable
-              {...(props as any)}
-              onPress={() => navigation.getParent()?.navigate('RecipeSourceMenu')}
-            />
-          ),
-        })}
-        listeners={({ navigation }) => ({
-          tabPress: (e) => {
-            e.preventDefault();
-            navigation.getParent()?.navigate('RecipeSourceMenu');
-          },
-        })}
-      />
+      <Tab.Screen name="Pool" component={CommunityPoolScreen} options={{ title: 'Pool' }} />
       <Tab.Screen name="Einkauf" component={ShoppingListScreen} />
       <Tab.Screen name="Profil" component={ProfileScreen} options={{ title: 'Profil' }} />
     </Tab.Navigator>

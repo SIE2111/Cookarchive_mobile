@@ -15,6 +15,8 @@ import {
 } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
+import ScanFab from '../components/ScanFab';
+import PublishToPoolButton from '../components/PublishToPoolButton';
 import { api, ApiError } from '../api/client';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -359,13 +361,12 @@ export default function RecipesScreen({ navigation, route }: Props) {
                 <Text style={[styles.recipeTags, { color: colors.muted }]}>{item.tags.join(' · ')}</Text>
               )}
             </View>
+            <PublishToPoolButton recipeId={item.id} recipeTitle={item.title} />
           </Pressable>
         )}
       />
 
-      <Pressable style={[styles.fab, { backgroundColor: gradient[0] }]} onPress={() => navigation.navigate('RecipeSourceMenu')}>
-        <Text style={styles.fabIcon}>+</Text>
-      </Pressable>
+      <ScanFab />
 
       <Modal visible={isCreatingFolder} transparent animationType="fade" onRequestClose={() => setIsCreatingFolder(false)}>
         <View style={styles.modalOverlay}>
@@ -427,18 +428,6 @@ const styles = StyleSheet.create({
   thumbnailPlaceholder: { width: 46, height: 46 },
   recipeTitle: { fontSize: 14, fontWeight: '700', flexShrink: 1 },
   recipeTags: { fontSize: 11, marginTop: 3 },
-  fab: {
-    position: 'absolute',
-    right: 18,
-    bottom: 18,
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 4,
-  },
-  fabIcon: { color: '#fff', fontSize: 26, fontWeight: '300', marginTop: -2 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 30 },
   modalCard: { padding: 20 },
   modalTitle: { fontSize: 16, fontWeight: '700', marginBottom: 14 },

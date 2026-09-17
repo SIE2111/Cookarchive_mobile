@@ -3,6 +3,8 @@ import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Refre
 import { LinearGradient } from 'expo-linear-gradient';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
+import ScanFab from '../components/ScanFab';
+import PublishToPoolButton from '../components/PublishToPoolButton';
 import BrutzelGreetingOverlay from '../components/BrutzelGreetingOverlay';
 import { useAuth } from '../context/AuthContext';
 import { api, ApiError } from '../api/client';
@@ -296,11 +298,13 @@ export default function DashboardScreen({ navigation }: Props) {
                   {r.prep_time_minutes ? ` · ${r.prep_time_minutes} Min.` : ''}
                 </Text>
               </View>
+              <PublishToPoolButton recipeId={r.id} recipeTitle={r.title} size={17} />
             </Pressable>
           ))}
         </View>
       )}
     </ScrollView>
+    <ScanFab />
     {showGreeting && <BrutzelGreetingOverlay name={displayName} onDismiss={() => setShowGreeting(false)} />}
     </>
   );
