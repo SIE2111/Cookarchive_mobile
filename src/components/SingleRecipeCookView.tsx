@@ -418,6 +418,15 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
         SCHRITT {currentIndex + 1}/{totalSteps}
       </Text>
 
+      <View style={styles.progressIconsRow}>
+        {derivedSteps.map((_, i) => (
+          <View key={i} style={styles.progressIconSlot}>
+            {activeTimerStepIndex === i && isTimerRunning && (
+              <MaterialCommunityIcons name="clock-outline" size={13} color="#3B82F6" />
+            )}
+          </View>
+        ))}
+      </View>
       <View style={styles.progressSegmentsRow}>
         {derivedSteps.map((step, i) => {
           const isPassedOrCurrent = i <= currentIndex;
@@ -576,6 +585,8 @@ const styles = StyleSheet.create({
   stepIndicator: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginBottom: 10 },
   progressSegmentsRow: { flexDirection: 'row', gap: 4, marginBottom: 24 },
   progressSegment: { flex: 1, height: 6, borderRadius: 3 },
+  progressIconsRow: { flexDirection: 'row', gap: 4, marginBottom: 3, height: 14 },
+  progressIconSlot: { flex: 1, alignItems: 'center' },
   stepTextRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 14 },
   stepText: { flex: 1, fontSize: 16, lineHeight: 24, fontWeight: '400' },
   speakButton: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
