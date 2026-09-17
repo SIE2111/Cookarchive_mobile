@@ -3,6 +3,7 @@ import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, Activi
 import * as ImagePicker from 'expo-image-picker';
 import { ensureMediaLibraryAccess } from '../utils/mediaPermissions';
 import { useTheme } from '../theme/ThemeContext';
+import { askWhatNext } from '../utils/afterRecipeSaved';
 import { api, ApiError } from '../api/client';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/AppNavigator';
@@ -238,7 +239,7 @@ export default function AIGenerateScreen({ navigation }: Props) {
         }
       }
 
-      await api.post('/recipes/', {
+      const saved = await api.post<{ id: string; title: string }>('/recipes/', {
         title: title.trim(),
         ingredients: cleanIngredients,
         steps: cleanSteps,
@@ -247,7 +248,7 @@ export default function AIGenerateScreen({ navigation }: Props) {
         source_type: 'ai_generated',
         folder_id: selectedFolderId,
       });
-      navigation.navigate('MainTabs');
+      askWhatNext(navigation, { id: saved.id, title: saved.title });
     } catch (err) {
       Alert.alert('Speichern fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
     } finally {

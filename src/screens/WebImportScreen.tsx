@@ -4,6 +4,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { ensureMediaLibraryAccess } from '../utils/mediaPermissions';
 import CategoryPicker from '../components/CategoryPicker';
 import { useTheme } from '../theme/ThemeContext';
+import { askWhatNext } from '../utils/afterRecipeSaved';
 import { api, ApiError } from '../api/client';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/AppNavigator';
@@ -224,7 +225,7 @@ export default function WebImportScreen({ navigation, route }: Props) {
 
       const tags = selectedTags;
 
-      await api.post('/recipes/', {
+      const saved = await api.post<{ id: string; title: string }>('/recipes/', {
         title: title.trim(),
         ingredients: cleanIngredients,
         steps: cleanSteps,
@@ -233,7 +234,7 @@ export default function WebImportScreen({ navigation, route }: Props) {
         tags: tags.length > 0 ? tags : undefined,
         folder_id: selectedFolderId,
       });
-      navigation.navigate('MainTabs');
+      askWhatNext(navigation, { id: saved.id, title: saved.title });
     } catch (err) {
       Alert.alert('Speichern fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
     } finally {

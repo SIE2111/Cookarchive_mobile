@@ -6,6 +6,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
 import { api, ApiError } from '../api/client';
 import ScanFab from '../components/ScanFab';
+import { askWhatNext } from '../utils/afterRecipeSaved';
 import type { MainStackParamList } from '../navigation/AppNavigator';
 
 interface PublicRecipeSummary {
@@ -70,10 +71,9 @@ export default function CommunityPoolScreen() {
     setForkingId(recipe.id);
     try {
       const result = await api.post<{ status: string; local_recipe_id: string }>(`/pool/${recipe.id}/fork`);
-      Alert.alert('Übernommen', `"${recipe.title}" ist jetzt in deiner Sammlung.`, [
-        { text: 'Ansehen', onPress: () => navigation.navigate('RecipeDetail', { recipeId: result.local_recipe_id, title: recipe.title }) },
-        { text: 'OK', style: 'cancel' },
-      ]);
+      // Gleicher Abschluss wie bei KI, Foto und Web-Import: ansehen,
+      // gleich kochen oder fertig - siehe utils/afterRecipeSaved.
+      askWhatNext(navigation, { id: result.local_recipe_id, title: recipe.title });
     } catch (err) {
       Alert.alert('Übernehmen fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
     } finally {
