@@ -176,6 +176,26 @@ export default function ProfileScreen({ navigation }: Props) {
     }
   };
 
+  const [isGeneratingStarterImages, setIsGeneratingStarterImages] = useState(false);
+  const handleGenerateStarterImages = async () => {
+    setIsGeneratingStarterImages(true);
+    try {
+      const result = await api.post<{ generated: string[]; failed: string[]; remaining_without_image: number }>(
+        '/onboarding/generate-starter-images',
+        { limit: 10 },
+      );
+      Alert.alert(
+        'Erledigt',
+        `${result.generated.length} Titelbilder generiert${result.failed.length > 0 ? `, ${result.failed.length} fehlgeschlagen` : ''}.\n` +
+          `Noch ohne Bild: ${result.remaining_without_image}.`,
+      );
+    } catch (err) {
+      Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Bildgenerierung fehlgeschlagen');
+    } finally {
+      setIsGeneratingStarterImages(false);
+    }
+  };
+
   if (error) {
     return (
       <View style={[styles.centered, { backgroundColor: colors.bg }]}>
@@ -382,6 +402,20 @@ export default function ProfileScreen({ navigation }: Props) {
           </Text>
         </View>
         <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>
+      </Pressable>
+
+      <Pressable
+        onPress={handleGenerateStarterImages}
+        disabled={isGeneratingStarterImages}
+        style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md, marginTop: 8, opacity: isGeneratingStarterImages ? 0.7 : 1 }]}
+      >
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.rowTitle, { color: colors.text }]}>Starter-Bilder generieren (nächste 10)</Text>
+          <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
+            Dauert etwas, läuft in kleinen Portionen - mehrfach antippen für weitere 10
+          </Text>
+        </View>
+        {isGeneratingStarterImages ? <ActivityIndicator color={colors.muted} size="small" /> : <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>}
       </Pressable>
 
       <Pressable onPress={() => signOut()} style={[styles.signOutButton, { borderColor: '#DC2626', borderRadius: radius.md }]}>
