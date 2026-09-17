@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Pressable, Image, Alert, Modal, TextInput, Keyboard } from 'react-native';
+import * as Sharing from 'expo-sharing';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
 import { api, ApiError } from '../api/client';
@@ -343,6 +344,24 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
     }
   };
 
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const handlePrintRecipe = async () => {
+    setIsExportingPdf(true);
+    try {
+      const localUri = await api.downloadFile(`/recipes/${recipeId}/pdf`, `rezept-${recipeId}.pdf`);
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (!isAvailable) {
+        Alert.alert('Nicht verfügbar', 'Teilen/Drucken wird auf diesem Gerät nicht unterstützt.');
+        return;
+      }
+      await Sharing.shareAsync(localUri, { mimeType: 'application/pdf', dialogTitle: recipe?.title ?? 'Rezept' });
+    } catch (err) {
+      Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Das Rezept-PDF konnte nicht erstellt werden.');
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   const [isSavingServings, setIsSavingServings] = useState(false);
   const servingsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleChangeServings = (delta: number) => {
@@ -511,6 +530,21 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
           <>
             <MaterialCommunityIcons name="cart-plus" size={16} color={colors.text} />
             <Text style={[styles.shoppingListButtonText, { color: colors.text }]}>Zutaten zur Einkaufsliste</Text>
+          </>
+        )}
+      </Pressable>
+
+      <Pressable
+        onPress={handlePrintRecipe}
+        disabled={isExportingPdf}
+        style={[styles.shoppingListButton, { backgroundColor: colors.card, borderRadius: radius.md, opacity: isExportingPdf ? 0.7 : 1 }]}
+      >
+        {isExportingPdf ? (
+          <ActivityIndicator color={colors.text} size="small" />
+        ) : (
+          <>
+            <MaterialCommunityIcons name="printer-outline" size={16} color={colors.text} />
+            <Text style={[styles.shoppingListButtonText, { color: colors.text }]}>Rezept drucken / als PDF</Text>
           </>
         )}
       </Pressable>

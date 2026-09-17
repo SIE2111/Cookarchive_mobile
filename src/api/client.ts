@@ -106,6 +106,24 @@ export const api = {
     }
     return JSON.parse(result.body);
   },
+
+  // Laedt eine Datei (z.B. das Rezept-PDF) authentifiziert vom Backend in
+  // den lokalen Cache und gibt den lokalen file://-Pfad zurueck - von dort
+  // kann sie z.B. per expo-sharing geteilt/gedruckt werden.
+  downloadFile: async (path: string, localFileName: string): Promise<string> => {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    const localUri = `${FileSystem.cacheDirectory}${localFileName}`;
+
+    const result = await FileSystem.downloadAsync(`${API_BASE_URL}${path}`, localUri, {
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    });
+
+    if (result.status < 200 || result.status >= 300) {
+      throw new ApiError(result.status, `HTTP ${result.status}`);
+    }
+    return result.uri;
+  },
 };
 
 export { ApiError };
