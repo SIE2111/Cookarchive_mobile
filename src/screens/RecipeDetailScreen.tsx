@@ -131,6 +131,61 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
     setIsPickerOpen(false);
   };
 
+  // Brutzel prueft das Rezept auf Verbesserungsvorschlaege (nutzt den schon
+  // laenger bestehenden, aber bisher nie an die App angebundenen Endpunkt
+  // POST /ai/review-recipe/{id}). Ausgewaehlte Vorschlaege werden beim
+  // Uebernehmen an personal_note angehaengt - landen damit dauerhaft im
+  // Kochbuch UND sind beim naechsten Kochen sichtbar (personal_note wird
+  // im Rezept-Detail angezeigt), nicht nur einmalig hier zu sehen.
+  const [isReviewing, setIsReviewing] = useState(false);
+  const [reviewSuggestions, setReviewSuggestions] = useState<{ title: string; detail: string }[] | null>(null);
+  const [reviewWebVerified, setReviewWebVerified] = useState(false);
+  const [selectedSuggestionIndices, setSelectedSuggestionIndices] = useState<number[]>([]);
+  const [isApplyingSuggestions, setIsApplyingSuggestions] = useState(false);
+
+  const handleReviewRecipe = async () => {
+    setIsReviewing(true);
+    setReviewSuggestions(null);
+    setSelectedSuggestionIndices([]);
+    try {
+      const result = await api.post<{ web_verified: boolean; suggestions: { title: string; detail: string }[] }>(
+        `/ai/review-recipe/${recipeId}`,
+      );
+      setReviewSuggestions(result.suggestions);
+      setReviewWebVerified(result.web_verified);
+    } catch (err) {
+      Alert.alert('Prüfung fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+    } finally {
+      setIsReviewing(false);
+    }
+  };
+
+  const toggleSuggestionSelect = (index: number) => {
+    setSelectedSuggestionIndices((prev) =>
+      prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index],
+    );
+  };
+
+  const handleApplySuggestions = async () => {
+    if (!recipe || !reviewSuggestions || selectedSuggestionIndices.length === 0) return;
+    const chosenText = selectedSuggestionIndices
+      .map((i) => `${reviewSuggestions[i].title}: ${reviewSuggestions[i].detail}`)
+      .join('\n');
+    const newNote = recipe.personal_note ? `${recipe.personal_note}\n${chosenText}` : chosenText;
+    setIsApplyingSuggestions(true);
+    try {
+      const updated = await api.patch<RecipeDetail>(`/recipes/${recipeId}`, { personal_note: newNote });
+      setRecipe(updated);
+      setReviewSuggestions(null);
+      setSelectedSuggestionIndices([]);
+      Alert.alert('Übernommen', 'Die ausgewählten Vorschläge wurden als Notiz ins Rezept übernommen.');
+    } catch (err) {
+      Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Konnte nicht übernommen werden.');
+    } finally {
+      setIsApplyingSuggestions(false);
+    }
+  };
+
   const filteredPickerRecipes = (recipeSearch.trim()
     ? allRecipes.filter((r) => r.title.toLowerCase().includes(recipeSearch.trim().toLowerCase()))
     : allRecipes
@@ -281,6 +336,28 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
         </View>
       </View>
 
+      <Pressable
+        onPress={() => navigation.navigate('CookMode', { recipeIds: [recipeId, ...selectedSideIds] })}
+        style={[styles.cookButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}
+      >
+        <Text style={styles.cookButtonText}>Zubereitung starten</Text>
+      </Pressable>
+
+      <Pressable
+        onPress={handleAddToShoppingList}
+        disabled={isAddingToList}
+        style={[styles.shoppingListButton, { backgroundColor: colors.card, borderRadius: radius.md, opacity: isAddingToList ? 0.7 : 1 }]}
+      >
+        {isAddingToList ? (
+          <ActivityIndicator color={colors.text} size="small" />
+        ) : (
+          <>
+            <MaterialCommunityIcons name="cart-plus" size={16} color={colors.text} />
+            <Text style={[styles.shoppingListButtonText, { color: colors.text }]}>Zutaten zur Einkaufsliste</Text>
+          </>
+        )}
+      </Pressable>
+
       <View style={[styles.sidesCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
         <View style={styles.sidesHeader}>
           <BrutzelAvatar size={36} />
@@ -335,27 +412,78 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
         )}
       </View>
 
-      <Pressable
-        onPress={() => navigation.navigate('CookMode', { recipeIds: [recipeId, ...selectedSideIds] })}
-        style={[styles.cookButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}
-      >
-        <Text style={styles.cookButtonText}>Zubereitung starten</Text>
-      </Pressable>
+      <View style={[styles.sidesCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
+        <View style={styles.sidesHeader}>
+          <BrutzelAvatar size={36} />
+          <Text style={[styles.sidesTitle, { color: colors.text }]}>Rezept auf Verbesserungen prüfen?</Text>
+        </View>
 
-      <Pressable
-        onPress={handleAddToShoppingList}
-        disabled={isAddingToList}
-        style={[styles.shoppingListButton, { backgroundColor: colors.card, borderRadius: radius.md, opacity: isAddingToList ? 0.7 : 1 }]}
-      >
-        {isAddingToList ? (
-          <ActivityIndicator color={colors.text} size="small" />
-        ) : (
+        {!reviewSuggestions && !isReviewing && (
+          <Pressable onPress={handleReviewRecipe} style={[styles.reviewButton, { backgroundColor: gradient[0], borderRadius: radius.sm }]}>
+            <Text style={styles.reviewButtonText}>Brutzel prüft das Rezept</Text>
+          </Pressable>
+        )}
+
+        {isReviewing && (
+          <View style={{ paddingVertical: 10, alignItems: 'center' }}>
+            <ActivityIndicator color={colors.muted} size="small" />
+            <Text style={{ color: colors.muted, fontSize: 11.5, marginTop: 6 }}>Brutzel prüft das Rezept…</Text>
+          </View>
+        )}
+
+        {reviewSuggestions && reviewSuggestions.length === 0 && (
+          <Text style={{ color: colors.muted, fontSize: 11.5 }}>
+            Sieht schon gut aus – Brutzel hat nichts Wesentliches zu ergänzen.
+          </Text>
+        )}
+
+        {reviewSuggestions && reviewSuggestions.length > 0 && (
           <>
-            <MaterialCommunityIcons name="cart-plus" size={16} color={colors.text} />
-            <Text style={[styles.shoppingListButtonText, { color: colors.text }]}>Zutaten zur Einkaufsliste</Text>
+            <Text style={{ color: colors.muted, fontSize: 10.5, marginBottom: 8 }}>
+              {reviewWebVerified ? '🌐 Gegen aktuelle Quellen im Internet geprüft' : '⚠️ Ohne Websuche geprüft (nur KI-Wissen)'}
+            </Text>
+            {reviewSuggestions.map((s, i) => {
+              const isSelected = selectedSuggestionIndices.includes(i);
+              return (
+                <Pressable
+                  key={i}
+                  onPress={() => toggleSuggestionSelect(i)}
+                  style={[
+                    styles.sideRow,
+                    { backgroundColor: colors.bg, borderRadius: radius.sm, borderWidth: isSelected ? 1.5 : 0, borderColor: gradient[0] },
+                  ]}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.sideTitle, { color: colors.text }]}>{s.title}</Text>
+                    <Text style={[styles.sideReason, { color: colors.muted }]}>{s.detail}</Text>
+                  </View>
+                  <MaterialCommunityIcons
+                    name={isSelected ? 'checkbox-marked-circle' : 'checkbox-blank-circle-outline'}
+                    size={20}
+                    color={isSelected ? gradient[0] : colors.muted}
+                  />
+                </Pressable>
+              );
+            })}
+            <Pressable
+              onPress={handleApplySuggestions}
+              disabled={selectedSuggestionIndices.length === 0 || isApplyingSuggestions}
+              style={[
+                styles.reviewButton,
+                { backgroundColor: gradient[0], borderRadius: radius.sm, opacity: selectedSuggestionIndices.length === 0 ? 0.5 : 1, marginTop: 4 },
+              ]}
+            >
+              {isApplyingSuggestions ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.reviewButtonText}>
+                  {selectedSuggestionIndices.length > 0 ? `${selectedSuggestionIndices.length} ins Kochbuch übernehmen` : 'Auswählen zum Übernehmen'}
+                </Text>
+              )}
+            </Pressable>
           </>
         )}
-      </Pressable>
+      </View>
 
       <Text style={[styles.sectionTitle, { color: colors.text }]}>Zutaten</Text>
       {recipe.ingredients.map((ing, i) => (
@@ -430,6 +558,8 @@ const styles = StyleSheet.create({
   servingsValue: { fontSize: 34, fontWeight: '800', minWidth: 50, textAlign: 'center' },
   cookButton: { height: 46, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
   sidesCard: { padding: 14, marginBottom: 14 },
+  reviewButton: { height: 42, alignItems: 'center', justifyContent: 'center' },
+  reviewButtonText: { color: '#fff', fontWeight: '700', fontSize: 12.5 },
   sidesHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
   sidesTitle: { fontSize: 14, fontWeight: '700', flex: 1 },
   sideRow: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, marginBottom: 8 },
