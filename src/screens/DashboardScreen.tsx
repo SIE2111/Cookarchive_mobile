@@ -236,7 +236,7 @@ export default function DashboardScreen({ navigation }: Props) {
       <View
         style={[
           styles.categoriesClip,
-          !categoriesOverflow && { marginBottom: 22 },
+          !categoriesOverflow && { marginBottom: 14 },
           !categoriesExpanded && { maxHeight: CATEGORIES_COLLAPSED_HEIGHT, overflow: 'hidden' },
         ]}
       >
@@ -306,36 +306,42 @@ export default function DashboardScreen({ navigation }: Props) {
   );
 }
 
+// Die Abstaende sind bewusst knapp gehalten: Das Dashboard soll auf einem
+// Handy-Bildschirm bis in die Liste "Zuletzt zubereitet" reichen. Vorher
+// endete der sichtbare Bereich genau ueber der Ueberschrift, die Liste
+// selbst sah man erst nach dem Scrollen - und damit wirkte das Dashboard
+// leerer als es ist. Wer hier Abstaende wieder vergroessert, schiebt die
+// Liste erneut aus dem Bild.
 const styles = StyleSheet.create({
   container: { padding: 18, paddingBottom: 40 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   greeting: { fontSize: 21, fontWeight: '700' },
-  subGreeting: { fontSize: 13, marginTop: 2, marginBottom: 18 },
+  subGreeting: { fontSize: 13, marginTop: 2, marginBottom: 12 },
   errorText: { fontSize: 12, marginBottom: 12 },
-  statsRow: { flexDirection: 'row', gap: 10, marginBottom: 18 },
-  statCard: { flex: 1, padding: 14, alignItems: 'center' },
+  statsRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
+  statCard: { flex: 1, paddingVertical: 11, paddingHorizontal: 10, alignItems: 'center' },
   statValue: { fontSize: 20, fontWeight: '700' },
   statLabel: { fontSize: 10.5, marginTop: 2, textAlign: 'center' },
-  dailyCard: { overflow: 'hidden', marginBottom: 18 },
+  dailyCard: { overflow: 'hidden', marginBottom: 12 },
   dailyBadge: { position: 'absolute', top: 12, left: 12, zIndex: 1, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
   dailyBadgeText: { color: '#fff', fontSize: 9.5, fontWeight: '700', letterSpacing: 0.4 },
-  dailyImage: { width: '100%', height: 150 },
-  dailyInfo: { padding: 14 },
+  dailyImage: { width: '100%', height: 118 },
+  dailyInfo: { paddingHorizontal: 14, paddingVertical: 11 },
   dailyTitle: { fontSize: 15.5, fontWeight: '700' },
   dailyMeta: { fontSize: 11.5, marginTop: 4 },
-  actionsRow: { flexDirection: 'row', gap: 10, marginBottom: 22 },
+  actionsRow: { flexDirection: 'row', gap: 10, marginBottom: 14 },
   actionButton: { flex: 1, flexDirection: 'row', gap: 7, alignItems: 'center', justifyContent: 'center', height: 46 },
   actionText: { color: '#fff', fontWeight: '600', fontSize: 12.5 },
-  sectionLabel: { fontSize: 15, fontWeight: '700', marginBottom: 10 },
+  sectionLabel: { fontSize: 15, fontWeight: '700', marginBottom: 8 },
   categoriesClip: { marginBottom: 6 },
   categoriesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   categoryChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 8 },
   categoryText: { fontSize: 12, fontWeight: '600' },
-  categoriesToggle: { alignSelf: 'flex-start', marginBottom: 22, paddingVertical: 4 },
+  categoriesToggle: { alignSelf: 'flex-start', marginBottom: 14, paddingVertical: 4 },
   categoriesToggleText: { fontSize: 12, fontWeight: '700' },
   emptyText: { fontSize: 12.5, lineHeight: 19 },
   recentCard: { paddingHorizontal: 4 },
-  recentRow: { flexDirection: 'row', alignItems: 'center', gap: 11, paddingVertical: 12, paddingHorizontal: 10 },
+  recentRow: { flexDirection: 'row', alignItems: 'center', gap: 11, paddingVertical: 10, paddingHorizontal: 10 },
   recentRowBorder: { borderBottomWidth: 1 },
   recentThumb: { width: 40, height: 40, borderRadius: 8 },
   recentThumbPlaceholder: {},
