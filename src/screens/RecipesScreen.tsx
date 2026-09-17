@@ -31,6 +31,7 @@ interface RecipeSummary {
   title: string;
   tags: string[] | null;
   updated_at: string;
+  created_at: string;
   cover_image_url: string | null;
   folder_id: string | null;
   source_type: string;
@@ -60,6 +61,7 @@ export default function RecipesScreen({ navigation, route }: Props) {
   const [folders, setFolders] = useState<FolderSummary[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [sortOption, setSortOption] = useState<'newest' | 'oldest' | 'az'>('newest');
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -148,6 +150,11 @@ export default function RecipesScreen({ navigation, route }: Props) {
   if (favoritesOnly) {
     visibleRecipes = visibleRecipes.filter((r) => r.is_favorite);
   }
+  visibleRecipes = [...visibleRecipes].sort((a, b) => {
+    if (sortOption === 'az') return a.title.localeCompare(b.title, 'de');
+    const diff = +new Date(b.created_at) - +new Date(a.created_at);
+    return sortOption === 'newest' ? diff : -diff;
+  });
 
   if (isLoading) {
     return (
@@ -187,18 +194,36 @@ export default function RecipesScreen({ navigation, route }: Props) {
         </Pressable>
       )}
 
-      <Pressable
-        onPress={() => setFavoritesOnly((prev) => !prev)}
-        style={[
-          styles.favoritesChip,
-          { backgroundColor: favoritesOnly ? gradient[0] : colors.card, borderRadius: radius.sm },
-        ]}
-      >
-        <MaterialCommunityIcons name={favoritesOnly ? 'heart' : 'heart-outline'} size={14} color={favoritesOnly ? '#fff' : colors.text} />
-        <Text style={{ color: favoritesOnly ? '#fff' : colors.text, fontSize: 12, fontWeight: '600', marginLeft: 5 }}>
-          Nur Favoriten
-        </Text>
-      </Pressable>
+      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+        <Pressable
+          onPress={() => setFavoritesOnly((prev) => !prev)}
+          style={[
+            styles.favoritesChip,
+            { backgroundColor: favoritesOnly ? gradient[0] : colors.card, borderRadius: radius.sm, marginBottom: 0 },
+          ]}
+        >
+          <MaterialCommunityIcons name={favoritesOnly ? 'heart' : 'heart-outline'} size={14} color={favoritesOnly ? '#fff' : colors.text} />
+          <Text style={{ color: favoritesOnly ? '#fff' : colors.text, fontSize: 12, fontWeight: '600', marginLeft: 5 }}>
+            Nur Favoriten
+          </Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() =>
+            setSortOption((prev) => (prev === 'newest' ? 'oldest' : prev === 'oldest' ? 'az' : 'newest'))
+          }
+          style={[styles.favoritesChip, { backgroundColor: colors.card, borderRadius: radius.sm, marginBottom: 0 }]}
+        >
+          <MaterialCommunityIcons
+            name={sortOption === 'az' ? 'sort-alphabetical-variant' : sortOption === 'newest' ? 'sort-clock-descending-outline' : 'sort-clock-ascending-outline'}
+            size={14}
+            color={colors.text}
+          />
+          <Text style={{ color: colors.text, fontSize: 12, fontWeight: '600', marginLeft: 5 }}>
+            {sortOption === 'az' ? 'A–Z' : sortOption === 'newest' ? 'Neueste zuerst' : 'Älteste zuerst'}
+          </Text>
+        </Pressable>
+      </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.folderBar} contentContainerStyle={{ gap: 8, alignItems: 'center' }}>
         <Pressable
@@ -348,7 +373,7 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 12, marginBottom: 12 },
   filterPill: { alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 7, marginBottom: 12 },
   filterPillText: { color: '#fff', fontSize: 12, fontWeight: '600' },
-  folderBar: { marginBottom: 14, maxHeight: 44 },
+  folderBar: { marginBottom: 14 },
   favoritesChip: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 7, marginBottom: 12 },
   folderChip: { paddingHorizontal: 13, paddingVertical: 8, justifyContent: 'center' },
   folderChipText: { fontSize: 12, fontWeight: '600' },
