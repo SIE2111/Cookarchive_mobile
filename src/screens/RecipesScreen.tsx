@@ -233,7 +233,7 @@ export default function RecipesScreen({ navigation, route }: Props) {
             { backgroundColor: selectedFolderId === null ? gradient[0] : colors.card, borderRadius: radius.sm },
           ]}
         >
-          <Text style={[styles.folderChipText, { color: selectedFolderId === null ? '#fff' : colors.text }]}>
+          <Text allowFontScaling={false} style={[styles.folderChipText, { color: selectedFolderId === null ? '#fff' : colors.text }]}>
             Alle ({recipes.length})
           </Text>
         </Pressable>
@@ -267,7 +267,7 @@ export default function RecipesScreen({ navigation, route }: Props) {
               }}
               style={[styles.folderChip, { backgroundColor: isSelected ? gradient[0] : colors.card, borderRadius: radius.sm }]}
             >
-              <Text style={[styles.folderChipText, { color: isSelected ? '#fff' : colors.text }]}>
+              <Text allowFontScaling={false} style={[styles.folderChipText, { color: isSelected ? '#fff' : colors.text }]}>
                 {folder.name} ({folder.recipe_count})
               </Text>
             </Pressable>
@@ -373,7 +373,7 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 12, marginBottom: 12 },
   filterPill: { alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 7, marginBottom: 12 },
   filterPillText: { color: '#fff', fontSize: 12, fontWeight: '600' },
-  folderBar: { height: 50, marginBottom: 14 },
+  folderBar: { height: 60, marginBottom: 14 },
   favoritesChip: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 7, marginBottom: 12 },
   folderChip: { paddingHorizontal: 13, paddingVertical: 8, justifyContent: 'center' },
   folderChipText: { fontSize: 12, fontWeight: '600', lineHeight: 16 },
