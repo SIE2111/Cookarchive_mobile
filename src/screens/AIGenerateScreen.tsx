@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, ActivityIndicator, Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { ensureMediaLibraryAccess } from '../utils/mediaPermissions';
 import { useTheme } from '../theme/ThemeContext';
 import { api, ApiError } from '../api/client';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -64,11 +65,7 @@ export default function AIGenerateScreen({ navigation }: Props) {
   const [localImageUri, setLocalImageUri] = useState<string | null>(null);
 
   const handlePickImage = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Zugriff verweigert', 'Ohne Foto-Zugriff kann kein Bild ausgewählt werden.');
-      return;
-    }
+    if (!(await ensureMediaLibraryAccess())) return;
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       quality: 0.7,
