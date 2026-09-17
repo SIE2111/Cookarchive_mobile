@@ -135,12 +135,15 @@ export default function DashboardScreen({ navigation }: Props) {
     [recipes],
   );
 
-  // Kategorien-Zeile: bei mehr als ~3 Zeilen zunaechst eingeklappt, mit
-  // "Mehr anzeigen" aufklappbar. Die tatsaechliche Hoehe wird per onLayout
-  // gemessen (der innere Container ist NIE selbst hoehenbegrenzt, nur der
-  // aeussere clippt visuell) - so weiss man, ob ueberhaupt etwas verborgen
-  // ist, unabhaengig von Chip-Anzahl/-Breite.
-  const CATEGORIES_COLLAPSED_HEIGHT = 116; // ca. 3 Zeilen bei dieser Chip-Groesse
+  // Kategorien-Zeile: zeigt eingeklappt nur EINE Zeile, mit "Mehr anzeigen"
+  // aufklappbar. Vorher waren es drei Zeilen - das schob bei vielen Tags
+  // die eigentlichen Rezepte weit nach unten, obwohl das Dashboard als
+  // Einstieg die Rezepte zeigen soll, nicht die Filterleiste.
+  // Die tatsaechliche Hoehe wird per onLayout gemessen (der innere
+  // Container ist NIE selbst hoehenbegrenzt, nur der aeussere clippt
+  // visuell) - so weiss man, ob ueberhaupt etwas verborgen ist,
+  // unabhaengig von Chip-Anzahl/-Breite.
+  const CATEGORIES_COLLAPSED_HEIGHT = 36; // eine Zeile bei dieser Chip-Groesse
   const [categoriesExpanded, setCategoriesExpanded] = useState(false);
   const [categoriesNaturalHeight, setCategoriesNaturalHeight] = useState(0);
   const categoriesOverflow = categoriesNaturalHeight > CATEGORIES_COLLAPSED_HEIGHT + 4;
