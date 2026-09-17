@@ -52,7 +52,8 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
   // Laden des bestehenden Rezepts selbst schon als "Aenderung" gilt.
   const hasLoadedRef = useRef(false);
   const justSavedRef = useRef(false);
-  const [isDirty, setIsDirty] = useState(false);
+  const isDirtyRef = useRef(false);
+  const isDiscardingRef = useRef(false);
 
   useEffect(() => {
     api.get<{ id: string; name: string }[]>('/folders/').then(setFolders).catch(() => {
@@ -125,29 +126,39 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
   // abgeschlossen), markiert jede weitere Aenderung das Formular als "dirty".
   useEffect(() => {
     if (!hasLoadedRef.current) return;
-    setIsDirty(true);
+    isDirtyRef.current = true;
   }, [title, servings, tagsText, ingredients, steps, localImageUri, selectedFolderId]);
 
   // Rueckfrage beim Verlassen mit ungespeicherten Aenderungen - nur im
   // Bearbeiten-Modus relevant (beim Neu-Erstellen bleibt es wie gehabt,
-  // wie gewuenscht). justSavedRef verhindert, dass die eigene Navigation
-  // nach erfolgreichem Speichern faelschlich als "Abbruch" abgefangen wird.
+  // wie gewuenscht). Listener registriert sich nur EINMAL (stabile Deps),
+  // liest den aktuellen Stand ueber Refs statt sich bei jeder Aenderung neu
+  // zu registrieren - vermeidet Navigations-Timing-Probleme. isDiscardingRef
+  // laesst die eigene "Verwerfen"-Navigation ungehindert durch, statt die
+  // urspruengliche (evtl. veraltete) Navigations-Aktion erneut zu versenden.
   useEffect(() => {
     if (!editingRecipeId) return;
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
-      if (!isDirty || justSavedRef.current) return;
+      if (!isDirtyRef.current || justSavedRef.current || isDiscardingRef.current) return;
       e.preventDefault();
       Alert.alert(
         'Änderungen verwerfen?',
         'Es gibt ungespeicherte Änderungen an diesem Rezept.',
         [
           { text: 'Weiter bearbeiten', style: 'cancel' },
-          { text: 'Verwerfen', style: 'destructive', onPress: () => navigation.dispatch(e.data.action) },
+          {
+            text: 'Verwerfen',
+            style: 'destructive',
+            onPress: () => {
+              isDiscardingRef.current = true;
+              navigation.goBack();
+            },
+          },
         ],
       );
     });
     return unsubscribe;
-  }, [navigation, editingRecipeId, isDirty]);
+  }, [navigation, editingRecipeId]);
 
   const handlePickImage = async () => {
     if (!(await ensureMediaLibraryAccess())) return;
