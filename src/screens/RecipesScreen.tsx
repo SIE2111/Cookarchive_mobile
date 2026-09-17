@@ -150,6 +150,13 @@ export default function RecipesScreen({ navigation, route }: Props) {
   if (favoritesOnly) {
     visibleRecipes = visibleRecipes.filter((r) => r.is_favorite);
   }
+
+  // Fuer die Kategorie-Auswahl direkt hier auf dem Screen - vorher konnte
+  // man einen Kategorie-Filter nur ueber den Umweg der Dashboard-Kacheln
+  // setzen, hier selbst aber keinen auswaehlen.
+  const availableCategories = Array.from(new Set(recipes.flatMap((r) => r.tags ?? []))).sort((a, b) =>
+    a.localeCompare(b, 'de'),
+  );
   visibleRecipes = [...visibleRecipes].sort((a, b) => {
     if (sortOption === 'az') return a.title.localeCompare(b.title, 'de');
     const diff = +new Date(b.created_at) - +new Date(a.created_at);
@@ -281,6 +288,30 @@ export default function RecipesScreen({ navigation, route }: Props) {
         </Pressable>
       </ScrollView>
 
+      {availableCategories.length > 0 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.categoryBar}
+          contentContainerStyle={{ gap: 8, alignItems: 'center' }}
+        >
+          {availableCategories.map((cat) => {
+            const isSelected = filterTag === cat;
+            return (
+              <Pressable
+                key={cat}
+                onPress={() => navigation.setParams({ filterTag: isSelected ? undefined : cat })}
+                style={[styles.folderChip, { backgroundColor: isSelected ? gradient[0] : colors.card, borderRadius: radius.sm }]}
+              >
+                <Text allowFontScaling={false} style={[styles.folderChipText, { color: isSelected ? '#fff' : colors.text }]}>
+                  {cat}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      )}
+
       <FlatList
         data={visibleRecipes}
         keyExtractor={(item) => item.id}
@@ -374,6 +405,7 @@ const styles = StyleSheet.create({
   filterPill: { alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 7, marginBottom: 12 },
   filterPillText: { color: '#fff', fontSize: 12, fontWeight: '600' },
   folderBar: { height: 60, marginBottom: 14 },
+  categoryBar: { height: 60, marginBottom: 14 },
   favoritesChip: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 7, marginBottom: 12 },
   folderChip: { height: 38, paddingHorizontal: 13, justifyContent: 'center', alignItems: 'center' },
   folderChipText: { fontSize: 12, fontWeight: '600', lineHeight: 16 },
