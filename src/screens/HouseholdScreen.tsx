@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, Alert, Share } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { api, ApiError } from '../api/client';
 
@@ -76,6 +76,15 @@ export default function HouseholdScreen() {
     } finally {
       setIsBusy(false);
     }
+  };
+
+  const handleShareInvite = () => {
+    if (!inviteCode) return;
+    Share.share({
+      message: `Komm in meinen Kochbuch-Haushalt "${household?.name}"! Gib in der App unter Profil → Haushalt diesen Code ein: ${inviteCode} (24 Std. gültig)`,
+    }).catch(() => {
+      // Teilen abgebrochen/fehlgeschlagen - kein Alert noetig, der Code steht ja weiterhin sichtbar da
+    });
   };
 
   const handleLeave = () => {
@@ -191,6 +200,9 @@ export default function HouseholdScreen() {
         <View style={[styles.inviteCodeBox, { backgroundColor: colors.card, borderRadius: radius.md }]}>
           <Text style={[styles.inviteCodeLabel, { color: colors.muted }]}>Einladungscode (24 Std. gültig)</Text>
           <Text style={[styles.inviteCodeValue, { color: gradient[0] }]}>{inviteCode}</Text>
+          <Pressable onPress={handleShareInvite} style={[styles.shareInviteButton, { borderColor: gradient[0], borderRadius: radius.sm }]}>
+            <Text style={{ color: gradient[0], fontSize: 12.5, fontWeight: '700' }}>Code teilen</Text>
+          </Pressable>
         </View>
       )}
 
@@ -217,6 +229,7 @@ const styles = StyleSheet.create({
   inviteCodeBox: { padding: 16, alignItems: 'center', marginTop: 12 },
   inviteCodeLabel: { fontSize: 10, marginBottom: 6 },
   inviteCodeValue: { fontSize: 24, fontWeight: '700', letterSpacing: 3 },
+  shareInviteButton: { marginTop: 10, paddingHorizontal: 16, paddingVertical: 8, borderWidth: 1.3 },
   leaveButton: { height: 44, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginTop: 'auto' },
   leaveButtonText: { color: '#DC2626', fontWeight: '600', fontSize: 13 },
 });

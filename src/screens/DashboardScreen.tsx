@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Refre
 import { LinearGradient } from 'expo-linear-gradient';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
+import BrutzelGreetingOverlay from '../components/BrutzelGreetingOverlay';
 import { useAuth } from '../context/AuthContext';
 import { api, ApiError } from '../api/client';
 import type { CompositeScreenProps } from '@react-navigation/native';
@@ -28,6 +29,12 @@ interface RecipeSummary {
 
 const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
+// Modul-weites Flag statt Component-State - die Begruessung soll nur EINMAL
+// pro App-Start erscheinen, nicht bei jedem Zurueckwechseln zum Dashboard-
+// Tab (das wuerde staendig neu ausgeloest werden, wenn es Teil des
+// Komponenten-States waere, der bei jedem Mount/Unmount zurueckgesetzt wird).
+let hasShownGreetingThisSession = false;
+
 export default function DashboardScreen({ navigation }: Props) {
   const { colors, gradient, radius } = useTheme();
   const { session } = useAuth();
@@ -36,11 +43,29 @@ export default function DashboardScreen({ navigation }: Props) {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [profileDisplayName, setProfileDisplayName] = useState<string | null>(null);
+  const [showGreeting, setShowGreeting] = useState(false);
 
-  const displayName =
-    (session?.user.user_metadata?.display_name as string | undefined) ||
-    session?.user.email?.split('@')[0] ||
-    'da';
+  // Derselbe Name wie im Profil editierbar (tbl_users.display_name ueber
+  // /preferences/) - vorher las die Begruessung stattdessen aus den
+  // Supabase-Auth-user_metadata, einer komplett getrennten Ablage, die
+  // eine Aenderung im Profil nie mitbekam.
+  const loadDisplayName = useCallback(() => {
+    api
+      .get<{ display_name: string | null; show_greeting_animation: boolean }>('/preferences/')
+      .then((prefs) => {
+        setProfileDisplayName(prefs.display_name);
+        if (prefs.show_greeting_animation && !hasShownGreetingThisSession) {
+          hasShownGreetingThisSession = true;
+          setShowGreeting(true);
+        }
+      })
+      .catch(() => {
+        // Faellt unten einfach auf E-Mail/"da" zurueck, wenn das Laden scheitert
+      });
+  }, []);
+
+  const displayName = profileDisplayName || session?.user.email?.split('@')[0] || 'da';
 
   const load = useCallback(async () => {
     try {
@@ -58,14 +83,19 @@ export default function DashboardScreen({ navigation }: Props) {
 
   useEffect(() => {
     load().finally(() => setIsLoading(false));
-  }, [load]);
+    loadDisplayName();
+  }, [load, loadDisplayName]);
 
-  // Bei Rueckkehr von einem anderen Screen (z.B. nach dem Anlegen eines
-  // neuen Rezepts) neu laden, damit die Zahlen/Listen aktuell bleiben.
+  // Bei Rueckkehr von einem anderen Screen (z.B. nach einer Namensaenderung
+  // im Profil oder dem Anlegen eines neuen Rezepts) neu laden, damit
+  // Begruessung/Zahlen/Listen aktuell bleiben.
   useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', load);
+    const unsubscribe = navigation.addListener('focus', () => {
+      load();
+      loadDisplayName();
+    });
     return unsubscribe;
-  }, [navigation, load]);
+  }, [navigation, load, loadDisplayName]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -124,6 +154,7 @@ export default function DashboardScreen({ navigation }: Props) {
   }
 
   return (
+    <>
     <ScrollView
       style={{ backgroundColor: colors.bg }}
       contentContainerStyle={styles.container}
@@ -267,6 +298,8 @@ export default function DashboardScreen({ navigation }: Props) {
         </View>
       )}
     </ScrollView>
+    {showGreeting && <BrutzelGreetingOverlay name={displayName} onDismiss={() => setShowGreeting(false)} />}
+    </>
   );
 }
 

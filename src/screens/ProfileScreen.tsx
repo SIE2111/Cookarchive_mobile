@@ -22,6 +22,7 @@ interface Preferences {
   large_text: boolean;
   auto_read_steps: boolean;
   server_sync_enabled: boolean;
+  show_greeting_animation: boolean;
   storage_mode: StorageMode;
   default_hauben_level: HaubenLevel;
   drittanbieter_provider: string | null;
@@ -30,7 +31,7 @@ interface Preferences {
   household_role: string | null;
 }
 
-type PreferenceKey = 'show_brutzel' | 'large_text' | 'auto_read_steps' | 'server_sync_enabled';
+type PreferenceKey = 'show_brutzel' | 'large_text' | 'auto_read_steps' | 'server_sync_enabled' | 'show_greeting_animation';
 
 const HAUBEN_OPTIONS: { key: HaubenLevel; title: string; hats: number }[] = [
   { key: 'anfaenger', title: 'Anfänger', hats: 1 },
@@ -56,6 +57,7 @@ const ROWS: { key: PreferenceKey; title: string; subtitle: string; lockedWhen?: 
   { key: 'show_brutzel', title: 'Brutzel anzeigen', subtitle: 'Tipps & Begrüßungen im Kochbuch' },
   { key: 'large_text', title: 'Große Schrift', subtitle: 'Größerer Text in der ganzen App' },
   { key: 'auto_read_steps', title: 'Schritte automatisch vorlesen', subtitle: 'Praktisch bei schmutzigen Händen' },
+  { key: 'show_greeting_animation', title: 'Begrüßungs-Animation', subtitle: 'Animierter Brutzel-Empfang beim Öffnen des Dashboards' },
   {
     key: 'server_sync_enabled',
     title: 'Server-Sync',
