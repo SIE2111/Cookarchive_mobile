@@ -134,11 +134,32 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
     });
   };
 
+  const [pickerLoading, setPickerLoading] = useState(false);
+  const [pickerError, setPickerError] = useState<string | null>(null);
+
+  const loadPickerRecipes = async () => {
+    setPickerLoading(true);
+    setPickerError(null);
+    try {
+      setAllRecipes(await api.get<RecipeSummary[]>('/recipes/'));
+    } catch (err) {
+      // Vorher stand hier ein leeres catch. Schlug das Laden fehl, blieb
+      // die Liste leer - ohne Ladeanzeige, ohne Meldung. Der Bildschirm
+      // sah dann exakt so aus wie 'nichts gefunden', obwohl gar nicht
+      // gesucht werden konnte.
+      setPickerError(err instanceof ApiError ? err.detail : 'Rezepte konnten nicht geladen werden');
+    } finally {
+      setPickerLoading(false);
+    }
+  };
+
   const openSidePicker = () => {
     setIsPickerOpen(true);
     setRecipeSearch('');
+    // Auch dann neu laden, wenn ein frueherer Versuch fehlgeschlagen ist -
+    // sonst bliebe der Picker bis zum Neustart der App leer.
     if (allRecipes.length === 0) {
-      api.get<RecipeSummary[]>('/recipes/').then(setAllRecipes).catch(() => {});
+      loadPickerRecipes();
     }
   };
 
@@ -764,17 +785,41 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
           value={recipeSearch}
           onChangeText={setRecipeSearch}
         />
-        <ScrollView>
-          {filteredPickerRecipes.map((r) => (
+        {pickerLoading ? (
+          <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+            <ActivityIndicator color={colors.muted} />
+          </View>
+        ) : pickerError ? (
+          <View style={{ paddingVertical: 30, alignItems: 'center', gap: 14 }}>
+            <Text style={{ color: colors.muted, fontSize: 13, textAlign: 'center' }}>{pickerError}</Text>
             <Pressable
-              key={r.id}
-              onPress={() => addManualSide(r)}
+              onPress={loadPickerRecipes}
               style={[styles.pickerRow, { backgroundColor: colors.card, borderRadius: radius.sm }]}
             >
-              <Text style={{ color: colors.text, fontSize: 13.5 }}>{r.title}</Text>
+              <Text style={{ color: gradient[0], fontSize: 13.5, fontWeight: '600' }}>Erneut versuchen</Text>
             </Pressable>
-          ))}
-        </ScrollView>
+          </View>
+        ) : (
+          <ScrollView keyboardShouldPersistTaps="handled">
+            {filteredPickerRecipes.length === 0 ? (
+              <Text style={{ color: colors.muted, fontSize: 13, textAlign: 'center', marginTop: 30, lineHeight: 19 }}>
+                {recipeSearch.trim()
+                  ? `Kein Rezept mit „${recipeSearch.trim()}" im Titel.`
+                  : 'Noch keine weiteren Rezepte im Kochbuch.'}
+              </Text>
+            ) : (
+              filteredPickerRecipes.map((r) => (
+                <Pressable
+                  key={r.id}
+                  onPress={() => addManualSide(r)}
+                  style={[styles.pickerRow, { backgroundColor: colors.card, borderRadius: radius.sm }]}
+                >
+                  <Text style={{ color: colors.text, fontSize: 13.5 }}>{r.title}</Text>
+                </Pressable>
+              ))
+            )}
+          </ScrollView>
+        )}
       </View>
     </Modal>
 
