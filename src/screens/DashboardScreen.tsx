@@ -196,8 +196,12 @@ export default function DashboardScreen({ navigation }: Props) {
       contentContainerStyle={styles.container}
       refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
     >
-      <Text style={[styles.greeting, { color: colors.text }]}>Hallo {displayName}! 👋</Text>
-      <Text style={[styles.subGreeting, { color: colors.muted }]}>Was kochen wir heute?</Text>
+      {/* Begruessung ("Hallo …! 👋" / "Was kochen wir heute?") bewusst
+          entfernt: Sie kostete zwei Zeilen fuer eine Information, die man
+          nach dem ersten Oeffnen kennt, und schob die Rezepte nach unten.
+          Die animierte Brutzel-Begruessung beim Start bleibt - dort ist
+          sie ein Moment, hier war sie Dauermoebel. displayName wird
+          weiterhin fuer diese Animation gebraucht. */}
 
       {error && <Text style={[styles.errorText, { color: '#DC2626' }]}>{error}</Text>}
 
@@ -350,10 +354,8 @@ export default function DashboardScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: { padding: 18, paddingBottom: 40 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  greeting: { fontSize: 21, fontWeight: '700' },
-  subGreeting: { fontSize: 13, marginTop: 2, marginBottom: 12 },
   errorText: { fontSize: 12, marginBottom: 12 },
-  statsRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
+  statsRow: { flexDirection: 'row', gap: 10, marginBottom: 12, marginTop: 4 },
   statCard: { flex: 1, paddingVertical: 11, paddingHorizontal: 10, alignItems: 'center' },
   statValue: { fontSize: 20, fontWeight: '700' },
   statLabel: { fontSize: 10.5, marginTop: 2, textAlign: 'center' },
