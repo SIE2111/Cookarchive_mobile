@@ -191,7 +191,7 @@ export default function RecipesScreen({ navigation, route }: Props) {
         onPress={() => setFavoritesOnly((prev) => !prev)}
         style={[
           styles.favoritesChip,
-          { backgroundColor: favoritesOnly ? '#DC2626' : colors.card, borderRadius: radius.sm },
+          { backgroundColor: favoritesOnly ? gradient[0] : colors.card, borderRadius: radius.sm },
         ]}
       >
         <MaterialCommunityIcons name={favoritesOnly ? 'heart' : 'heart-outline'} size={14} color={favoritesOnly ? '#fff' : colors.text} />
@@ -272,7 +272,7 @@ export default function RecipesScreen({ navigation, route }: Props) {
                   size={12}
                   color={colors.muted}
                 />
-                {item.is_favorite && <MaterialCommunityIcons name="heart" size={12} color="#DC2626" />}
+                {item.is_favorite && <MaterialCommunityIcons name="heart" size={12} color={gradient[0]} />}
               </View>
               {item.tags && item.tags.length > 0 && (
                 <Text style={[styles.recipeTags, { color: colors.muted }]}>{item.tags.join(' · ')}</Text>

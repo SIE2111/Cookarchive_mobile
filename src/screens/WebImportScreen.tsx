@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, ActivityIndicator, Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { ensureMediaLibraryAccess } from '../utils/mediaPermissions';
+import CategoryPicker from '../components/CategoryPicker';
 import { useTheme } from '../theme/ThemeContext';
 import { api, ApiError } from '../api/client';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -49,7 +50,7 @@ export default function WebImportScreen({ navigation, route }: Props) {
   // Backend legt bewusst noch KEIN Rezept an, das passiert erst hier beim
   // "Speichern" (siehe routers/web_import.py).
   const [title, setTitle] = useState('');
-  const [tagsText, setTagsText] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [folders, setFolders] = useState<{ id: string; name: string }[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [ingredients, setIngredients] = useState<IngredientDraft[]>([]);
@@ -132,7 +133,7 @@ export default function WebImportScreen({ navigation, route }: Props) {
     try {
       const result = await api.post<ImportedRecipe>('/web-import/import-recipe', { url: trimmedUrl });
       setTitle(result.title);
-      setTagsText((result.tags ?? []).join(', '));
+      setSelectedTags(result.tags ?? []);
       setIngredients(
         result.ingredients.map((ing) => ({
           name: ing.name,
@@ -212,10 +213,7 @@ export default function WebImportScreen({ navigation, route }: Props) {
         }
       }
 
-      const tags = tagsText
-        .split(',')
-        .map((t) => t.trim())
-        .filter(Boolean);
+      const tags = selectedTags;
 
       await api.post('/recipes/', {
         title: title.trim(),
@@ -304,14 +302,8 @@ export default function WebImportScreen({ navigation, route }: Props) {
         onChangeText={setTitle}
       />
 
-      <Text style={[styles.label, { color: colors.muted, marginTop: 16 }]}>Kategorien (mit Komma getrennt)</Text>
-      <TextInput
-        style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-        placeholder="z.B. vegetarisch, schnell, warm"
-        placeholderTextColor={colors.muted}
-        value={tagsText}
-        onChangeText={setTagsText}
-      />
+      <Text style={[styles.label, { color: colors.muted, marginTop: 16 }]}>Kategorien</Text>
+      <CategoryPicker selected={selectedTags} onChange={setSelectedTags} />
 
       {folders.length > 0 && (
         <>

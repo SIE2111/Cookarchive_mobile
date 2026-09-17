@@ -195,7 +195,7 @@ export default function DashboardScreen({ navigation }: Props) {
           onPress={() => navigation.navigate('Rezepte', { favoritesOnly: true })}
           style={[styles.categoryChip, { backgroundColor: colors.card, borderRadius: radius.sm }]}
         >
-          <MaterialCommunityIcons name="heart" size={13} color="#DC2626" style={{ marginRight: 5 }} />
+          <MaterialCommunityIcons name="heart" size={13} color={gradient[0]} style={{ marginRight: 5 }} />
           <Text style={[styles.categoryText, { color: colors.text }]}>Lieblingsgerichte</Text>
         </Pressable>
         {categories.map((tag) => (

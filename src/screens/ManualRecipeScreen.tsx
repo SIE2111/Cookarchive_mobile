@@ -3,6 +3,7 @@ import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, Activi
 import * as ImagePicker from 'expo-image-picker';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { ensureMediaLibraryAccess } from '../utils/mediaPermissions';
+import CategoryPicker from '../components/CategoryPicker';
 import { useTheme } from '../theme/ThemeContext';
 import { api, ApiError } from '../api/client';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -26,7 +27,7 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
   const [isLoadingExisting, setIsLoadingExisting] = useState(!!editingRecipeId);
   const [title, setTitle] = useState('');
   const [servings, setServings] = useState('');
-  const [tagsText, setTagsText] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [ingredients, setIngredients] = useState<IngredientDraft[]>([{ name: '', amount: '', unit: '' }]);
   const [steps, setSteps] = useState<StepDraft[]>([{ text: '' }]);
   const [isSaving, setIsSaving] = useState(false);
@@ -92,7 +93,7 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
         setTitle(existing.title);
         setServings(existing.servings != null ? String(existing.servings) : '');
         setSelectedFolderId(existing.folder_id);
-        setTagsText((existing.tags ?? []).join(', '));
+        setSelectedTags(existing.tags ?? []);
         setIngredients(
           existing.ingredients.length > 0
             ? existing.ingredients.map((ing) => ({
@@ -130,7 +131,7 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
   useEffect(() => {
     if (!hasLoadedRef.current) return;
     isDirtyRef.current = true;
-  }, [title, servings, tagsText, ingredients, steps, localImageUri, existingCoverUrl, selectedFolderId]);
+  }, [title, servings, selectedTags, ingredients, steps, localImageUri, existingCoverUrl, selectedFolderId]);
 
   const handleBackPress = () => {
     if (isDirtyRef.current && !justSavedRef.current) {
@@ -203,7 +204,7 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
     try {
       const result = await api.post<{ url: string; storage_warning?: string | null }>('/ai/generate-recipe-image', {
         title: title.trim(),
-        context: tagsText.trim() || undefined,
+        context: selectedTags.length > 0 ? selectedTags.join(', ') : undefined,
       });
       // Wie ein bereits gespeichertes Bild behandeln (existingCoverUrl) -
       // beim Speichern wird es dann NICHT erneut hochgeladen, ist ja schon
@@ -318,10 +319,7 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
         }
       }
 
-      const tags = tagsText
-        .split(',')
-        .map((t) => t.trim())
-        .filter(Boolean);
+      const tags = selectedTags;
 
       const payload = {
         title: title.trim(),
@@ -405,14 +403,8 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
         onChangeText={setServings}
       />
 
-      <Text style={[styles.label, { color: colors.muted, marginTop: 16 }]}>Kategorien (mit Komma getrennt)</Text>
-      <TextInput
-        style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-        placeholder="z.B. vegetarisch, schnell, warm"
-        placeholderTextColor={colors.muted}
-        value={tagsText}
-        onChangeText={setTagsText}
-      />
+      <Text style={[styles.label, { color: colors.muted, marginTop: 16 }]}>Kategorien</Text>
+      <CategoryPicker selected={selectedTags} onChange={setSelectedTags} />
 
       {folders.length > 0 && (
         <>

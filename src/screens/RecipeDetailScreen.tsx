@@ -440,7 +440,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
           <MaterialCommunityIcons
             name={recipe.is_favorite ? 'heart' : 'heart-outline'}
             size={26}
-            color={recipe.is_favorite ? '#DC2626' : colors.muted}
+            color={recipe.is_favorite ? gradient[0] : colors.muted}
           />
         </Pressable>
       </View>
