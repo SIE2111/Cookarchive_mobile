@@ -73,6 +73,15 @@ export default function RecipesScreen({ navigation, route }: Props) {
   // Backend aktuell keinen eigenen Tag-Filter-Parameter anbietet.
   const filterTag = route.params?.filterTag;
 
+  // Kommt vom Dashboard mit favoritesOnly=true an (Lieblingsgerichte-Kachel) -
+  // uebernimmt das als Startzustand, bleibt danach aber normal ueber den
+  // Chip lokal umschaltbar.
+  useEffect(() => {
+    if (route.params?.favoritesOnly) {
+      setFavoritesOnly(true);
+    }
+  }, [route.params?.favoritesOnly]);
+
   const loadAll = useCallback(async () => {
     try {
       const recipesUrl = searchText.trim()

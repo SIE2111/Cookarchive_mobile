@@ -40,7 +40,7 @@ export type AuthStackParamList = {
 // dargestellt.
 export type MainTabParamList = {
   Home: undefined;
-  Rezepte: { filterTag?: string } | undefined;
+  Rezepte: { filterTag?: string; favoritesOnly?: boolean } | undefined;
   Scan: undefined;
   Einkauf: undefined;
   Profil: undefined;

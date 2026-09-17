@@ -187,23 +187,27 @@ export default function DashboardScreen({ navigation }: Props) {
         </Pressable>
       </View>
 
-      {/* Kategorien - aus den tatsaechlich vorkommenden Tags abgeleitet */}
-      {categories.length > 0 && (
-        <>
-          <Text style={[styles.sectionLabel, { color: colors.text }]}>Kategorien</Text>
-          <View style={styles.categoriesRow}>
-            {categories.map((tag) => (
-              <Pressable
-                key={tag}
-                onPress={() => navigation.navigate('Rezepte', { filterTag: tag })}
-                style={[styles.categoryChip, { backgroundColor: colors.card, borderRadius: radius.sm }]}
-              >
-                <Text style={[styles.categoryText, { color: colors.text }]}>{tag}</Text>
-              </Pressable>
-            ))}
-          </View>
-        </>
-      )}
+      {/* Kategorien - aus den tatsaechlich vorkommenden Tags abgeleitet, plus
+          eine feste Lieblingsgerichte-Kachel, immer sichtbar */}
+      <Text style={[styles.sectionLabel, { color: colors.text }]}>Kategorien</Text>
+      <View style={styles.categoriesRow}>
+        <Pressable
+          onPress={() => navigation.navigate('Rezepte', { favoritesOnly: true })}
+          style={[styles.categoryChip, { backgroundColor: colors.card, borderRadius: radius.sm }]}
+        >
+          <MaterialCommunityIcons name="heart" size={13} color="#DC2626" style={{ marginRight: 5 }} />
+          <Text style={[styles.categoryText, { color: colors.text }]}>Lieblingsgerichte</Text>
+        </Pressable>
+        {categories.map((tag) => (
+          <Pressable
+            key={tag}
+            onPress={() => navigation.navigate('Rezepte', { filterTag: tag })}
+            style={[styles.categoryChip, { backgroundColor: colors.card, borderRadius: radius.sm }]}
+          >
+            <Text style={[styles.categoryText, { color: colors.text }]}>{tag}</Text>
+          </Pressable>
+        ))}
+      </View>
 
       {/* Zuletzt zubereitet (nur Hauptgerichte, keine mitgekochten Beilagen -
           siehe CookModeScreen.tsx, ruft mark-cooked nur fuer recipeIds[0] auf) */}
@@ -264,7 +268,7 @@ const styles = StyleSheet.create({
   actionText: { color: '#fff', fontWeight: '600', fontSize: 12.5 },
   sectionLabel: { fontSize: 15, fontWeight: '700', marginBottom: 10 },
   categoriesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 22 },
-  categoryChip: { paddingHorizontal: 14, paddingVertical: 8 },
+  categoryChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 8 },
   categoryText: { fontSize: 12, fontWeight: '600' },
   emptyText: { fontSize: 12.5, lineHeight: 19 },
   recentCard: { paddingHorizontal: 4 },
