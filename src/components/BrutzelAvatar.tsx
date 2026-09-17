@@ -3,16 +3,32 @@ import { Image, StyleSheet } from 'react-native';
 
 interface Props {
   size?: number;
+  // 'head': kleiner, runder Kopf-Ausschnitt (Standard, fuer knappe
+  // Kontext-Hinweise). 'full': ganze Figur, nicht rund zugeschnitten - fuer
+  // den Kochtipp im Koch-Modus, der jetzt bewusst prominenter/groesser
+  // gezeigt wird statt nur des kleinen Kopfes.
+  variant?: 'head' | 'full';
 }
 
+const FULL_ASPECT_RATIO = 789 / 983; // Breite/Hoehe von assets/brutzel-full.png
+
 /**
- * Brutzels Kopf - echtes Illustrations-Asset (assets/brutzel-avatar.png,
- * aus der finalen Maskottchen-Grafik zugeschnitten), ersetzt die fruehere
- * programmatische SVG-Annaeherung. Nur der Kopf, keine Vollfigur - passend
- * fuer kleine Kontext-Hinweise wie Kochtipps im Koch-Modus (siehe Regel
- * "Vollfigur nur bei grossen Momenten").
+ * Brutzel - echte Illustrations-Assets (assets/brutzel-avatar.png fuer den
+ * Kopf, assets/brutzel-full.png fuer die ganze Figur), ersetzen die
+ * fruehere programmatische SVG-Annaeherung.
  */
-export default function BrutzelAvatar({ size = 28 }: Props) {
+export default function BrutzelAvatar({ size = 28, variant = 'head' }: Props) {
+  if (variant === 'full') {
+    const height = size;
+    const width = Math.round(height * FULL_ASPECT_RATIO);
+    return (
+      <Image
+        source={require('../../assets/brutzel-full.png')}
+        style={{ width, height }}
+        resizeMode="contain"
+      />
+    );
+  }
   return (
     <Image
       source={require('../../assets/brutzel-avatar.png')}

@@ -62,22 +62,36 @@ function getEffectiveTimerSeconds(step: { timer_seconds?: number | null; text: s
 }
 
 const BRUTZEL_TIPS: Record<string, string> = {
-  mehlieren: 'Erst kurz vorm Braten mehlieren, sonst wird die Kruste matschig statt knusprig.',
-  zwiebel_schneiden: 'Gleichmäßige Ringe/Würfel braten gleichmäßiger durch.',
-  koecheln_lassen: 'Nicht sprudelnd kochen lassen – nur leise Bläschen, sonst wird die Suppe trüb.',
+  mehlieren: 'Erst unmittelbar vorm Braten mehlieren, nie vorher liegen lassen – sonst zieht das Mehl Feuchtigkeit und die Kruste wird matschig statt knusprig.',
+  zwiebel_schneiden: 'Wurzelansatz beim Schneiden dran lassen, hält die Schichten zusammen – gibt gleichmäßigere Stücke und schont die Augen, da weniger Zellsaft austritt.',
+  koecheln_lassen: 'Nur leise Bläschen, nie sprudelnd kochen – zu starke Hitze macht Brühen trüb und lässt Fleisch zäh statt zart werden.',
+  apfel_schaelen: 'Schale möglichst dünn abschälen, direkt darunter sitzen die meisten Aromastoffe.',
+  filetieren: 'Immer gegen die Gräten, nie mit ihnen schneiden – das Messer flach halten und in einem durchgehenden Zug führen statt zu sägen.',
+  germteig_gehen_lassen: 'Zugedeckt an einem warmen, zugfreien Ort gehen lassen – über 40°C stirbt die Hefe ab, das Ergebnis bleibt dann flach.',
+  knoblauch_schaelen: 'Zehe mit der flachen Klinge andrücken, dann löst sich die Schale von selbst – schneller und schont die Finger.',
+  palatschinken_wenden: 'Erst wenden, wenn sich der Rand von der Pfanne löst und die Oberfläche matt wird – zu früh gewendet reißt der Teig.',
+  risotto_ruehren: 'Brühe nur löffelweise zugeben und erst nachschütten, wenn die vorherige Portion aufgesogen ist – so wird die Stärke schonend freigesetzt, das macht die Cremigkeit.',
+  ruehrteig_unterheben: 'Mit dem Schneebesen oder Teigschaber von unten nach oben heben, nicht rühren – sonst geht die eingeschlagene Luft wieder verloren.',
+  schnitzel_klopfen: 'Zwischen zwei Lagen Frischhaltefolie klopfen, gleichmäßig von innen nach außen – schützt die Fasern und verhindert, dass das Fleisch ausfranst.',
+  schwarte_einschneiden: 'Nur die Schwarte einschneiden, nicht bis ins Fleisch – sonst läuft beim Braten der Saft aus statt die Kruste aufzuplatzen.',
+  teig_kneten: 'Mindestens 8–10 Minuten kräftig kneten, bis er sich glatt und elastisch anfühlt – erst dann hat sich genug Gluten gebildet, damit der Teig aufgeht.',
+  eiweiss_schlagen: 'Schüssel und Rührbesen müssen absolut fettfrei sein, sonst schlägt das Eiweiß nicht steif – schon eine Spur Eigelb reicht, um es zu verhindern.',
+  strudelteig_ausziehen: 'Von der Mitte nach außen ziehen, mit dem Handrücken statt den Fingerspitzen – so reißt der Teig seltener und wird gleichmäßig dünn.',
 };
 
 // Generische Tipps fuer Schritte OHNE technique_tag (das betrifft aktuell
 // rund 70% aller Schritte in den Starter-Rezepten) - Brutzel hatte bisher
-// nur bei rund einem Viertel der Schritte ueberhaupt etwas zu sagen. Wird
-// deterministisch nach Schrittnummer gewaehlt (kein Zufall -> kein
-// Flackern bei Re-Renders desselben Schritts).
+// nur bei rund einem Viertel der Schritte ueberhaupt etwas zu sagen.
+// Bewusst als ECHTE Kuechen-Praxis-Tipps formuliert (Mise en Place,
+// Profi-Kueche), nicht als beilaeufige Erinnerungen. Wird deterministisch
+// nach Schrittnummer gewaehlt (kein Zufall -> kein Flackern bei
+// Re-Renders desselben Schritts).
 const GENERIC_BRUTZEL_TIPS: string[] = [
-  'Lies dir den Schritt einmal ganz durch, bevor du loslegst – dann läuft\'s runder.',
-  'Alle Zutaten für diesen Schritt schon bereitgestellt? Spart unnötiges Suchen.',
-  'Kein Stress – du kannst jederzeit einen Schritt zurückgehen, falls was unklar war.',
-  'Falls ein Timer läuft: ruhig weiterlesen, Brutzel erinnert dich rechtzeitig.',
-  'Guter Moment für einen Schluck Wasser, bevor es weitergeht.',
+  'Mise en Place: alle Zutaten für diesen Schritt abgewogen und griffbereit, bevor du anfängst – das ist der Unterschied zwischen Hektik und Ruhe in der Küche.',
+  'Schneidebrett und Messer zwischendurch sauber wischen, besonders nach rohem Fleisch oder Fisch – Profis trennen strikt zwischen den Arbeitsschritten.',
+  'Lies den ganzen Schritt einmal durch, bevor du loslegst – wer erst mittendrin merkt, was als Nächstes kommt, verliert Zeit und Timing.',
+  'Immer erst die Pfanne oder den Topf auf Temperatur bringen, dann erst die Zutaten zugeben – kalt angesetzt ziehen viele Zutaten Flüssigkeit statt zu bräunen.',
+  'Mit der Nase mitkochen: Röstaromen, die zu bitter riechen, kündigen sich meist einige Sekunden vorher an – dann ist Reduzieren der Hitze schon zu spät.',
 ];
 
 interface TechniqueVideoInfo {
@@ -468,7 +482,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
       )}
 
       <View style={[styles.brutzelCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
-        <BrutzelAvatar size={52} />
+        <BrutzelAvatar size={88} variant="full" />
         <View style={{ flex: 1 }}>
           <Text style={[styles.brutzelText, { color: colors.muted }]}>
             <Text style={{ fontWeight: '700', color: gradient[0] }}>Brutzel: </Text>
