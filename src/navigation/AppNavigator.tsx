@@ -25,7 +25,6 @@ import ProfileScreen from '../screens/ProfileScreen';
 import CommunityPoolScreen from '../screens/CommunityPoolScreen';
 import HouseholdScreen from '../screens/HouseholdScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
-import SideDishSuggestionScreen from '../screens/SideDishSuggestionScreen';
 import PhotoCaptureScreen from '../screens/PhotoCaptureScreen';
 
 export type AuthStackParamList = {
@@ -63,7 +62,6 @@ export type MainStackParamList = {
   CommunityPool: undefined;
   Household: undefined;
   Onboarding: undefined;
-  SideDishSuggestion: { recipeId: string };
   PhotoCapture: undefined;
 };
 
@@ -210,7 +208,6 @@ function MainNavigator() {
       <MainStack.Screen name="CommunityPool" component={CommunityPoolScreen} options={{ title: 'Community-Pool' }} />
       <MainStack.Screen name="Household" component={HouseholdScreen} options={{ title: 'Haushalt' }} />
       <MainStack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false, gestureEnabled: false }} />
-      <MainStack.Screen name="SideDishSuggestion" component={SideDishSuggestionScreen} options={{ title: 'Beilage?', headerBackVisible: false }} />
       <MainStack.Screen name="PhotoCapture" component={PhotoCaptureScreen} options={{ title: 'Foto erfassen' }} />
     </MainStack.Navigator>
   );

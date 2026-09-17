@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Pressable, Image, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Pressable, Image, Alert, Modal, TextInput } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
 import { api, ApiError } from '../api/client';
+import BrutzelAvatar from '../components/BrutzelAvatar';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/AppNavigator';
 
@@ -41,6 +42,19 @@ const SOURCE_LABELS: Record<string, string> = {
   pool_fork: '👥 Aus dem Community-Pool',
 };
 
+interface SideSuggestion {
+  id: string;
+  title: string;
+  reason: string;
+}
+
+interface RecipeSummary {
+  id: string;
+  title: string;
+}
+
+const MAX_SELECTABLE_SIDES = 2;
+
 export default function RecipeDetailScreen({ route, navigation }: Props) {
   const { colors, gradient, radius } = useTheme();
   const { recipeId } = route.params;
@@ -66,13 +80,66 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
     return unsubscribe;
   }, [recipeId, navigation]);
 
-  const goToSideDish = () => navigation.navigate('SideDishSuggestion', { recipeId: recipeId });
+
+
+  const [sideSuggestions, setSideSuggestions] = useState<SideSuggestion[]>([]);
+  const [manualSides, setManualSides] = useState<SideSuggestion[]>([]);
+  const [selectedSideIds, setSelectedSideIds] = useState<string[]>([]);
+  const [isSidesLoading, setIsSidesLoading] = useState(true);
+  const [sidesError, setSidesError] = useState<string | null>(null);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [allRecipes, setAllRecipes] = useState<RecipeSummary[]>([]);
+  const [recipeSearch, setRecipeSearch] = useState('');
+
+  useEffect(() => {
+    // Beilagen-Vorschlaege direkt hier auf dem Rezept-Detail laden (nicht
+    // erst auf einem eigenen Screen nach "Zubereitung starten") - echte
+    // KI-Zuordnung aus den eigenen gespeicherten Rezepten, mit Begruendung.
+    setIsSidesLoading(true);
+    api
+      .post<{ suggestions: SideSuggestion[] }>(`/ai/suggest-sides-for-recipe/${recipeId}`)
+      .then((res) => setSideSuggestions(res.suggestions))
+      .catch((err) => setSidesError(err instanceof ApiError ? err.detail : 'Vorschläge konnten nicht geladen werden'))
+      .finally(() => setIsSidesLoading(false));
+  }, [recipeId]);
+
+  const allSideCandidates = [...manualSides, ...sideSuggestions.filter((s) => !manualSides.some((m) => m.id === s.id))];
+
+  const toggleSideSelect = (id: string) => {
+    setSelectedSideIds((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      if (prev.length >= MAX_SELECTABLE_SIDES) return prev;
+      return [...prev, id];
+    });
+  };
+
+  const openSidePicker = () => {
+    setIsPickerOpen(true);
+    setRecipeSearch('');
+    if (allRecipes.length === 0) {
+      api.get<RecipeSummary[]>('/recipes/').then(setAllRecipes).catch(() => {});
+    }
+  };
+
+  const addManualSide = (r: RecipeSummary) => {
+    if (r.id === recipeId) return;
+    if (!manualSides.some((m) => m.id === r.id) && !sideSuggestions.some((s) => s.id === r.id)) {
+      setManualSides((prev) => [...prev, { id: r.id, title: r.title, reason: 'Selbst ausgewählt' }]);
+    }
+    toggleSideSelect(r.id);
+    setIsPickerOpen(false);
+  };
+
+  const filteredPickerRecipes = (recipeSearch.trim()
+    ? allRecipes.filter((r) => r.title.toLowerCase().includes(recipeSearch.trim().toLowerCase()))
+    : allRecipes
+  ).filter((r) => r.id !== recipeId);
 
   const [isAddingToList, setIsAddingToList] = useState(false);
   const handleAddToShoppingList = async () => {
     setIsAddingToList(true);
     try {
-      await api.post('/shopping-list/add-recipe', { recipe_id: recipeId });
+      await api.post('/shopping-list/add-recipes', { recipe_ids: [recipeId, ...selectedSideIds] });
       Alert.alert('Erledigt', 'Zutaten wurden zur Einkaufsliste hinzugefügt.');
     } catch (err) {
       Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Zutaten konnten nicht hinzugefügt werden.');
@@ -141,6 +208,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
   }
 
   return (
+    <>
     <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
       {recipe.cover_image_url && (
         <Image source={{ uri: recipe.cover_image_url }} style={[styles.heroImage, { borderRadius: radius.md }]} />
@@ -186,8 +254,62 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
         </View>
       </View>
 
+      <View style={[styles.sidesCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
+        <View style={styles.sidesHeader}>
+          <BrutzelAvatar size={36} />
+          <Text style={[styles.sidesTitle, { color: colors.text }]}>Passt eine Beilage dazu?</Text>
+        </View>
+
+        {isSidesLoading ? (
+          <View style={{ paddingVertical: 10, alignItems: 'center' }}>
+            <ActivityIndicator color={colors.muted} size="small" />
+            <Text style={{ color: colors.muted, fontSize: 11.5, marginTop: 6 }}>Brutzel überlegt, was dazu passt…</Text>
+          </View>
+        ) : (
+          <>
+            {sidesError && (
+              <Text style={{ color: colors.muted, fontSize: 11.5, marginBottom: 8 }}>
+                Keine KI-Vorschläge verfügbar ({sidesError}) - du kannst trotzdem selbst eines dazuwählen.
+              </Text>
+            )}
+            {!sidesError && allSideCandidates.length === 0 && (
+              <Text style={{ color: colors.muted, fontSize: 11.5, marginBottom: 8 }}>
+                Gerade keine passende Beilage im Kochbuch gefunden.
+              </Text>
+            )}
+            {allSideCandidates.map((s) => {
+              const isSelected = selectedSideIds.includes(s.id);
+              return (
+                <Pressable
+                  key={s.id}
+                  onPress={() => toggleSideSelect(s.id)}
+                  style={[
+                    styles.sideRow,
+                    { backgroundColor: colors.bg, borderRadius: radius.sm, borderWidth: isSelected ? 1.5 : 0, borderColor: gradient[0] },
+                  ]}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.sideTitle, { color: colors.text }]}>{s.title}</Text>
+                    <Text style={[styles.sideReason, { color: colors.muted }]}>{s.reason}</Text>
+                  </View>
+                  <MaterialCommunityIcons
+                    name={isSelected ? 'checkbox-marked-circle' : 'checkbox-blank-circle-outline'}
+                    size={20}
+                    color={isSelected ? gradient[0] : colors.muted}
+                  />
+                </Pressable>
+              );
+            })}
+            <Pressable onPress={openSidePicker} style={styles.searchLink}>
+              <MaterialCommunityIcons name="magnify" size={14} color={gradient[0]} />
+              <Text style={[styles.searchLinkText, { color: gradient[0] }]}>Anderes Rezept suchen</Text>
+            </Pressable>
+          </>
+        )}
+      </View>
+
       <Pressable
-        onPress={goToSideDish}
+        onPress={() => navigation.navigate('CookMode', { recipeIds: [recipeId, ...selectedSideIds] })}
         style={[styles.cookButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}
       >
         <Text style={styles.cookButtonText}>Zubereitung starten</Text>
@@ -231,6 +353,36 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
         </View>
       )}
     </ScrollView>
+
+    <Modal visible={isPickerOpen} animationType="slide" onRequestClose={() => setIsPickerOpen(false)}>
+      <View style={[styles.pickerContainer, { backgroundColor: colors.bg }]}>
+        <View style={styles.pickerHeader}>
+          <Text style={[styles.pickerTitle, { color: colors.text }]}>Rezept als Beilage wählen</Text>
+          <Pressable onPress={() => setIsPickerOpen(false)} hitSlop={10}>
+            <MaterialCommunityIcons name="close" size={24} color={colors.text} />
+          </Pressable>
+        </View>
+        <TextInput
+          style={[styles.pickerSearch, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
+          placeholder="Rezept suchen…"
+          placeholderTextColor={colors.muted}
+          value={recipeSearch}
+          onChangeText={setRecipeSearch}
+        />
+        <ScrollView>
+          {filteredPickerRecipes.map((r) => (
+            <Pressable
+              key={r.id}
+              onPress={() => addManualSide(r)}
+              style={[styles.pickerRow, { backgroundColor: colors.card, borderRadius: radius.sm }]}
+            >
+              <Text style={{ color: colors.text, fontSize: 13.5 }}>{r.title}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </View>
+    </Modal>
+    </>
   );
 }
 
@@ -249,6 +401,19 @@ const styles = StyleSheet.create({
   servingsButton: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
   servingsValue: { fontSize: 34, fontWeight: '800', minWidth: 50, textAlign: 'center' },
   cookButton: { height: 46, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
+  sidesCard: { padding: 14, marginBottom: 14 },
+  sidesHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+  sidesTitle: { fontSize: 14, fontWeight: '700', flex: 1 },
+  sideRow: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, marginBottom: 8 },
+  sideTitle: { fontSize: 12.5, fontWeight: '600' },
+  sideReason: { fontSize: 10.5, marginTop: 2 },
+  searchLink: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
+  searchLinkText: { fontSize: 12, fontWeight: '700' },
+  pickerContainer: { flex: 1, paddingHorizontal: 18, paddingTop: 60 },
+  pickerHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  pickerTitle: { fontSize: 17, fontWeight: '700' },
+  pickerSearch: { height: 44, paddingHorizontal: 14, fontSize: 13.5, marginBottom: 14 },
+  pickerRow: { padding: 13, marginBottom: 7 },
   shoppingListButton: { flexDirection: 'row', gap: 7, height: 42, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
   shoppingListButtonText: { fontSize: 12.5, fontWeight: '700' },
   cookButtonText: { color: '#fff', fontWeight: '700', fontSize: 14 },
