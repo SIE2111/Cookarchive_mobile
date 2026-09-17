@@ -31,6 +31,36 @@ function formatTime(totalSeconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+// Fallback fuer Schritte OHNE fest hinterlegtes timer_seconds (betrifft
+// alle KI-generierten/importierten/manuell getippten Rezepte - nur die
+// 51 Starter-Rezepte haben das Feld von Hand gesetzt). Erkennt Zeitangaben
+// direkt im Schritt-Text ("20 Minuten", "2 Stunden", "25-30 Min.") und
+// leitet daraus einen Timer ab - aber erst AB 2 MINUTEN, wie gewuenscht,
+// damit nicht jede beilaeufige Erwaehnung ("kurz anbraten, 1 Minute") einen
+// Timer aufploppen laesst.
+function parseDurationSecondsFromText(text: string): number | null {
+  const rangeMatch = text.match(/(\d+)\s*[-–]\s*(\d+)\s*(Minuten|Min\.?|Stunden|Std\.?)/i);
+  const singleMatch = !rangeMatch ? text.match(/(\d+)\s*(Minuten|Min\.?|Stunden|Std\.?)/i) : null;
+  const match = rangeMatch ?? singleMatch;
+  if (!match) return null;
+
+  const isHours = /Stunden|Std/i.test(match[match.length - 1]);
+  let value: number;
+  if (rangeMatch) {
+    // Bei einer Spanne (z.B. "25-30 Minuten") den Mittelwert nehmen -
+    // repraesentativer als nur die untere oder obere Grenze.
+    value = (Number(rangeMatch[1]) + Number(rangeMatch[2])) / 2;
+  } else {
+    value = Number(match[1]);
+  }
+  const seconds = isHours ? value * 3600 : value * 60;
+  return seconds >= 120 ? Math.round(seconds) : null;
+}
+
+function getEffectiveTimerSeconds(step: { timer_seconds?: number | null; text: string }): number | null {
+  return step.timer_seconds ?? parseDurationSecondsFromText(step.text);
+}
+
 const BRUTZEL_TIPS: Record<string, string> = {
   mehlieren: 'Erst kurz vorm Braten mehlieren, sonst wird die Kruste matschig statt knusprig.',
   zwiebel_schneiden: 'Gleichmäßige Ringe/Würfel braten gleichmäßiger durch.',
@@ -145,6 +175,11 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
   // und der Nutzer ihn gestartet hat. Echtes setInterval, keine Attrappe.
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
+  // Welcher SCHRITT (Index) gerade einen laufenden/gestarteten Timer hat -
+  // getrennt von currentIndex (welcher Schritt gerade ANGEZEIGT wird).
+  // Ohne diese Trennung wurde der Timer bei jedem Weiter/Zurueck
+  // faelschlich gestoppt und zurueckgesetzt (siehe Reset-Effekt unten).
+  const [activeTimerStepIndex, setActiveTimerStepIndex] = useState<number | null>(null);
   const [timerNotificationId, setTimerNotificationId] = useState<string | null>(null);
   const timerNotificationIdRef = useRef<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -232,6 +267,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
 
   const handleStartTimer = async () => {
     setIsTimerRunning(true);
+    setActiveTimerStepIndex(currentIndex);
     if (recipe && currentStep && remainingSeconds) {
       const id = await scheduleTimerNotification(recipe.title, currentStep.text, remainingSeconds);
       setTimerNotificationId(id);
@@ -244,17 +280,27 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
     setTimerNotificationId(null);
   };
 
-  // Beim Schrittwechsel: laufenden Timer stoppen, neuen Startwert setzen
+  // Beim Schrittwechsel: NUR zuruecksetzen, wenn der neu angezeigte Schritt
+  // NICHT der Schritt mit dem laufenden/gestarteten Timer ist. Wechselt man
+  // zwischenzeitlich zu einem anderen Schritt, bleibt der Timer im
+  // Hintergrund unangetastet weiterlaufen (die Interval-Logik unten haengt
+  // nur von isTimerRunning ab, nicht von currentIndex) - erst beim
+  // Zurueckwechseln zu einem GANZ ANDEREN, timer-losen Schritt wird
+  // zurueckgesetzt.
   useEffect(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
+    if (activeTimerStepIndex !== null && activeTimerStepIndex === currentIndex) {
+      return; // dieser Schritt hat den aktiven Timer - Anzeige unveraendert lassen
     }
-    setIsTimerRunning(false);
-    cancelTimerNotification(timerNotificationId);
-    setTimerNotificationId(null);
-    setRemainingSeconds(currentStep?.timer_seconds ?? null);
-  }, [currentIndex, currentStep?.timer_seconds]);
+    if (activeTimerStepIndex === null) {
+      // Kein Timer aktiv irgendwo - normales Zuruecksetzen auf den
+      // Startwert des jetzt angezeigten Schritts.
+      setRemainingSeconds(currentStep ? getEffectiveTimerSeconds(currentStep) : null);
+    }
+    // Ist ein Timer fuer einen ANDEREN Schritt aktiv, wird hier bewusst
+    // NICHTS an remainingSeconds/isTimerRunning veraendert - die Anzeige
+    // fuer den jetzt sichtbaren (timer-losen oder eigenen) Schritt wird
+    // weiter unten beim Rendern anhand von activeTimerStepIndex entschieden.
+  }, [currentIndex]);
 
   useEffect(() => {
     if (!isTimerRunning) return;
@@ -299,8 +345,17 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
   }
 
   const totalSteps = derivedSteps.length;
-  const progress = (currentIndex + 1) / totalSteps;
   const isLastStep = currentIndex === totalSteps - 1;
+
+  // Was fuer den JETZT sichtbaren Schritt anzuzeigen ist: laeuft dessen
+  // eigener Timer, zeigt sich der echte Live-Countdown; sonst dessen
+  // eigene (nicht laufende) Dauer. remainingSeconds/isTimerRunning selbst
+  // bleiben unabhaengig davon fuer den aktiven Timer-Schritt im Hintergrund
+  // bestehen, auch waehrend ein anderer Schritt angezeigt wird.
+  const isViewingActiveTimerStep = activeTimerStepIndex === currentIndex;
+  const displayedRemainingSeconds = isViewingActiveTimerStep ? remainingSeconds : (currentStep ? getEffectiveTimerSeconds(currentStep) : null);
+  const displayedIsTimerRunning = isViewingActiveTimerStep && isTimerRunning;
+  const isTimerRunningElsewhere = !isViewingActiveTimerStep && activeTimerStepIndex !== null && isTimerRunning;
 
   const goNext = () => {
     if (isLastStep) {
@@ -363,8 +418,27 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
         SCHRITT {currentIndex + 1}/{totalSteps}
       </Text>
 
-      <View style={[styles.progressTrack, { backgroundColor: colors.card }]}>
-        <View style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: gradient[0] }]} />
+      <View style={styles.progressSegmentsRow}>
+        {derivedSteps.map((step, i) => {
+          const isPassedOrCurrent = i <= currentIndex;
+          const hasTimer = getEffectiveTimerSeconds(step) !== null;
+          return (
+            <View
+              key={i}
+              style={[
+                styles.progressSegment,
+                {
+                  backgroundColor: isPassedOrCurrent ? gradient[0] : colors.card,
+                  // Schritte mit Timer bekommen einen sichtbaren Rahmen in
+                  // einer eigenen Akzentfarbe, unabhaengig vom Fortschritt -
+                  // so sieht man auf einen Blick, wo noch ein Timer kommt.
+                  borderWidth: hasTimer ? 2 : 0,
+                  borderColor: '#3B82F6',
+                },
+              ]}
+            />
+          );
+        })}
       </View>
 
       <View style={styles.stepTextRow}>
@@ -421,18 +495,27 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
         </Pressable>
       ) : null}
 
-      {remainingSeconds !== null && (
+      {isTimerRunningElsewhere && (
+        <View style={[styles.timerElsewhereBanner, { backgroundColor: colors.card, borderRadius: radius.sm }]}>
+          <MaterialCommunityIcons name="timer-sand" size={14} color={gradient[0]} />
+          <Text style={[styles.timerElsewhereText, { color: colors.muted }]}>
+            Timer läuft weiter für Schritt {(activeTimerStepIndex ?? 0) + 1} · noch {formatTime(remainingSeconds ?? 0)}
+          </Text>
+        </View>
+      )}
+
+      {displayedRemainingSeconds !== null && (
         <View style={[styles.timerCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
           <Text style={[styles.timerLabel, { color: colors.muted }]}>
-            {isTimerRunning ? 'TIMER LÄUFT' : remainingSeconds === 0 ? 'FERTIG' : 'TIMER'}
+            {displayedIsTimerRunning ? 'TIMER LÄUFT' : displayedRemainingSeconds === 0 ? 'FERTIG' : 'TIMER'}
           </Text>
-          <Text style={[styles.timerValue, { color: gradient[0] }]}>{formatTime(remainingSeconds)}</Text>
-          {!isTimerRunning && remainingSeconds > 0 && (
+          <Text style={[styles.timerValue, { color: gradient[0] }]}>{formatTime(displayedRemainingSeconds)}</Text>
+          {!displayedIsTimerRunning && displayedRemainingSeconds > 0 && (
             <Pressable onPress={handleStartTimer} style={[styles.timerButton, { backgroundColor: gradient[0], borderRadius: radius.sm }]}>
               <Text style={styles.timerButtonText}>Timer starten</Text>
             </Pressable>
           )}
-          {isTimerRunning && (
+          {displayedIsTimerRunning && (
             <Pressable onPress={handlePauseTimer} style={[styles.timerButton, { backgroundColor: colors.bg, borderRadius: radius.sm }]}>
               <Text style={[styles.timerButtonText, { color: colors.text }]}>Pausieren</Text>
             </Pressable>
@@ -491,8 +574,8 @@ const styles = StyleSheet.create({
   ingredientsList: { padding: 12, marginBottom: 16 },
   ingredientLine: { fontSize: 12.5, lineHeight: 20 },
   stepIndicator: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginBottom: 10 },
-  progressTrack: { height: 4, borderRadius: 2, overflow: 'hidden', marginBottom: 24 },
-  progressFill: { height: '100%' },
+  progressSegmentsRow: { flexDirection: 'row', gap: 4, marginBottom: 24 },
+  progressSegment: { flex: 1, height: 6, borderRadius: 3 },
   stepTextRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 14 },
   stepText: { flex: 1, fontSize: 16, lineHeight: 24, fontWeight: '400' },
   speakButton: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
@@ -517,6 +600,8 @@ const styles = StyleSheet.create({
   modalSaveButton: { paddingHorizontal: 18, paddingVertical: 10, minWidth: 80, alignItems: 'center' },
   modalSaveText: { color: '#fff', fontSize: 13, fontWeight: '700' },
   timerCard: { padding: 20, alignItems: 'center', marginBottom: 20 },
+  timerElsewhereBanner: { flexDirection: 'row', alignItems: 'center', gap: 7, padding: 10, marginBottom: 10 },
+  timerElsewhereText: { fontSize: 11.5, fontWeight: '600', flex: 1 },
   timerLabel: { fontSize: 10, fontWeight: '600', letterSpacing: 0.5, marginBottom: 6 },
   timerValue: { fontSize: 32, fontWeight: '700', marginBottom: 12 },
   timerButton: { paddingHorizontal: 20, paddingVertical: 10 },

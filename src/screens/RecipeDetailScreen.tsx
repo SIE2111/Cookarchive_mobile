@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Pressable, Image, Alert } from 'react-native';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
 import { api, ApiError } from '../api/client';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -67,28 +68,17 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
 
   const goToSideDish = () => navigation.navigate('SideDishSuggestion', { recipeId: recipeId });
 
-  const handleStartCooking = () => {
-    Alert.alert(
-      'Zutaten übernehmen?',
-      'Sollen die Zutaten dieses Rezepts in die Einkaufsliste übernommen werden?',
-      [
-        { text: 'Nein, direkt kochen', style: 'cancel', onPress: goToSideDish },
-        {
-          text: 'Ja, übernehmen',
-          onPress: async () => {
-            try {
-              await api.post('/shopping-list/add-recipe', { recipe_id: recipeId });
-            } catch (err) {
-              // Einkaufsliste ist ein Zusatznutzen - ein Fehler dabei soll
-              // das eigentliche Kochen nicht blockieren, nur sichtbar melden
-              Alert.alert('Hinweis', err instanceof ApiError ? err.detail : 'Zutaten konnten nicht zur Einkaufsliste hinzugefügt werden.');
-            } finally {
-              goToSideDish();
-            }
-          },
-        },
-      ],
-    );
+  const [isAddingToList, setIsAddingToList] = useState(false);
+  const handleAddToShoppingList = async () => {
+    setIsAddingToList(true);
+    try {
+      await api.post('/shopping-list/add-recipe', { recipe_id: recipeId });
+      Alert.alert('Erledigt', 'Zutaten wurden zur Einkaufsliste hinzugefügt.');
+    } catch (err) {
+      Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Zutaten konnten nicht hinzugefügt werden.');
+    } finally {
+      setIsAddingToList(false);
+    }
   };
 
   const handleDelete = () => {
@@ -156,10 +146,25 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
       </Text>
 
       <Pressable
-        onPress={handleStartCooking}
+        onPress={goToSideDish}
         style={[styles.cookButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}
       >
         <Text style={styles.cookButtonText}>Zubereitung starten</Text>
+      </Pressable>
+
+      <Pressable
+        onPress={handleAddToShoppingList}
+        disabled={isAddingToList}
+        style={[styles.shoppingListButton, { backgroundColor: colors.card, borderRadius: radius.md, opacity: isAddingToList ? 0.7 : 1 }]}
+      >
+        {isAddingToList ? (
+          <ActivityIndicator color={colors.text} size="small" />
+        ) : (
+          <>
+            <MaterialCommunityIcons name="cart-plus" size={16} color={colors.text} />
+            <Text style={[styles.shoppingListButtonText, { color: colors.text }]}>Zutaten zur Einkaufsliste</Text>
+          </>
+        )}
       </Pressable>
 
       <Text style={[styles.sectionTitle, { color: colors.text }]}>Zutaten</Text>
@@ -197,7 +202,9 @@ const styles = StyleSheet.create({
   meta: { fontSize: 12 },
   editLink: { fontSize: 12.5, fontWeight: '700' },
   sourceHint: { fontSize: 10.5, marginTop: -12, marginBottom: 18 },
-  cookButton: { height: 46, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
+  cookButton: { height: 46, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
+  shoppingListButton: { flexDirection: 'row', gap: 7, height: 42, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
+  shoppingListButtonText: { fontSize: 12.5, fontWeight: '700' },
   cookButtonText: { color: '#fff', fontWeight: '700', fontSize: 14 },
   sectionTitle: { fontSize: 13, fontWeight: '700', marginTop: 8, marginBottom: 10 },
   ingredient: { fontSize: 13.5, lineHeight: 22 },
