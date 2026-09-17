@@ -46,6 +46,13 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
   const [suggestions, setSuggestions] = useState<{ id: string; name: string; default_unit: string | null }[]>([]);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Ungespeicherte-Aenderungen-Erkennung, NUR im Bearbeiten-Modus relevant -
+  // hasLoadedRef verhindert, dass das Befuellen der Felder beim ersten
+  // Laden des bestehenden Rezepts selbst schon als "Aenderung" gilt.
+  const hasLoadedRef = useRef(false);
+  const justSavedRef = useRef(false);
+  const [isDirty, setIsDirty] = useState(false);
+
   useEffect(() => {
     api.get<{ id: string; name: string }[]>('/folders/').then(setFolders).catch(() => {
       // Ordner sind hier nur "nice to have" - schlaegt das Laden fehl,
@@ -99,6 +106,12 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
             : [{ text: '' }],
         );
         setExistingCoverUrl(existing.cover_image_url);
+        // Leicht verzoegert setzen, damit der Watcher-Effekt unten (der auf
+        // alle Formularfelder reagiert) das Befuellen selbst nicht schon als
+        // Aenderung durch den Nutzer wertet.
+        setTimeout(() => {
+          hasLoadedRef.current = true;
+        }, 0);
       })
       .catch((err) => {
         Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Rezept konnte nicht geladen werden');
@@ -106,6 +119,34 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
       })
       .finally(() => setIsLoadingExisting(false));
   }, [editingRecipeId]);
+
+  // Beobachtet alle Formularfelder - sobald hasLoadedRef gesetzt ist (Laden
+  // abgeschlossen), markiert jede weitere Aenderung das Formular als "dirty".
+  useEffect(() => {
+    if (!hasLoadedRef.current) return;
+    setIsDirty(true);
+  }, [title, servings, tagsText, ingredients, steps, localImageUri, selectedFolderId]);
+
+  // Rueckfrage beim Verlassen mit ungespeicherten Aenderungen - nur im
+  // Bearbeiten-Modus relevant (beim Neu-Erstellen bleibt es wie gehabt,
+  // wie gewuenscht). justSavedRef verhindert, dass die eigene Navigation
+  // nach erfolgreichem Speichern faelschlich als "Abbruch" abgefangen wird.
+  useEffect(() => {
+    if (!editingRecipeId) return;
+    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
+      if (!isDirty || justSavedRef.current) return;
+      e.preventDefault();
+      Alert.alert(
+        'Änderungen verwerfen?',
+        'Es gibt ungespeicherte Änderungen an diesem Rezept.',
+        [
+          { text: 'Weiter bearbeiten', style: 'cancel' },
+          { text: 'Verwerfen', style: 'destructive', onPress: () => navigation.dispatch(e.data.action) },
+        ],
+      );
+    });
+    return unsubscribe;
+  }, [navigation, editingRecipeId, isDirty]);
 
   const handlePickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -246,6 +287,7 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
       });
 
       if (editingRecipeId) {
+        justSavedRef.current = true;
         navigation.goBack();
       } else {
         navigation.navigate('MainTabs');

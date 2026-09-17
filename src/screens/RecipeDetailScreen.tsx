@@ -81,6 +81,26 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
     }
   };
 
+  const [isSavingServings, setIsSavingServings] = useState(false);
+  const handleChangeServings = async (delta: number) => {
+    if (!recipe) return;
+    const newValue = Math.max(1, (recipe.servings ?? 1) + delta);
+    if (newValue === recipe.servings) return;
+    const previous = recipe;
+    // Direkt speichern, kein Zwischenschritt ueber "Bearbeiten" noetig -
+    // sofort bei jedem Antippen von +/-, wie gewuenscht.
+    setRecipe({ ...recipe, servings: newValue });
+    setIsSavingServings(true);
+    try {
+      await api.patch(`/recipes/${recipeId}`, { servings: newValue });
+    } catch (err) {
+      setRecipe(previous);
+      Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Portionenzahl konnte nicht gespeichert werden.');
+    } finally {
+      setIsSavingServings(false);
+    }
+  };
+
   const handleDelete = () => {
     if (!recipe) return;
     Alert.alert(
@@ -128,8 +148,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
       <Text style={[styles.title, { color: colors.text }]}>{recipe.title}</Text>
       <View style={styles.metaRow}>
         <Text style={[styles.meta, { color: colors.muted }]}>
-          {recipe.servings ? `${recipe.servings} Portionen` : ''}
-          {recipe.prep_time_minutes ? ` · ${recipe.prep_time_minutes} min` : ''}
+          {recipe.prep_time_minutes ? `${recipe.prep_time_minutes} min` : ''}
         </Text>
         <View style={{ flexDirection: 'row', gap: 16 }}>
           <Pressable onPress={() => navigation.navigate('ManualRecipe', { recipeId: recipe.id })} hitSlop={8}>
@@ -144,6 +163,28 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
       <Text style={[styles.sourceHint, { color: colors.muted }]}>
         {SOURCE_LABELS[recipe.source_type] ?? recipe.source_type}
       </Text>
+
+      <View style={[styles.servingsCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
+        <Text style={[styles.servingsLabel, { color: colors.muted }]}>Portionen</Text>
+        <View style={styles.servingsControlRow}>
+          <Pressable
+            onPress={() => handleChangeServings(-1)}
+            disabled={isSavingServings || (recipe.servings ?? 1) <= 1}
+            style={[styles.servingsButton, { backgroundColor: colors.bg, borderRadius: radius.sm, opacity: (recipe.servings ?? 1) <= 1 ? 0.4 : 1 }]}
+          >
+            <MaterialCommunityIcons name="minus" size={22} color={colors.text} />
+          </Pressable>
+          <Text style={[styles.servingsValue, { color: colors.text }]}>{recipe.servings ?? '–'}</Text>
+          <Pressable
+            onPress={() => handleChangeServings(1)}
+            disabled={isSavingServings}
+            style={[styles.servingsButton, { backgroundColor: colors.bg, borderRadius: radius.sm }]}
+          >
+            <MaterialCommunityIcons name="plus" size={22} color={colors.text} />
+          </Pressable>
+          {isSavingServings && <ActivityIndicator color={colors.muted} size="small" style={{ marginLeft: 8 }} />}
+        </View>
+      </View>
 
       <Pressable
         onPress={goToSideDish}
@@ -202,6 +243,11 @@ const styles = StyleSheet.create({
   meta: { fontSize: 12 },
   editLink: { fontSize: 12.5, fontWeight: '700' },
   sourceHint: { fontSize: 10.5, marginTop: -12, marginBottom: 18 },
+  servingsCard: { alignItems: 'center', padding: 16, marginBottom: 14 },
+  servingsLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginBottom: 10, textTransform: 'uppercase' },
+  servingsControlRow: { flexDirection: 'row', alignItems: 'center', gap: 20 },
+  servingsButton: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
+  servingsValue: { fontSize: 34, fontWeight: '800', minWidth: 50, textAlign: 'center' },
   cookButton: { height: 46, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
   shoppingListButton: { flexDirection: 'row', gap: 7, height: 42, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
   shoppingListButtonText: { fontSize: 12.5, fontWeight: '700' },
