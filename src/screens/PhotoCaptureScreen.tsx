@@ -147,7 +147,10 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
         const extension = fileName.split('.').pop()?.toLowerCase();
         const mimeType = extension === 'png' ? 'image/png' : 'image/jpeg';
         try {
-          const uploadResult = await api.uploadImage('/images/upload', imageUri, fileName, mimeType);
+          const uploadResult = await api.uploadImage('/images/upload', imageUri, fileName, mimeType, {
+            folder_name: folders.find((f) => f.id === selectedFolderId)?.name ?? '',
+            recipe_title: title.trim(),
+          });
           coverImageUrl = uploadResult.url;
           if (uploadResult.storage_warning) {
             // Fallback-Logik im Backend (storage-architektur-standard.md):

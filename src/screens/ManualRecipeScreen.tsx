@@ -205,6 +205,7 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
       const result = await api.post<{ url: string; storage_warning?: string | null }>('/ai/generate-recipe-image', {
         title: title.trim(),
         context: selectedTags.length > 0 ? selectedTags.join(', ') : undefined,
+        folder_name: folders.find((f) => f.id === selectedFolderId)?.name,
       });
       // Wie ein bereits gespeichertes Bild behandeln (existingCoverUrl) -
       // beim Speichern wird es dann NICHT erneut hochgeladen, ist ja schon
@@ -298,7 +299,10 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
         const extension = fileName.split('.').pop()?.toLowerCase();
         const mimeType = extension === 'png' ? 'image/png' : 'image/jpeg';
         try {
-          const uploadResult = await api.uploadImage('/images/upload', localImageUri, fileName, mimeType);
+          const uploadResult = await api.uploadImage('/images/upload', localImageUri, fileName, mimeType, {
+            folder_name: folders.find((f) => f.id === selectedFolderId)?.name ?? '',
+            recipe_title: title.trim(),
+          });
           coverImageUrl = uploadResult.url;
           if (uploadResult.storage_warning) {
             // Fallback-Logik im Backend (storage-architektur-standard.md):

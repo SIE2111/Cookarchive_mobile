@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, ActivityIndicator, Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { ensureMediaLibraryAccess } from '../utils/mediaPermissions';
@@ -42,6 +42,7 @@ interface GeneratedRecipe {
   side_suggestions: SideSuggestion[] | null;
   follow_up_question: string | null;
   allergen_warning: string | null;
+  cover_image_url: string | null;
 }
 
 export default function AIGenerateScreen({ navigation }: Props) {
@@ -65,6 +66,15 @@ export default function AIGenerateScreen({ navigation }: Props) {
   const [localImageUri, setLocalImageUri] = useState<string | null>(null);
   const [aiGeneratedImageUrl, setAiGeneratedImageUrl] = useState<string | null>(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [folders, setFolders] = useState<{ id: string; name: string }[]>([]);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.get<{ id: string; name: string }[]>('/folders/').then(setFolders).catch(() => {
+      // Ordner sind hier nur "nice to have" - schlaegt das Laden fehl,
+      // bleibt die Auswahl einfach leer, das Speichern funktioniert trotzdem
+    });
+  }, []);
 
   const handlePickFromGallery = async () => {
     if (!(await ensureMediaLibraryAccess())) return;
@@ -102,6 +112,7 @@ export default function AIGenerateScreen({ navigation }: Props) {
     try {
       const result = await api.post<{ url: string; storage_warning?: string | null }>('/ai/generate-recipe-image', {
         title: title.trim(),
+        folder_name: folders.find((f) => f.id === selectedFolderId)?.name,
       });
       setLocalImageUri(null);
       setAiGeneratedImageUrl(result.url);
@@ -152,6 +163,12 @@ export default function AIGenerateScreen({ navigation }: Props) {
         })),
       );
       setSteps((generated.steps ?? []).sort((a, b) => a.order - b.order).map((s) => ({ text: s.text })));
+      // Das Backend generiert jetzt automatisch ein passendes Titelbild
+      // mit (siehe POST /ai/generate-recipe) - direkt uebernehmen, kein
+      // manuelles Antippen mehr noetig, wenn schon eines mitkam.
+      if (generated.cover_image_url) {
+        setAiGeneratedImageUrl(generated.cover_image_url);
+      }
     } catch (err) {
       Alert.alert('Generieren fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
     } finally {
@@ -196,7 +213,10 @@ export default function AIGenerateScreen({ navigation }: Props) {
         const extension = fileName.split('.').pop()?.toLowerCase();
         const mimeType = extension === 'png' ? 'image/png' : 'image/jpeg';
         try {
-          const uploadResult = await api.uploadImage('/images/upload', localImageUri, fileName, mimeType);
+          const uploadResult = await api.uploadImage('/images/upload', localImageUri, fileName, mimeType, {
+            folder_name: folders.find((f) => f.id === selectedFolderId)?.name ?? '',
+            recipe_title: title.trim(),
+          });
           coverImageUrl = uploadResult.url;
           if (uploadResult.storage_warning) {
             // Fallback-Logik im Backend (storage-architektur-standard.md):
@@ -220,6 +240,7 @@ export default function AIGenerateScreen({ navigation }: Props) {
         tags: result?.tags ?? undefined,
         cover_image_url: coverImageUrl,
         source_type: 'ai_generated',
+        folder_id: selectedFolderId,
       });
       navigation.navigate('MainTabs');
     } catch (err) {
@@ -331,6 +352,31 @@ export default function AIGenerateScreen({ navigation }: Props) {
         onChangeText={setTitle}
       />
 
+      {folders.length > 0 && (
+        <>
+          <Text style={[styles.label, { color: colors.muted, marginTop: 16 }]}>Ordner (optional)</Text>
+          <View style={styles.folderChipsRow}>
+            {folders.map((folder) => {
+              const isSelected = selectedFolderId === folder.id;
+              return (
+                <Pressable
+                  key={folder.id}
+                  onPress={() => setSelectedFolderId(isSelected ? null : folder.id)}
+                  style={[
+                    styles.folderChip,
+                    { backgroundColor: isSelected ? gradient[0] : colors.card, borderRadius: radius.sm },
+                  ]}
+                >
+                  <Text style={{ color: isSelected ? '#fff' : colors.text, fontSize: 12, fontWeight: '600' }}>
+                    {folder.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </>
+      )}
+
       <Text style={[styles.sectionTitle, { color: colors.text }]}>Zutaten</Text>
       {ingredients.map((ing, i) => (
         <View key={i} style={styles.ingredientRow}>
@@ -413,6 +459,8 @@ const styles = StyleSheet.create({
   imagePreview: { width: '100%', height: '100%' },
   warningText: { color: '#92400E', fontSize: 12, lineHeight: 17 },
   label: { fontSize: 11, fontWeight: '500', marginBottom: 6, marginTop: 12 },
+  folderChipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
+  folderChip: { paddingHorizontal: 12, paddingVertical: 8 },
   input: { minHeight: 44, paddingHorizontal: 12, fontSize: 13.5 },
   multilineInput: { height: 70, paddingTop: 12, textAlignVertical: 'top' },
   sectionTitle: { fontSize: 13, fontWeight: '700', marginTop: 20, marginBottom: 10 },
