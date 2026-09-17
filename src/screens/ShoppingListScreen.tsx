@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, SectionList, Pressable, StyleSheet, ActivityIndicator, TextInput, Alert } from 'react-native';
+import { View, Text, SectionList, Pressable, StyleSheet, ActivityIndicator, TextInput, Alert, Keyboard } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
 import { api, ApiError } from '../api/client';
@@ -96,6 +96,7 @@ export default function ShoppingListScreen({}: Props) {
   const handleAddManual = async () => {
     const name = newItemName.trim();
     if (!name) return;
+    Keyboard.dismiss();
     setIsAdding(true);
     try {
       await api.post('/shopping-list/manual', {
