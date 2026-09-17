@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, ActivityIndicator, Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { ensureMediaLibraryAccess } from '../utils/mediaPermissions';
 import { useTheme } from '../theme/ThemeContext';
 import { api, ApiError } from '../api/client';
@@ -53,7 +54,6 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
   const hasLoadedRef = useRef(false);
   const justSavedRef = useRef(false);
   const isDirtyRef = useRef(false);
-  const isDiscardingRef = useRef(false);
 
   useEffect(() => {
     api.get<{ id: string; name: string }[]>('/folders/').then(setFolders).catch(() => {
@@ -124,41 +124,48 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
 
   // Beobachtet alle Formularfelder - sobald hasLoadedRef gesetzt ist (Laden
   // abgeschlossen), markiert jede weitere Aenderung das Formular als "dirty".
+  // existingCoverUrl mit aufgenommen - fehlte vorher, dadurch wurde ein per
+  // KI generiertes/neu aufgenommenes Bild (setzt existingCoverUrl direkt,
+  // ohne ueber localImageUri zu gehen) faelschlich NICHT als Aenderung erkannt.
   useEffect(() => {
     if (!hasLoadedRef.current) return;
     isDirtyRef.current = true;
-  }, [title, servings, tagsText, ingredients, steps, localImageUri, selectedFolderId]);
+  }, [title, servings, tagsText, ingredients, steps, localImageUri, existingCoverUrl, selectedFolderId]);
 
-  // Rueckfrage beim Verlassen mit ungespeicherten Aenderungen - nur im
-  // Bearbeiten-Modus relevant (beim Neu-Erstellen bleibt es wie gehabt,
-  // wie gewuenscht). Listener registriert sich nur EINMAL (stabile Deps),
-  // liest den aktuellen Stand ueber Refs statt sich bei jeder Aenderung neu
-  // zu registrieren - vermeidet Navigations-Timing-Probleme. isDiscardingRef
-  // laesst die eigene "Verwerfen"-Navigation ungehindert durch, statt die
-  // urspruengliche (evtl. veraltete) Navigations-Aktion erneut zu versenden.
-  useEffect(() => {
-    if (!editingRecipeId) return;
-    const unsubscribe = navigation.addListener('beforeRemove', (e) => {
-      if (!isDirtyRef.current || justSavedRef.current || isDiscardingRef.current) return;
-      e.preventDefault();
+  const handleBackPress = () => {
+    if (isDirtyRef.current && !justSavedRef.current) {
       Alert.alert(
         'Änderungen verwerfen?',
         'Es gibt ungespeicherte Änderungen an diesem Rezept.',
         [
           { text: 'Weiter bearbeiten', style: 'cancel' },
-          {
-            text: 'Verwerfen',
-            style: 'destructive',
-            onPress: () => {
-              isDiscardingRef.current = true;
-              navigation.goBack();
-            },
-          },
+          { text: 'Verwerfen', style: 'destructive', onPress: () => navigation.goBack() },
         ],
       );
+    } else {
+      navigation.goBack();
+    }
+  };
+
+  // Eigener Zurueck-Button im Header statt beforeRemove-Interception: die
+  // beforeRemove+preventDefault()-Variante kam bei der iOS-Wisch-Geste und
+  // dem Header-Zurueck-Pfeil zu spaet (Navigation lief schon, Meldung
+  // erschien erst danach auf dem bereits gewechselten Screen) und loeste
+  // dabei React-Navigation-interne Warnungen aus. Ein eigener Button, der
+  // VOR jeder Navigation prueft, ist zuverlässiger. Wisch-Geste bewusst
+  // deaktiviert (gestureEnabled: false), damit sie die Pruefung nicht mehr
+  // umgehen kann.
+  useEffect(() => {
+    if (!editingRecipeId) return;
+    navigation.setOptions({
+      gestureEnabled: false,
+      headerLeft: () => (
+        <Pressable onPress={handleBackPress} hitSlop={10} style={{ paddingHorizontal: 4 }}>
+          <MaterialCommunityIcons name="chevron-left" size={28} color={gradient[0]} />
+        </Pressable>
+      ),
     });
-    return unsubscribe;
-  }, [navigation, editingRecipeId]);
+  }, [navigation, editingRecipeId, gradient]);
 
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
