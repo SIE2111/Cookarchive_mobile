@@ -24,6 +24,7 @@ interface Preferences {
   server_sync_enabled: boolean;
   storage_mode: StorageMode;
   default_hauben_level: HaubenLevel;
+  drittanbieter_provider: string | null;
 }
 
 type PreferenceKey = 'show_brutzel' | 'large_text' | 'auto_read_steps' | 'server_sync_enabled';
@@ -77,22 +78,12 @@ const CLOUD_PROVIDERS: { key: string; apiPrefix: string; title: string; subtitle
   { key: 'dropbox', apiPrefix: '/dropbox-auth', title: 'Dropbox', subtitle: 'In der eigenen Dropbox unter "MeinKochbuch".' },
 ];
 
-interface ProviderStatus {
-  configured: boolean;
-  connected: boolean;
-  provider: string | null;
-}
-
 export default function ProfileScreen({ navigation }: Props) {
   const { colors, gradient, radius, theme, setTheme } = useTheme();
   const { signOut } = useAuth();
   const [prefs, setPrefs] = useState<Preferences | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [savingKey, setSavingKey] = useState<PreferenceKey | 'storage_mode' | 'default_hauben_level' | null>(null);
-  // Nur EIN Anbieter kann gleichzeitig aktiv sein (Backend garantiert das
-  // beim Verbinden, siehe google_auth.py) - ein einzelner Status genuegt,
-  // 'provider' darin sagt, welcher der drei es gerade ist.
-  const [activeProviderStatus, setActiveProviderStatus] = useState<ProviderStatus | null>(null);
+  const [savingKey, setSavingKey] = useState<PreferenceKey | 'storage_mode' | 'default_hauben_level' | 'drittanbieter_provider' | null>(null);
   const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
 
   const loadPrefs = () => {
@@ -104,29 +95,10 @@ export default function ProfileScreen({ navigation }: Props) {
 
   useEffect(() => {
     loadPrefs();
-  }, []);
-
-  const loadDriveStatus = () => {
-    // Irgendeinen der drei Status-Endpunkte abfragen reicht - alle drei
-    // liefern dasselbe 'provider'-Feld (welcher Anbieter gerade aktiv ist).
-    api
-      .get<ProviderStatus>('/google-auth/status')
-      .then(setActiveProviderStatus)
-      .catch(() => {
-        // Status konnte nicht geladen werden - Verbinden-Buttons bleiben
-        // dann einfach ausgeblendet, kein Grund den restlichen Screen zu blockieren
-      });
-  };
-
-  useEffect(() => {
-    loadDriveStatus();
     // Bei Rueckkehr aus dem System-Browser (nach der Anbieter-Anmeldung) ist
     // die App noch dieselbe Instanz, nur der Fokus wechselt zurueck - hier
-    // den Status neu abfragen, damit "Verbunden" ohne manuelles Neuladen erscheint.
-    const unsubscribe = navigation.addListener('focus', () => {
-      loadDriveStatus();
-      loadPrefs();
-    });
+    // neu laden, damit "Verbunden" ohne manuelles Neuladen erscheint.
+    const unsubscribe = navigation.addListener('focus', loadPrefs);
     return unsubscribe;
   }, [navigation]);
 
@@ -145,10 +117,30 @@ export default function ProfileScreen({ navigation }: Props) {
     }
   };
 
+  // Anbieter, der schon einmal verbunden wurde (Tokens existieren noch),
+  // aber gerade nicht der aktive storage_mode ist - reaktiviert OHNE
+  // erneuten OAuth-Flow, da die Tokens im Backend unveraendert bestehen
+  // bleiben, wenn man nur auf 'lokal'/'nas' wechselt und zurueck.
+  const handleReactivateProvider = async (providerKey: string) => {
+    if (!prefs) return;
+    const previous = prefs;
+    setPrefs({ ...prefs, storage_mode: 'drittanbieter_cloud', drittanbieter_provider: providerKey });
+    setSavingKey('drittanbieter_provider');
+    try {
+      const updated = await api.patch<Preferences>('/preferences/', { drittanbieter_provider: providerKey });
+      setPrefs(updated);
+    } catch (err) {
+      setPrefs(previous);
+      Alert.alert('Reaktivieren fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+    } finally {
+      setSavingKey(null);
+    }
+  };
+
   const handleDisconnectProvider = async (apiPrefix: string) => {
     try {
       await api.post(`${apiPrefix}/disconnect`);
-      loadDriveStatus();
+      loadPrefs();
     } catch (err) {
       Alert.alert('Trennen fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
     }
@@ -249,41 +241,49 @@ export default function ProfileScreen({ navigation }: Props) {
       })}
 
       {CLOUD_PROVIDERS.map((p) => {
-        const isConnectedHere = prefs.storage_mode === 'drittanbieter_cloud' && activeProviderStatus?.provider === p.key;
+        // hasTokens: Anbieter wurde schon mal verbunden, Tokens bestehen im
+        // Backend unabhaengig vom aktuellen storage_mode weiter.
+        // isActive: dieser Anbieter ist GERADE der aktive Speicherort.
+        const hasTokens = prefs.drittanbieter_provider === p.key;
+        const isActive = prefs.storage_mode === 'drittanbieter_cloud' && hasTokens;
         return (
           <Pressable
             key={p.key}
             onPress={() => {
-              if (isConnectedHere) return; // Verbunden -> nichts tun, Trennen ist der eigene Link unten
-              handleConnectProvider(p.key, p.apiPrefix);
+              if (isActive) return; // schon aktiv -> nichts tun, Trennen ist der eigene Link unten
+              if (hasTokens) {
+                handleReactivateProvider(p.key); // schon verbunden -> kein erneuter OAuth-Flow noetig
+              } else {
+                handleConnectProvider(p.key, p.apiPrefix);
+              }
             }}
-            disabled={connectingProvider !== null}
+            disabled={connectingProvider !== null || savingKey === 'drittanbieter_provider'}
             style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md, opacity: connectingProvider && connectingProvider !== p.key ? 0.5 : 1 }]}
           >
             <MaterialCommunityIcons
               name={CLOUD_PROVIDER_ICONS[p.key]}
               size={20}
-              color={isConnectedHere ? '#16A34A' : colors.muted}
+              color={isActive ? '#16A34A' : colors.muted}
               style={styles.rowIcon}
             />
             <View style={{ flex: 1 }}>
-              <Text style={[styles.rowTitle, { color: isConnectedHere ? '#16A34A' : colors.text }]}>
-                {isConnectedHere ? `${p.title} ✓ verbunden` : p.title}
+              <Text style={[styles.rowTitle, { color: isActive ? '#16A34A' : colors.text }]}>
+                {isActive ? `${p.title} ✓ verbunden` : hasTokens ? `${p.title} (verbunden, nicht aktiv)` : p.title}
               </Text>
               <Text style={[styles.rowSubtitle, { color: colors.muted }]}>{p.subtitle}</Text>
-              {isConnectedHere && (
+              {hasTokens && (
                 <Pressable onPress={() => handleDisconnectProvider(p.apiPrefix)} hitSlop={8} style={{ marginTop: 6, alignSelf: 'flex-start' }}>
                   <Text style={{ color: '#DC2626', fontSize: 11.5, fontWeight: '700' }}>Trennen</Text>
                 </Pressable>
               )}
             </View>
-            {connectingProvider === p.key ? (
+            {connectingProvider === p.key || (savingKey === 'drittanbieter_provider' && hasTokens && !isActive) ? (
               <ActivityIndicator color={colors.muted} />
             ) : (
               <MaterialCommunityIcons
-                name={isConnectedHere ? 'radiobox-marked' : 'radiobox-blank'}
+                name={isActive ? 'radiobox-marked' : 'radiobox-blank'}
                 size={22}
-                color={isConnectedHere ? '#16A34A' : colors.muted}
+                color={isActive ? '#16A34A' : colors.muted}
               />
             )}
           </Pressable>
