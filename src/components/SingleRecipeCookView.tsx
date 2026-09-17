@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, Modal, TextInput, Linking, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, Modal, TextInput, Linking, Alert, ScrollView } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import * as Speech from 'expo-speech';
 import { useTheme } from '../theme/ThemeContext';
@@ -320,6 +320,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg, display: isActive ? 'flex' : 'none' }]}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 16 }}>
       <View style={styles.levelRow}>
         {[1, 2, 3].map((hatCount) => {
           const isFilled = hatCount <= LEVEL_TO_HAT_COUNT[level];
@@ -438,6 +439,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
           )}
         </View>
       )}
+      </ScrollView>
 
       <View style={styles.navRow}>
         <Pressable onPress={goBackStep} style={[styles.navButtonSecondary, { borderColor: colors.muted, borderRadius: radius.md }]}>
