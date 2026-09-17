@@ -191,7 +191,7 @@ export default function RecipesScreen({ navigation, route }: Props) {
         </Text>
       </Pressable>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.folderBar} contentContainerStyle={{ gap: 8 }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.folderBar} contentContainerStyle={{ gap: 8, alignItems: 'center' }}>
         <Pressable
           onPress={() => setSelectedFolderId(null)}
           style={[
@@ -310,14 +310,14 @@ export default function RecipesScreen({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingHorizontal: 18, paddingTop: 16 },
+  container: { flex: 1, paddingHorizontal: 18, paddingTop: 26 },
   searchBar: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, height: 42, marginBottom: 12 },
   searchInput: { flex: 1, fontSize: 13.5 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   errorText: { fontSize: 12, marginBottom: 12 },
   filterPill: { alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 7, marginBottom: 12 },
   filterPillText: { color: '#fff', fontSize: 12, fontWeight: '600' },
-  folderBar: { marginBottom: 14, maxHeight: 36 },
+  folderBar: { marginBottom: 14, maxHeight: 44 },
   favoritesChip: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 7, marginBottom: 12 },
   folderChip: { paddingHorizontal: 13, paddingVertical: 8, justifyContent: 'center' },
   folderChipText: { fontSize: 12, fontWeight: '600' },
