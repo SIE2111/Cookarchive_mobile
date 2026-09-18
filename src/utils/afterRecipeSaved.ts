@@ -41,15 +41,15 @@ export function askWhatNext(
     return;
   }
 
+  // Zwei Wege statt drei. 'Fertig' war der dritte Knopf und fuehrte nur
+  // aufs Dashboard - dasselbe erreicht man mit 'Abbrechen', und genau das
+  // erwartet man bei einem Dialog auch. Drei fast gleichwertige Knoepfe
+  // kosten eine Entscheidung, die niemand treffen will.
   Alert.alert(
     'Rezept gespeichert',
-    `„${recipe.title}" liegt jetzt in deinem Kochbuch. Wie möchtest du weitermachen?`,
+    `„${recipe.title}" liegt jetzt in deinem Kochbuch.`,
     [
-      {
-        text: 'Fertig',
-        style: 'cancel',
-        onPress: () => navigation.navigate('MainTabs'),
-      },
+      { text: 'Abbrechen', style: 'cancel', onPress: () => navigation.navigate('MainTabs') },
       {
         text: 'Ansehen',
         onPress: () =>
