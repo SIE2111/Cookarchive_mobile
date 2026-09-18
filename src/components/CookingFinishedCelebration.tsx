@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Animated } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Animated, Share, Linking, Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useTheme } from '../theme/ThemeContext';
 import BrutzelAvatar from './BrutzelAvatar';
 import { api } from '../api/client';
+import { IOS_REVIEW_URL, ANDROID_REVIEW_URL, SHARE_MESSAGE } from '../config/appLinks';
 
 interface Props {
   recipeTitle?: string;
@@ -25,6 +28,14 @@ interface Props {
  * Wer bewegte Bilder nicht mag (oder auf schwaecheren Geraeten kocht),
  * soll Brutzel trotzdem behalten duerfen.
  */
+// Wie oft gekocht sein muss, bevor die Bitte ueberhaupt erscheint, und in
+// welchem Abstand danach. Nach dem ersten Kochen zu fragen waere
+// aufdringlich und bringt schlechte Bewertungen - wer noch nichts erlebt
+// hat, hat auch nichts zu loben. Danach hoechstens jedes 5. Mal.
+const PROMO_FIRST_AFTER = 3;
+const PROMO_EVERY = 5;
+const COOK_COUNT_KEY = 'cook_finished_count';
+
 export default function CookingFinishedCelebration({ recipeTitle, onDone }: Props) {
   const { colors, gradient, radius } = useTheme();
   const [showText, setShowText] = useState(false);
@@ -34,7 +45,28 @@ export default function CookingFinishedCelebration({ recipeTitle, onDone }: Prop
   // kurz an, bevor die Einstellung da ist - genau das, was jemand mit
   // abgeschalteter Animation nicht sehen will.
   const [prefsLoaded, setPrefsLoaded] = useState(false);
+  const [showPromo, setShowPromo] = useState(false);
   const textOpacity = React.useRef(new Animated.Value(0)).current;
+
+  const reviewUrl = Platform.OS === 'ios' ? IOS_REVIEW_URL : ANDROID_REVIEW_URL;
+
+  // Zaehlt die abgeschlossenen Kochvorgaenge lokal mit und entscheidet
+  // daraus, ob diesmal gefragt wird. Bewusst lokal und nicht am Server:
+  // Es ist eine Anzeige-Entscheidung, kein Nutzerdatum, das irgendwo
+  // gespeichert gehoert.
+  useEffect(() => {
+    AsyncStorage.getItem(COOK_COUNT_KEY)
+      .then((raw) => {
+        const count = (parseInt(raw ?? '0', 10) || 0) + 1;
+        AsyncStorage.setItem(COOK_COUNT_KEY, String(count)).catch(() => {});
+        setShowPromo(count >= PROMO_FIRST_AFTER && (count - PROMO_FIRST_AFTER) % PROMO_EVERY === 0);
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleShare = () => {
+    Share.share({ message: SHARE_MESSAGE }).catch(() => {});
+  };
 
   useEffect(() => {
     api
@@ -79,6 +111,36 @@ export default function CookingFinishedCelebration({ recipeTitle, onDone }: Prop
 
   return (
     <View style={[styles.overlay, { backgroundColor: colors.bg }]}>
+      {/* Oben, weil der Blick nach dem Kochen zuerst hier landet - aber nur
+          gelegentlich (siehe PROMO_EVERY) und erst, wenn jemand die App
+          wirklich benutzt hat. */}
+      {showPromo && (
+        <View style={[styles.promoCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
+          <Text style={[styles.promoTitle, { color: colors.text }]}>Schmeckt's mit Mein Kochbuch?</Text>
+          <Text style={[styles.promoText, { color: colors.muted }]}>
+            Dann erzähl es weiter – das hilft der App mehr als alles andere.
+          </Text>
+          <View style={styles.promoRow}>
+            <Pressable onPress={handleShare} style={[styles.promoButton, { borderColor: gradient[0], borderRadius: radius.sm }]}>
+              <MaterialCommunityIcons name="share-variant-outline" size={15} color={gradient[0]} />
+              <Text style={[styles.promoButtonText, { color: gradient[0] }]}>Weiterempfehlen</Text>
+            </Pressable>
+            {/* Nur wenn ein Store-Link hinterlegt ist - siehe config/appLinks.ts.
+                Ein Knopf, der auf eine Fehlerseite fuehrt, ist schlimmer
+                als gar keiner. */}
+            {reviewUrl && (
+              <Pressable
+                onPress={() => Linking.openURL(reviewUrl).catch(() => {})}
+                style={[styles.promoButton, { borderColor: gradient[0], borderRadius: radius.sm }]}
+              >
+                <MaterialCommunityIcons name="star-outline" size={15} color={gradient[0]} />
+                <Text style={[styles.promoButtonText, { color: gradient[0] }]}>Bewerten</Text>
+              </Pressable>
+            )}
+          </View>
+        </View>
+      )}
+
       {showBrutzel && animated && (
         <VideoView player={player} style={styles.video} contentFit="contain" nativeControls={false} />
       )}
@@ -106,6 +168,12 @@ export default function CookingFinishedCelebration({ recipeTitle, onDone }: Prop
 const styles = StyleSheet.create({
   overlay: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   video: { width: '100%', height: 260, marginBottom: 20 },
+  promoCard: { width: '100%', padding: 14, marginBottom: 20 },
+  promoTitle: { fontSize: 14, fontWeight: '700' },
+  promoText: { fontSize: 12, lineHeight: 17, marginTop: 3 },
+  promoRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  promoButton: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1.2, paddingHorizontal: 12, paddingVertical: 7 },
+  promoButtonText: { fontSize: 12.5, fontWeight: '600' },
   title: { fontSize: 22, fontWeight: '700', marginBottom: 6 },
   subtitle: { fontSize: 13, marginBottom: 22, textAlign: 'center' },
   doneButton: { paddingHorizontal: 40, paddingVertical: 13 },
