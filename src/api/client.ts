@@ -80,48 +80,31 @@ export const api = {
    * Code hochlaedt.
    */
   /**
-   * Mehrere Bilder in EINEM Aufruf hochladen.
+   * Mehrere Bilder in EINEM Aufruf auswerten lassen.
    *
-   * Nicht ueber FileSystem.uploadAsync wie uploadImage: Das kann genau
-   * eine Datei. Hier braucht es FormData mit mehreren Eintraegen unter
-   * demselben Feldnamen, damit FastAPI sie als Liste erhaelt.
+   * Bewusst als JSON mit base64 statt als Multipart-Upload: React Natives
+   * neuerer Netzwerk-Stack unterstuetzt das klassische
+   * {uri, name, type}-FormData-Objekt nicht mehr und quittiert es mit
+   * "Unsupported FormDataPart implementation" (siehe uploadImage unten).
+   * Der bewaehrte Ausweg FileSystem.uploadAsync kann nur EINE Datei je
+   * Aufruf - hier werden aber mehrere gebraucht, die GEMEINSAM ausgewertet
+   * werden muessen, damit die KI Zutaten von Bild 1 und Schritte von
+   * Bild 2 zu einem Rezept verbindet.
    *
-   * Wichtig ist das gemeinsame Hochladen, nicht mehrere Aufrufe: Die KI
-   * muss alle Seiten zusammen sehen, um Zutaten von Seite 1 und
-   * Zubereitung von Seite 2 zu EINEM Rezept zu verbinden.
+   * Der Preis ist ein rund ein Drittel groesserer Transfer. Bei
+   * hoechstens vier Fotos mit Qualitaet 0.8 ist das vertretbar.
    */
-  uploadImages: async <T>(
+  uploadImagesAsJson: async <T>(
     path: string,
-    files: { uri: string; name: string; type: string }[],
+    files: { uri: string; type: string }[],
   ): Promise<T> => {
-    const { data } = await supabase.auth.getSession();
-    const token = data.session?.access_token;
-
-    const form = new FormData();
-    files.forEach((f) => {
-      // In React Native nimmt FormData dieses Objekt-Format statt eines Blobs.
-      form.append('files', { uri: f.uri, name: f.name, type: f.type } as unknown as Blob);
-    });
-
-    const response = await fetch(`${API_BASE_URL}${path}`, {
-      method: 'POST',
-      // KEIN Content-Type setzen: Den Multipart-Trenner setzt fetch selbst,
-      // von Hand gesetzt fehlt die boundary und der Server lehnt ab.
-      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-      body: form,
-    });
-
-    const text = await response.text();
-    if (!response.ok) {
-      let detail = `HTTP ${response.status}`;
-      try {
-        detail = JSON.parse(text).detail ?? detail;
-      } catch {
-        // Antwort war kein JSON - beim Status bleiben
-      }
-      throw new ApiError(response.status, detail);
+    const images: string[] = [];
+    const mime_types: string[] = [];
+    for (const f of files) {
+      images.push(await FileSystem.readAsStringAsync(f.uri, { encoding: 'base64' }));
+      mime_types.push(f.type);
     }
-    return JSON.parse(text) as T;
+    return api.post<T>(path, { images, mime_types });
   },
 
   uploadImage: async (

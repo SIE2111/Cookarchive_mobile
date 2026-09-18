@@ -81,13 +81,9 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
       // Alle Fotos GEMEINSAM in einem Aufruf - nur so erkennt die KI, dass
       // Zutaten vom einen und Schritte vom anderen Bild zusammengehoeren.
       // Nacheinander ausgewertet kaemen mehrere halbe Rezepte heraus.
-      const scanResult = await api.uploadImages<ScanPhotoResponse>(
+      const scanResult = await api.uploadImagesAsJson<ScanPhotoResponse>(
         '/ai/scan-photos',
-        uris.map((u, i) => ({
-          uri: u,
-          name: u.split('/').pop() ?? `foto-${i + 1}.jpg`,
-          type: 'image/jpeg',
-        })),
+        uris.map((u) => ({ uri: u, type: 'image/jpeg' })),
       );
       const typedResult = scanResult as unknown as ScanPhotoResponse;
       setResult(typedResult);
