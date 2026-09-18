@@ -23,6 +23,7 @@ import WeeklyPlanScreen from '../screens/WeeklyPlanScreen';
 import CookModeScreen from '../screens/CookModeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import CommunityPoolScreen from '../screens/CommunityPoolScreen';
+import PoolRecipeDetailScreen from '../screens/PoolRecipeDetailScreen';
 import HouseholdScreen from '../screens/HouseholdScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import StorageSettingsScreen from '../screens/StorageSettingsScreen';
@@ -69,6 +70,7 @@ export type MainStackParamList = {
   // Tabs oeffnen soll - der Tab ist der Bereich, dieser hier der gezielte
   // Aufruf aus dem Erfassen-Menue.
   CommunityPool: undefined;
+  PoolRecipeDetail: { publicRecipeId: string; title?: string };
   Household: undefined;
   Onboarding: undefined;
   StorageSettings: undefined;
@@ -190,6 +192,11 @@ function MainNavigator() {
         options={{ title: 'Kochen', headerBackTitle: 'Abbrechen' }}
       />
       <MainStack.Screen name="CommunityPool" component={CommunityPoolScreen} options={{ title: 'Community-Pool' }} />
+      <MainStack.Screen
+        name="PoolRecipeDetail"
+        component={PoolRecipeDetailScreen}
+        options={({ route }) => ({ title: route.params?.title ?? 'Rezept' })}
+      />
       <MainStack.Screen name="Household" component={HouseholdScreen} options={{ title: 'Haushalt' }} />
       <MainStack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false, gestureEnabled: false }} />
       <MainStack.Screen name="StorageSettings" component={StorageSettingsScreen} options={{ title: 'Speicherort' }} />

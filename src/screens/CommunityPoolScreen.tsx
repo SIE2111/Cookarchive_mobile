@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, Pressable, StyleSheet, ActivityIndicator, Alert, RefreshControl } from 'react-native';
+import { View, Text, FlatList, Pressable, StyleSheet, ActivityIndicator, Alert, RefreshControl, Image } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -17,6 +17,7 @@ interface PublicRecipeSummary {
   fork_count: number;
   download_count: number;
   avg_rating: number | null;
+  cover_image_url: string | null;
 }
 
 /**
@@ -122,7 +123,20 @@ export default function CommunityPoolScreen() {
           </Text>
         }
         renderItem={({ item }) => (
-          <View style={[styles.card, { backgroundColor: colors.card, borderRadius: radius.md }]}>
+          // Antippen oeffnet die Vollansicht. Vorher konnte man ein fremdes
+          // Rezept nur blind uebernehmen - was drin ist, sah man erst
+          // danach in der eigenen Sammlung.
+          <Pressable
+            onPress={() => navigation.navigate('PoolRecipeDetail', { publicRecipeId: item.id, title: item.title })}
+            style={[styles.card, { backgroundColor: colors.card, borderRadius: radius.md }]}
+          >
+            {item.cover_image_url ? (
+              <Image source={{ uri: item.cover_image_url }} style={[styles.thumb, { borderRadius: radius.sm }]} />
+            ) : (
+              <View style={[styles.thumb, styles.thumbEmpty, { borderRadius: radius.sm }]}>
+                <MaterialCommunityIcons name="silverware-fork-knife" size={18} color={colors.muted} />
+              </View>
+            )}
             <View style={{ flex: 1 }}>
               <Text style={[styles.title, { color: colors.text }]}>{item.title}</Text>
               <Text style={[styles.meta, { color: colors.muted }]}>
@@ -147,7 +161,7 @@ export default function CommunityPoolScreen() {
                 <Text style={styles.forkButtonText}>Übernehmen</Text>
               )}
             </Pressable>
-          </View>
+          </Pressable>
         )}
       />
       <ScanFab />
@@ -157,6 +171,8 @@ export default function CommunityPoolScreen() {
 
 const styles = StyleSheet.create({
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  thumb: { width: 54, height: 54, marginRight: 12 },
+  thumbEmpty: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(128,128,128,0.15)' },
   header: { fontSize: 19, fontWeight: '700', marginBottom: 4 },
   headerSub: { fontSize: 11.5, lineHeight: 17, marginBottom: 16 },
   card: { flexDirection: 'row', alignItems: 'center', padding: 14, marginBottom: 9 },
