@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, Alert, Share } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, Alert, Share, ScrollView } from 'react-native';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
 import { api, ApiError } from '../api/client';
 
@@ -17,6 +18,15 @@ interface Household {
   members: Member[];
 }
 
+interface InviteListItem {
+  id: string;
+  code: string;
+  invitee_name: string | null;
+  invitee_email: string | null;
+  expires_at: string;
+  status: 'beigetreten' | 'offen' | 'abgelaufen';
+}
+
 export default function HouseholdScreen() {
   const { colors, gradient, radius } = useTheme();
   const [household, setHousehold] = useState<Household | null | undefined>(undefined);
@@ -25,6 +35,9 @@ export default function HouseholdScreen() {
   const [newHouseholdName, setNewHouseholdName] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [inviteName, setInviteName] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [invites, setInvites] = useState<InviteListItem[]>([]);
   const [isBusy, setIsBusy] = useState(false);
 
   const loadHousehold = () => {
@@ -36,6 +49,8 @@ export default function HouseholdScreen() {
 
   useEffect(() => {
     loadHousehold();
+    loadInvites();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleCreate = async () => {
@@ -64,6 +79,73 @@ export default function HouseholdScreen() {
     } finally {
       setIsBusy(false);
     }
+  };
+
+  const loadInvites = async () => {
+    try {
+      setInvites(await api.get<InviteListItem[]>('/households/invites'));
+    } catch {
+      // Die Liste ist Zusatzinformation - schlaegt sie fehl, soll der
+      // Haushalt trotzdem bedienbar bleiben.
+    }
+  };
+
+  const handleInviteByEmail = async () => {
+    const email = inviteEmail.trim();
+    if (!email.includes('@')) {
+      Alert.alert('E-Mail fehlt', 'Bitte eine gültige E-Mail-Adresse eingeben.');
+      return;
+    }
+    setIsBusy(true);
+    try {
+      const invite = await api.post<{ code: string; email_sent: boolean }>('/households/invite', {
+        name: inviteName.trim() || null,
+        email,
+      });
+      setInviteName('');
+      setInviteEmail('');
+      await loadInvites();
+      if (invite.email_sent) {
+        Alert.alert('Einladung verschickt', `${email} hat eine E-Mail mit dem Beitrittscode bekommen.`);
+      } else {
+        // Der Code gilt trotzdem - deshalb wird er hier gezeigt, statt nur
+        // einen Fehler zu melden. Sonst waere die Einladung angelegt, aber
+        // fuer den Nutzer unbrauchbar.
+        setInviteCode(invite.code);
+        Alert.alert(
+          'E-Mail nicht zugestellt',
+          `Die Einladung wurde angelegt, die E-Mail ging aber nicht raus. Gib den Code ${invite.code} direkt weiter.`,
+        );
+      }
+    } catch (err) {
+      Alert.alert('Einladen fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
+  const handleDeleteInvite = (invite: InviteListItem) => {
+    Alert.alert(
+      'Einladung entfernen?',
+      invite.status === 'beigetreten'
+        ? 'Der Eintrag verschwindet aus der Liste. Das Mitglied bleibt im Haushalt – zum Entfernen den Knopf bei den Mitgliedern verwenden.'
+        : 'Der Code wird ungültig und kann nicht mehr eingelöst werden.',
+      [
+        { text: 'Abbrechen', style: 'cancel' },
+        {
+          text: 'Entfernen',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.delete(`/households/invites/${invite.id}`);
+              await loadInvites();
+            } catch (err) {
+              Alert.alert('Fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+            }
+          },
+        },
+      ],
+    );
   };
 
   const handleInvite = async () => {
@@ -175,7 +257,14 @@ export default function HouseholdScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}>
+    // Scrollbar, seit Einladungsformular und -liste dazugekommen sind:
+    // Bei mehreren Einladungen passt der Inhalt sonst nicht mehr auf eine
+    // Bildschirmhoehe und 'Haushalt verlassen' liegt unerreichbar unten.
+    <ScrollView
+      style={{ backgroundColor: colors.bg }}
+      contentContainerStyle={styles.scrollContent}
+      keyboardShouldPersistTaps="handled"
+    >
       <Text style={[styles.householdName, { color: colors.text }]}>{household.name}</Text>
       <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 20 }]}>MITGLIEDER</Text>
       {household.members.map((member) => (
@@ -192,9 +281,68 @@ export default function HouseholdScreen() {
         </View>
       ))}
 
-      <Pressable onPress={handleInvite} disabled={isBusy} style={[styles.secondaryButton, { borderColor: gradient[0], borderRadius: radius.md, marginTop: 16 }]}>
-        <Text style={[styles.secondaryButtonText, { color: gradient[0] }]}>Mitglied einladen</Text>
+      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 24 }]}>MITGLIED EINLADEN</Text>
+      <Text style={[styles.hint, { color: colors.muted }]}>
+        Name und E-Mail eingeben – die Person bekommt eine Nachricht mit ihrem Beitrittscode.
+      </Text>
+      <TextInput
+        value={inviteName}
+        onChangeText={setInviteName}
+        placeholder="Name (optional)"
+        placeholderTextColor={colors.muted}
+        style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
+      />
+      <TextInput
+        value={inviteEmail}
+        onChangeText={setInviteEmail}
+        placeholder="familie@beispiel.at"
+        placeholderTextColor={colors.muted}
+        autoCapitalize="none"
+        keyboardType="email-address"
+        style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md, marginTop: 8 }]}
+      />
+      <Pressable
+        onPress={handleInviteByEmail}
+        disabled={isBusy}
+        style={[styles.secondaryButton, { borderColor: gradient[0], borderRadius: radius.md, marginTop: 10, opacity: isBusy ? 0.6 : 1 }]}
+      >
+        <Text style={[styles.secondaryButtonText, { color: gradient[0] }]}>Einladung senden</Text>
       </Pressable>
+
+      {/* Der reine Code bleibt als zweiter Weg erhalten: fuer alle, die
+          gerade keine Adresse zur Hand haben und den Code muendlich oder
+          per Messenger weitergeben wollen. */}
+      <Pressable onPress={handleInvite} disabled={isBusy} style={{ marginTop: 12, alignSelf: 'center' }}>
+        <Text style={{ color: colors.muted, fontSize: 12.5 }}>
+          Stattdessen <Text style={{ color: gradient[0], fontWeight: '600' }}>nur einen Code erzeugen</Text>
+        </Text>
+      </Pressable>
+
+      {invites.length > 0 && (
+        <>
+          <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 24 }]}>BISHERIGE EINLADUNGEN</Text>
+          {invites.map((invite) => (
+            <View key={invite.id} style={[styles.memberRow, { backgroundColor: colors.card, borderRadius: radius.md }]}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.memberText, { color: colors.text }]} numberOfLines={1}>
+                  {invite.invitee_name || invite.invitee_email || `Code ${invite.code}`}
+                </Text>
+                <Text style={{ fontSize: 11, marginTop: 2, color: invite.status === 'beigetreten' ? '#16A34A' : colors.muted }}>
+                  {invite.status === 'beigetreten'
+                    ? 'Beigetreten'
+                    : invite.status === 'abgelaufen'
+                      ? 'Abgelaufen'
+                      : `Offen · Code ${invite.code}`}
+                  {invite.invitee_name && invite.invitee_email ? ` · ${invite.invitee_email}` : ''}
+                </Text>
+              </View>
+              <Pressable onPress={() => handleDeleteInvite(invite)} hitSlop={8}>
+                <MaterialCommunityIcons name="trash-can-outline" size={18} color="#DC2626" />
+              </Pressable>
+            </View>
+          ))}
+        </>
+      )}
 
       {inviteCode && (
         <View style={[styles.inviteCodeBox, { backgroundColor: colors.card, borderRadius: radius.md }]}>
@@ -206,15 +354,19 @@ export default function HouseholdScreen() {
         </View>
       )}
 
-      <Pressable onPress={handleLeave} style={[styles.leaveButton, { borderColor: '#DC2626', borderRadius: radius.md }]}>
+      <Pressable onPress={handleLeave} style={[styles.leaveButton, { borderColor: '#DC2626', borderRadius: radius.md, marginTop: 28 }]}>
         <Text style={styles.leaveButtonText}>Haushalt verlassen</Text>
       </Pressable>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 18 },
+  // Ohne eigenen Style waere hier 'flex: 1' gelandet - im
+  // contentContainerStyle einer ScrollView verhindert das das Scrollen
+  // vollstaendig, der Inhalt wird stattdessen gestaucht.
+  scrollContent: { padding: 18, paddingBottom: 40 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   sectionLabel: { fontSize: 10.5, fontWeight: '700', letterSpacing: 0.5, marginBottom: 10 },
   input: { height: 44, paddingHorizontal: 14, fontSize: 13.5, marginBottom: 10 },
@@ -226,6 +378,7 @@ const styles = StyleSheet.create({
   memberRow: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, marginBottom: 7 },
   memberText: { flex: 1, fontSize: 11.5 },
   roleTag: { fontSize: 10.5, fontWeight: '600' },
+  hint: { fontSize: 11.5, lineHeight: 17, marginBottom: 10 },
   inviteCodeBox: { padding: 16, alignItems: 'center', marginTop: 12 },
   inviteCodeLabel: { fontSize: 10, marginBottom: 6 },
   inviteCodeValue: { fontSize: 24, fontWeight: '700', letterSpacing: 3 },
