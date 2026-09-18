@@ -24,6 +24,7 @@ interface PlanEntry {
   recipe_title: string;
   recipe_cover_image_url: string | null;
   servings: number | null;
+  position: number; // 0 = Hauptgericht, 1-2 = Beilage
 }
 
 interface RecipeSummary {
@@ -66,7 +67,7 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [isAddingToList, setIsAddingToList] = useState(false);
 
-  const [pickerTarget, setPickerTarget] = useState<{ dateKey: string; slot: MealSlot } | null>(null);
+  const [pickerTarget, setPickerTarget] = useState<{ dateKey: string; slot: MealSlot; position?: number } | null>(null);
   const [allRecipes, setAllRecipes] = useState<RecipeSummary[]>([]);
   const [recipeSearch, setRecipeSearch] = useState('');
   const [defaultServings, setDefaultServings] = useState(4);
@@ -104,8 +105,15 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
     loadWeek();
   }, [loadWeek]);
 
-  const openPicker = (dateKey: string, slot: MealSlot) => {
-    setPickerTarget({ dateKey, slot });
+  // Welche Mahlzeiten ihre Beilagen-Zeilen zeigen. Eingeklappt sieht man
+  // nur das Hauptgericht - bei sieben Tagen mal drei Mahlzeiten mal drei
+  // Zeilen waeren es sonst 63 Zeilen auf einem Handy-Bildschirm, und die
+  // allermeisten davon leer.
+  const [expandedSlots, setExpandedSlots] = useState<Record<string, boolean>>({});
+  const slotKey = (dateKey: string, slot: MealSlot) => `${dateKey}|${slot}`;
+
+  const openPicker = (dateKey: string, slot: MealSlot, position?: number) => {
+    setPickerTarget({ dateKey, slot, position });
     setRecipeSearch('');
     setServingsInput(String(defaultServings));
     if (allRecipes.length === 0) {
@@ -122,6 +130,8 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
         meal_slot: pickerTarget.slot,
         recipe_id: recipeId,
         servings,
+        // Ohne Position sucht das Backend den naechsten freien Platz.
+        position: pickerTarget.position ?? null,
       });
       setPickerTarget(null);
       loadWeek();
@@ -179,8 +189,12 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
     );
   };
 
-  const entryFor = (dateKey: string, slot: MealSlot) =>
-    entries.find((e) => e.plan_date === dateKey && e.meal_slot === slot);
+  // Alle Eintraege eines Slots, nach Position sortiert: Hauptgericht
+  // zuerst, Beilagen darunter.
+  const entriesFor = (dateKey: string, slot: MealSlot) =>
+    entries
+      .filter((e) => e.plan_date === dateKey && e.meal_slot === slot)
+      .sort((a, b) => a.position - b.position);
 
   const filteredRecipes = recipeSearch.trim()
     ? allRecipes.filter((r) => r.title.toLowerCase().includes(recipeSearch.trim().toLowerCase()))
@@ -232,27 +246,81 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
                   {WEEKDAY_NAMES[i]}, {formatShort(day)}
                 </Text>
                 {MEAL_SLOTS.map((slot) => {
-                  const entry = entryFor(dateKey, slot.key);
+                  const slotEntries = entriesFor(dateKey, slot.key);
+                  const haupt = slotEntries.find((e) => e.position === 0);
+                  const beilagen = slotEntries.filter((e) => e.position > 0);
+                  const key = slotKey(dateKey, slot.key);
+                  // Automatisch offen, sobald Beilagen da sind - sonst
+                  // waeren sie unsichtbar und man wuerde sie erneut
+                  // hinzufuegen.
+                  const offen = expandedSlots[key] ?? beilagen.length > 0;
+
                   return (
-                    <Pressable
-                      key={slot.key}
-                      onPress={() => (entry ? removeEntry(entry.id) : openPicker(dateKey, slot.key))}
-                      onLongPress={() => openPicker(dateKey, slot.key)}
-                      style={[styles.slotRow, { backgroundColor: colors.card, borderRadius: radius.sm }]}
-                    >
-                      <Text style={[styles.slotLabel, { color: colors.muted }]}>{slot.title}</Text>
-                      {entry ? (
-                        <View style={styles.slotFilled}>
-                          <Text style={[styles.slotRecipeTitle, { color: colors.text }]} numberOfLines={1}>
-                            {entry.recipe_title}
-                            {entry.servings ? ` · ${entry.servings} Port.` : ''}
-                          </Text>
-                          <MaterialCommunityIcons name="close-circle-outline" size={16} color={colors.muted} />
-                        </View>
-                      ) : (
-                        <Text style={[styles.slotEmpty, { color: gradient[0] }]}>+ Rezept wählen</Text>
+                    <View key={slot.key} style={{ marginBottom: 6 }}>
+                      <Pressable
+                        onPress={() => (haupt ? removeEntry(haupt.id) : openPicker(dateKey, slot.key, 0))}
+                        onLongPress={() => openPicker(dateKey, slot.key, 0)}
+                        style={[styles.slotRow, { backgroundColor: colors.card, borderRadius: radius.sm, marginBottom: 0 }]}
+                      >
+                        <Text style={[styles.slotLabel, { color: colors.muted }]}>{slot.title}</Text>
+                        {haupt ? (
+                          <View style={styles.slotFilled}>
+                            <Text style={[styles.slotRecipeTitle, { color: colors.text }]} numberOfLines={1}>
+                              {haupt.recipe_title}
+                              {haupt.servings ? ` · ${haupt.servings} Port.` : ''}
+                            </Text>
+                            <MaterialCommunityIcons name="close-circle-outline" size={16} color={colors.muted} />
+                          </View>
+                        ) : (
+                          <Text style={[styles.slotEmpty, { color: gradient[0] }]}>+ Rezept wählen</Text>
+                        )}
+                      </Pressable>
+
+                      {/* Beilagen nur, wenn es ein Hauptgericht gibt -
+                          eine Beilage ohne Gericht ergibt keinen Sinn und
+                          wuerde die Ansicht mit leeren Zeilen fluten. */}
+                      {haupt && (
+                        <>
+                          {offen &&
+                            beilagen.map((b) => (
+                              <Pressable
+                                key={b.id}
+                                onPress={() => removeEntry(b.id)}
+                                style={[styles.sideRow, { backgroundColor: colors.card, borderRadius: radius.sm }]}
+                              >
+                                <Text style={[styles.sideBullet, { color: colors.muted }]}>↳</Text>
+                                <Text style={[styles.slotRecipeTitle, { color: colors.text, flex: 1 }]} numberOfLines={1}>
+                                  {b.recipe_title}
+                                </Text>
+                                <MaterialCommunityIcons name="close-circle-outline" size={15} color={colors.muted} />
+                              </Pressable>
+                            ))}
+
+                          <Pressable
+                            onPress={() => {
+                              if (!offen) {
+                                setExpandedSlots((prev) => ({ ...prev, [key]: true }));
+                                return;
+                              }
+                              if (beilagen.length >= 2) {
+                                Alert.alert('Voll', 'Mehr als zwei Beilagen pro Mahlzeit sind nicht vorgesehen.');
+                                return;
+                              }
+                              openPicker(dateKey, slot.key);
+                            }}
+                            style={styles.sideToggle}
+                          >
+                            <Text style={{ color: gradient[0], fontSize: 11.5, fontWeight: '600' }}>
+                              {!offen
+                                ? '+ Beilage'
+                                : beilagen.length >= 2
+                                  ? 'Beilagen voll (2 von 2)'
+                                  : `+ Beilage (${beilagen.length} von 2)`}
+                            </Text>
+                          </Pressable>
+                        </>
                       )}
-                    </Pressable>
+                    </View>
                   );
                 })}
               </View>
@@ -329,6 +397,12 @@ const styles = StyleSheet.create({
   slotFilled: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   slotRecipeTitle: { fontSize: 13, fontWeight: '600', flex: 1 },
   slotEmpty: { fontSize: 12, fontWeight: '600' },
+  // Beilagen ruecken ein und sind etwas flacher als das Hauptgericht -
+  // so ist die Zugehoerigkeit auf einen Blick erkennbar, ohne dass es
+  // eine Ueberschrift dafuer braucht.
+  sideRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: 22, marginTop: 4, paddingHorizontal: 12, paddingVertical: 8 },
+  sideBullet: { fontSize: 12 },
+  sideToggle: { marginLeft: 22, marginTop: 5, paddingVertical: 4 },
   pickerContainer: { flex: 1, paddingHorizontal: 18, paddingTop: 60 },
   pickerHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   pickerTitle: { fontSize: 17, fontWeight: '700' },

@@ -3,6 +3,7 @@ import { View, Text, SectionList, Pressable, StyleSheet, ActivityIndicator, Text
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
+import * as Sharing from 'expo-sharing';
 import ScanFab from '../components/ScanFab';
 import { api, ApiError } from '../api/client';
 import type { CompositeScreenProps } from '@react-navigation/native';
@@ -64,6 +65,53 @@ export default function ShoppingListScreen({}: Props) {
       load();
     }, [load]),
   );
+
+  const [isExporting, setIsExporting] = useState(false);
+  const [isMailing, setIsMailing] = useState(false);
+
+  // Drucken laeuft ueber PDF + Teilen-Blatt, nicht ueber ein eigenes
+  // Druck-Paket: Dasselbe Verfahren wie beim Rezept-PDF, und aus dem
+  // Teilen-Blatt heraus erreicht man den Drucker, AirDrop, Notizen und
+  // alles andere - ein reiner Druckdialog koennte weniger.
+  const handlePrint = async () => {
+    setIsExporting(true);
+    try {
+      const localUri = await api.downloadFile('/shopping-list/pdf', 'einkaufsliste.pdf');
+      if (!(await Sharing.isAvailableAsync())) {
+        Alert.alert('Nicht verfügbar', 'Teilen und Drucken wird auf diesem Gerät nicht unterstützt.');
+        return;
+      }
+      await Sharing.shareAsync(localUri, { mimeType: 'application/pdf', dialogTitle: 'Einkaufsliste' });
+    } catch (err) {
+      Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Das PDF konnte nicht erstellt werden.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleMail = () => {
+    Alert.alert(
+      'Einkaufsliste verschicken',
+      'An deine eigene E-Mail-Adresse senden? Erledigte Posten bleiben weg.',
+      [
+        { text: 'Abbrechen', style: 'cancel' },
+        {
+          text: 'Senden',
+          onPress: async () => {
+            setIsMailing(true);
+            try {
+              await api.post('/shopping-list/email', {});
+              Alert.alert('Verschickt', 'Die Einkaufsliste ist unterwegs.');
+            } catch (err) {
+              Alert.alert('Nicht verschickt', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+            } finally {
+              setIsMailing(false);
+            }
+          },
+        },
+      ],
+    );
+  };
 
   const handleToggle = async (item: ShoppingItem) => {
     // Optimistisch umschalten, damit es sich sofort reaktionsschnell anfuehlt
@@ -236,6 +284,35 @@ export default function ShoppingListScreen({}: Props) {
           </Pressable>
         )}
       />
+
+      {hasAnyItems && (
+        <View style={{ flexDirection: 'row', gap: 10, marginBottom: 4 }}>
+          <Pressable
+            onPress={handlePrint}
+            disabled={isExporting}
+            style={[styles.clearButton, { flex: 1, flexDirection: 'row', gap: 6, justifyContent: 'center' }]}
+          >
+            {isExporting ? (
+              <ActivityIndicator size="small" color={colors.muted} />
+            ) : (
+              <MaterialCommunityIcons name="printer-outline" size={15} color={gradient[0]} />
+            )}
+            <Text style={[styles.clearButtonText, { color: gradient[0] }]}>Drucken / PDF</Text>
+          </Pressable>
+          <Pressable
+            onPress={handleMail}
+            disabled={isMailing}
+            style={[styles.clearButton, { flex: 1, flexDirection: 'row', gap: 6, justifyContent: 'center' }]}
+          >
+            {isMailing ? (
+              <ActivityIndicator size="small" color={colors.muted} />
+            ) : (
+              <MaterialCommunityIcons name="email-outline" size={15} color={gradient[0]} />
+            )}
+            <Text style={[styles.clearButtonText, { color: gradient[0] }]}>Per Mail</Text>
+          </Pressable>
+        </View>
+      )}
 
       {(hasCheckedItems || hasAnyItems) && (
         <View style={{ flexDirection: 'row', gap: 10 }}>
