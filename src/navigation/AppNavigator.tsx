@@ -64,7 +64,11 @@ export type MainStackParamList = {
   WebBrowse: { initialQuery?: string } | undefined;
   AIGenerate: undefined;
   WeeklyPlan: undefined;
-  CookMode: { recipeIds: string[]; sessionNote?: string; sessionOverrides?: { ingredients?: { name: string; amount: number | null; unit: string | null }[]; steps?: { order: number; text: string; timer_seconds?: number | null; user_note?: string | null; technique_tag?: string | null }[] } };
+  // discardAfterId: Rezept, das nach dem Kochvorgang wieder geloescht wird.
+  // Fuer "nur kochen, nicht behalten" - der Koch-Modus braucht ein
+  // gespeichertes Rezept (Timer, Tipps, Stufen, Notizen haengen an der ID),
+  // also wird es angelegt und danach wieder entfernt.
+  CookMode: { recipeIds: string[]; discardAfterId?: string; sessionNote?: string; sessionOverrides?: { ingredients?: { name: string; amount: number | null; unit: string | null }[]; steps?: { order: number; text: string; timer_seconds?: number | null; user_note?: string | null; technique_tag?: string | null }[] } };
   // Derselbe Screen ist auch ein Tab. Der Stack-Eintrag bleibt, weil das
   // RecipeSourceMenu ihn als Quelle anbietet und dann als Seite ueber den
   // Tabs oeffnen soll - der Tab ist der Bereich, dieser hier der gezielte

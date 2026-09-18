@@ -190,7 +190,7 @@ export default function AIGenerateScreen({ navigation }: Props) {
     setSteps((prev) => prev.map((step, i) => (i === index ? { text: value } : step)));
   };
 
-  const handleSave = async () => {
+  const handleSave = async (cookOnly = false) => {
     if (!title.trim()) {
       Alert.alert('Titel fehlt', 'Bitte einen Rezeptnamen eingeben.');
       return;
@@ -248,7 +248,7 @@ export default function AIGenerateScreen({ navigation }: Props) {
         source_type: 'ai_generated',
         folder_id: selectedFolderId,
       });
-      askWhatNext(navigation, { id: saved.id, title: saved.title });
+      askWhatNext(navigation, { id: saved.id, title: saved.title }, cookOnly);
     } catch (err) {
       Alert.alert('Speichern fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
     } finally {
@@ -446,8 +446,18 @@ export default function AIGenerateScreen({ navigation }: Props) {
         </View>
       )}
 
-      <Pressable onPress={handleSave} disabled={isSaving} style={[styles.saveButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}>
+      <Pressable onPress={() => handleSave(false)} disabled={isSaving} style={[styles.saveButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}>
         {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveButtonText}>Rezept speichern</Text>}
+      </Pressable>
+
+      {/* Zweiter Weg: Manches kocht man einmal und will es nicht im
+          Kochbuch stehen haben. Das Rezept wird trotzdem kurz angelegt -
+          Timer, Schritt-Tipps und Hauben-Stufen haengen alle an einer
+          Rezept-ID - und nach dem Kochen wieder entfernt. */}
+      <Pressable onPress={() => handleSave(true)} disabled={isSaving} style={{ marginTop: 12, paddingVertical: 8 }}>
+        <Text style={{ color: colors.muted, fontSize: 12.5, textAlign: 'center' }}>
+          Nur <Text style={{ color: gradient[0], fontWeight: '600' }}>jetzt kochen</Text>, nicht im Kochbuch behalten
+        </Text>
       </Pressable>
     </ScrollView>
   );

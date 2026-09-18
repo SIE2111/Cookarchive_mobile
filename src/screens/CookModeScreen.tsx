@@ -35,6 +35,24 @@ export default function CookModeScreen({ route, navigation }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // "Nur kochen, nicht behalten": Das Rezept wurde nur angelegt, damit der
+  // Koch-Modus ueberhaupt etwas zu arbeiten hat - Timer, Schritt-Tipps,
+  // Hauben-Stufen und Notizen haengen alle an einer Rezept-ID. Nach dem
+  // Vorgang kommt es wieder weg.
+  //
+  // Fehler werden geschluckt: Bleibt das Rezept im Kochbuch stehen, ist das
+  // aergerlich, aber harmlos - eine Fehlermeldung nach dem Essen waere
+  // schlimmer als ein Rezept zu viel.
+  const discardIfRequested = async () => {
+    const id = route.params.discardAfterId;
+    if (!id) return;
+    try {
+      await api.delete(`/recipes/${id}`);
+    } catch {
+      // siehe oben
+    }
+  };
+
   const finishSession = () => {
     // Nur das HAUPTGERICHT (recipeIds[0]) zaehlt als "zubereitet" fuers
     // Dashboard - mitgekochte Beilagen bleiben davon bewusst ausgenommen.
@@ -51,6 +69,7 @@ export default function CookModeScreen({ route, navigation }: Props) {
       // verlassen, nicht tatsaechlich fertig gekocht - einfach verlassen,
       // OHNE als zubereitet zu markieren und OHNE die Guten-Appetit-Feier
       // (war zuvor ein Bug: beides loeste dieselbe Feier aus).
+      discardIfRequested();
       navigation.goBack();
       return;
     }
@@ -82,7 +101,10 @@ export default function CookModeScreen({ route, navigation }: Props) {
     return (
       <CookingFinishedCelebration
         recipeTitle={finishedTitles || undefined}
-        onDone={() => navigation.navigate('MainTabs', { screen: 'Home' })}
+        onDone={async () => {
+          await discardIfRequested();
+          navigation.navigate('MainTabs', { screen: 'Home' });
+        }}
       />
     );
   }

@@ -29,7 +29,18 @@ type Nav = Pick<NativeStackNavigationProp<MainStackParamList>, 'navigate' | 'rep
 export function askWhatNext(
   navigation: Nav,
   recipe: { id: string; title: string },
+  /**
+   * true = das Rezept wurde nur angelegt, um es kochen zu koennen, und
+   * soll danach wieder verschwinden ("Nur kochen"). Dann entfaellt die
+   * Frage: Es geht direkt in den Koch-Modus, der es hinterher entfernt.
+   */
+  discardAfterCooking = false,
 ) {
+  if (discardAfterCooking) {
+    navigation.replace('CookMode', { recipeIds: [recipe.id], discardAfterId: recipe.id });
+    return;
+  }
+
   Alert.alert(
     'Rezept gespeichert',
     `„${recipe.title}" liegt jetzt in deinem Kochbuch. Wie möchtest du weitermachen?`,

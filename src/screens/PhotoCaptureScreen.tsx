@@ -125,7 +125,7 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = async (cookOnly = false) => {
     if (!title.trim()) {
       Alert.alert('Titel fehlt', 'Bitte einen Rezeptnamen eingeben.');
       return;
@@ -171,7 +171,7 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
       }
 
       const saved = await api.post<{ id: string; title: string }>('/recipes/', { title: title.trim(), servings: servings ? Number(servings) : null, ingredients, steps, cover_image_url: coverImageUrl, folder_id: selectedFolderId, source_type: 'photo_scan' });
-      askWhatNext(navigation, { id: saved.id, title: saved.title });
+      askWhatNext(navigation, { id: saved.id, title: saved.title }, cookOnly);
     } catch (err) {
       Alert.alert('Speichern fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
     } finally {
@@ -290,8 +290,18 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
         />
       ))}
 
-      <Pressable onPress={handleSave} disabled={isSaving} style={[styles.saveButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}>
+      <Pressable onPress={() => handleSave(false)} disabled={isSaving} style={[styles.saveButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}>
         {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveButtonText}>Rezept speichern</Text>}
+      </Pressable>
+
+      {/* Zweiter Weg: Manches kocht man einmal und will es nicht im
+          Kochbuch stehen haben. Das Rezept wird trotzdem kurz angelegt -
+          Timer, Schritt-Tipps und Hauben-Stufen haengen alle an einer
+          Rezept-ID - und nach dem Kochen wieder entfernt. */}
+      <Pressable onPress={() => handleSave(true)} disabled={isSaving} style={{ marginTop: 12, paddingVertical: 8 }}>
+        <Text style={{ color: colors.muted, fontSize: 12.5, textAlign: 'center' }}>
+          Nur <Text style={{ color: gradient[0], fontWeight: '600' }}>jetzt kochen</Text>, nicht im Kochbuch behalten
+        </Text>
       </Pressable>
     </ScrollView>
   );
