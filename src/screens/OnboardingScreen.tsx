@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, Switch, ScrollView, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, Switch, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -22,10 +22,11 @@ export default function OnboardingScreen({ navigation }: Props) {
   const { colors, gradient, radius } = useTheme();
   const { clearJustRegistered } = useAuth();
   const [createFolders, setCreateFolders] = useState(true);
-  // Keine 50/100-Paketgroessen mehr - fuehrte bei wachsendem Rezept-Pool
-  // dazu, dass neu hinzugefuegte Rezepte (hoeherer popularity_rank) beim
-  // Import schlicht nie mitkamen. Stattdessen nur noch "alle" oder "keine".
-  const [importAll, setImportAll] = useState(true);
+  // Bei der Anmeldung wird nur das Standard-Paket angeboten. Cocktails
+  // und Vegetarisch holt man sich im Profil, wenn man sie will - sie
+  // gleich mitzuliefern hiesse, jedem Neuling 38 Rezepte aufzudraengen,
+  // die er vielleicht nie braucht.
+  const [importStandard, setImportStandard] = useState(true);
   // Vorbelegung wie in der Datenbank (default_hauben_level='fortgeschritten')
   const [haubenLevel, setHaubenLevel] = useState<HaubenLevel>('fortgeschritten');
   const [totalAvailable, setTotalAvailable] = useState<number | null>(null);
@@ -34,54 +35,13 @@ export default function OnboardingScreen({ navigation }: Props) {
 
   useEffect(() => {
     api
-      .get<{ total_curated_recipes_available: number }>('/onboarding/starter-pack-options')
-      .then((res) => setTotalAvailable(res.total_curated_recipes_available))
+      .get<{ packs?: { key: string; count: number }[] }>('/onboarding/starter-pack-options')
+      .then((res) => setTotalAvailable(res.packs?.find((p) => p.key === 'standard')?.count ?? null))
       .catch(() => {
         // Nur fuer die Anzeige der Rezeptanzahl - schlaegt das Laden fehl,
         // bleibt der Text generisch, der Import selbst funktioniert trotzdem
       });
   }, []);
-
-  const [isRemoving, setIsRemoving] = useState(false);
-
-  const handleRemoveStarters = () => {
-    Alert.alert(
-      'Starter-Rezepte entfernen?',
-      'Entfernt werden nur Rezepte aus dem Starter-Paket, die du nicht verändert, nie gekocht und nicht ' +
-        'veröffentlicht hast. Alles andere bleibt.',
-      [
-        { text: 'Abbrechen', style: 'cancel' },
-        {
-          text: 'Entfernen',
-          style: 'destructive',
-          onPress: async () => {
-            setIsRemoving(true);
-            try {
-              const res = await api.delete<{
-                deleted: number; kept_changed: number; kept_cooked: number; kept_published: number;
-              }>('/onboarding/starter-import');
-              // Die Gruende mit ausgeben: '80 von 124 entfernt' ohne
-              // Erklaerung sieht nach einem Fehler aus.
-              const reasons = [
-                res.kept_changed ? `${res.kept_changed} bearbeitet` : null,
-                res.kept_cooked ? `${res.kept_cooked} schon gekocht` : null,
-                res.kept_published ? `${res.kept_published} veröffentlicht` : null,
-              ].filter(Boolean);
-              Alert.alert(
-                'Fertig',
-                `${res.deleted} Rezepte entfernt.` +
-                  (reasons.length ? `\n\nBehalten: ${reasons.join(', ')}.` : ''),
-              );
-            } catch (err) {
-              Alert.alert('Fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
-            } finally {
-              setIsRemoving(false);
-            }
-          },
-        },
-      ],
-    );
-  };
 
   const handleContinue = async () => {
     setIsSubmitting(true);
@@ -89,7 +49,7 @@ export default function OnboardingScreen({ navigation }: Props) {
     try {
       await api.post('/onboarding/setup', {
         create_standard_folders: createFolders,
-        starter_pack_size: importAll ? totalAvailable ?? 1000 : null,
+        starter_packs: importStandard ? ['standard'] : null,
       });
       // Bewusst NACH dem Setup und in einem eigenen try: Scheitert nur das
       // Speichern der Stufe, waere es unsinnig, das komplette Onboarding
@@ -166,45 +126,37 @@ export default function OnboardingScreen({ navigation }: Props) {
       </Text>
 
       <Text style={[styles.sectionLabel, { color: colors.muted }]}>STARTER-REZEPTE IMPORTIEREN</Text>
+      <Text style={[styles.rowSubtitle, { color: colors.muted, marginBottom: 6 }]}>
+        Cocktails und vegetarische Rezepte gibt es später im Profil.
+      </Text>
 
       <Pressable
-        onPress={() => setImportAll(true)}
+        onPress={() => setImportStandard(true)}
         style={[
           styles.row,
-          { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: importAll ? 1.5 : 0, borderColor: gradient[0] },
+          { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: importStandard ? 1.5 : 0, borderColor: gradient[0] },
         ]}
       >
         <View style={{ flex: 1 }}>
           <Text style={[styles.rowTitle, { color: colors.text }]}>
-            Alle importieren{totalAvailable !== null ? ` (${totalAvailable})` : ''}
+            Standard-Rezepte{totalAvailable !== null ? ` (${totalAvailable})` : ''}
           </Text>
-          <Text style={[styles.rowSubtitle, { color: colors.muted }]}>Bereits importierte werden übersprungen, keine Duplikate</Text>
+          <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
+            Vorspeisen, Suppen, Hauptgerichte, Beilagen, Backen & Desserts
+          </Text>
         </View>
-        {importAll && <Text style={{ color: gradient[0], fontSize: 18 }}>✓</Text>}
+        {importStandard && <Text style={{ color: gradient[0], fontSize: 18 }}>✓</Text>}
       </Pressable>
 
       <Pressable
-        onPress={() => setImportAll(false)}
-        style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: !importAll ? 1.5 : 0, borderColor: gradient[0] }]}
+        onPress={() => setImportStandard(false)}
+        style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: !importStandard ? 1.5 : 0, borderColor: gradient[0] }]}
       >
         <Text style={[styles.rowTitle, { color: colors.text, flex: 1 }]}>Keine Starter-Rezepte importieren</Text>
-        {!importAll && <Text style={{ color: gradient[0], fontSize: 18 }}>✓</Text>}
+        {!importStandard && <Text style={{ color: gradient[0], fontSize: 18 }}>✓</Text>}
       </Pressable>
 
       {error && <Text style={[styles.errorText, { color: '#DC2626' }]}>{error}</Text>}
-
-      {/* Nur sinnvoll, wenn schon einmal importiert wurde - deshalb nicht
-          beim allerersten Start, wo es kein Zurueck gibt. */}
-      {navigation.canGoBack() && (
-        <Pressable onPress={handleRemoveStarters} disabled={isRemoving} style={styles.removeRow}>
-          <Text style={{ color: '#DC2626', fontSize: 12.5, fontWeight: '600', textAlign: 'center' }}>
-            {isRemoving ? 'Wird entfernt…' : 'Importierte Starter-Rezepte wieder entfernen'}
-          </Text>
-          <Text style={[styles.rowSubtitle, { color: colors.muted, textAlign: 'center', marginTop: 3 }]}>
-            Nur unveränderte, nie gekochte und nicht veröffentlichte
-          </Text>
-        </Pressable>
-      )}
 
       <Pressable onPress={handleContinue} disabled={isSubmitting} style={[styles.continueButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}>
         {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.continueButtonText}>Los geht's</Text>}

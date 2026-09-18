@@ -462,13 +462,13 @@ export default function ProfileScreen({ navigation }: Props) {
       </Pressable>
 
       <Pressable
-        onPress={() => navigation.getParent()?.navigate('Onboarding')}
+        onPress={() => navigation.getParent()?.navigate('StarterPacks')}
         style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md, marginTop: 8 }]}
       >
         <View style={{ flex: 1 }}>
-          <Text style={[styles.rowTitle, { color: colors.text }]}>Starter-Rezepte importieren</Text>
+          <Text style={[styles.rowTitle, { color: colors.text }]}>Starter-Rezepte</Text>
           <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
-            Bereits importierte werden übersprungen, keine Duplikate
+            Standard, Vegetarisch & Vegan, Cocktails – holen oder entfernen
           </Text>
         </View>
         <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>
