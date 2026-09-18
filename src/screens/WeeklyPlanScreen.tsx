@@ -212,7 +212,9 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
       {isLoading ? (
         <ActivityIndicator color={colors.text} style={{ marginTop: 30 }} />
       ) : (
-        <ScrollView contentContainerStyle={{ paddingBottom: 40, paddingTop: 6 }}>
+        <ScrollView
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag" contentContainerStyle={{ paddingBottom: 40, paddingTop: 6 }}>
           {weekDays.map((day, i) => {
             const dateKey = toDateKey(day);
             const isToday = toDateKey(new Date()) === dateKey;

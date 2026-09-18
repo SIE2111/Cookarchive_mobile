@@ -223,7 +223,9 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
   }
 
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
+    <ScrollView
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag" style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
       <Image source={{ uri: imageUri }} style={[styles.reviewThumbnail, { borderRadius: radius.md }]} />
 
       {result?.low_confidence_note && (

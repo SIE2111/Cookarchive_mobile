@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../theme/ThemeContext';
+import DismissKeyboardView from '../components/DismissKeyboardView';
 import { useAuth } from '../context/AuthContext';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../navigation/AppNavigator';
@@ -78,7 +79,7 @@ export default function ConfirmEmailScreen({ navigation, route }: Props) {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}>
+    <DismissKeyboardView style={[styles.container, { backgroundColor: colors.bg }]}>
       <View style={[styles.card, { backgroundColor: colors.bg, borderRadius: radius.lg }]}>
         <Text style={styles.emoji}>📬</Text>
         <Text style={[styles.title, { color: colors.text }]}>Fast geschafft</Text>
@@ -150,7 +151,7 @@ export default function ConfirmEmailScreen({ navigation, route }: Props) {
           </Text>
         </Pressable>
       </View>
-    </View>
+    </DismissKeyboardView>
   );
 }
 

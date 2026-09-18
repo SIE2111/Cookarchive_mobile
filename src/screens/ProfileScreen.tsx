@@ -252,7 +252,9 @@ export default function ProfileScreen({ navigation }: Props) {
   };
 
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
+    <ScrollView
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag" style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
       <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 4 }]}>NAME</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 }}>
         <TextInput

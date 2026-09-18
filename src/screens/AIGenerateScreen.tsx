@@ -259,7 +259,9 @@ export default function AIGenerateScreen({ navigation }: Props) {
   // Schritt 1: Vorgaben-Formular, solange noch nichts generiert wurde
   if (!result) {
     return (
-      <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.introContainer}>
+      <ScrollView
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag" style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.introContainer}>
         <Text style={[styles.introTitle, { color: colors.text }]}>KI-Rezept nach Vorgaben</Text>
         <Text style={[styles.introText, { color: colors.muted }]}>
           Alle Felder sind optional – je mehr du ausfüllst, desto passender wird der Vorschlag.

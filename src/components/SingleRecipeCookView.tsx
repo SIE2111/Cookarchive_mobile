@@ -705,7 +705,9 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg, display: isActive ? 'flex' : 'none' }]}>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 16 }}>
+      <ScrollView
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag" style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 16 }}>
       <View style={styles.levelRow}>
         {[1, 2, 3].map((hatCount) => {
           const isFilled = hatCount <= LEVEL_TO_HAT_COUNT[level];

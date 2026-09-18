@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../theme/ThemeContext';
+import DismissKeyboardView from '../components/DismissKeyboardView';
 import { useAuth } from '../context/AuthContext';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../navigation/AppNavigator';
@@ -42,7 +43,7 @@ export default function LoginScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}>
+    <DismissKeyboardView style={[styles.container, { backgroundColor: colors.bg }]}>
       <View style={[styles.card, { backgroundColor: colors.bg, borderRadius: radius.lg }]}>
         <Text style={[styles.title, { color: colors.text }]}>Mein Kochbuch</Text>
 
@@ -88,7 +89,7 @@ export default function LoginScreen({ navigation }: Props) {
           </Text>
         </Pressable>
       </View>
-    </View>
+    </DismissKeyboardView>
   );
 }
 

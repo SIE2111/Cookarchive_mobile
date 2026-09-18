@@ -287,7 +287,9 @@ export default function WebImportScreen({ navigation, route }: Props) {
 
   // Schritt 2: importiertes Ergebnis bearbeiten und speichern
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
+    <ScrollView
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag" style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
       <Text style={[styles.sourceHint, { color: colors.muted }]} numberOfLines={1}>
         Quelle: {originUrl}
       </Text>
