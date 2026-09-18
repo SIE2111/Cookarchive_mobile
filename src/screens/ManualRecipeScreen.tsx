@@ -94,9 +94,13 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
         setServings(existing.servings != null ? String(existing.servings) : '');
         setSelectedFolderId(existing.folder_id);
         setSelectedTags(existing.tags ?? []);
+        // ?? [] an beiden Stellen: Kommt ein Rezept ohne Zutaten oder
+        // Schritte zurueck, waere .length auf undefined ein Absturz beim
+        // blossen Oeffnen des Bearbeiten-Bildschirms - und der Nutzer
+        // kaeme an sein Rezept gar nicht mehr heran.
         setIngredients(
-          existing.ingredients.length > 0
-            ? existing.ingredients.map((ing) => ({
+          (existing.ingredients ?? []).length > 0
+            ? (existing.ingredients ?? []).map((ing) => ({
                 name: ing.name,
                 amount: ing.amount != null ? String(ing.amount) : '',
                 unit: ing.unit ?? '',
@@ -104,8 +108,8 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
             : [{ name: '', amount: '', unit: '' }],
         );
         setSteps(
-          existing.steps.length > 0
-            ? existing.steps.sort((a, b) => a.order - b.order).map((s) => ({ text: s.text }))
+          (existing.steps ?? []).length > 0
+            ? [...(existing.steps ?? [])].sort((a, b) => a.order - b.order).map((s) => ({ text: s.text }))
             : [{ text: '' }],
         );
         setExistingCoverUrl(existing.cover_image_url);
