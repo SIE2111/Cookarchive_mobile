@@ -139,6 +139,11 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
   // Abruf scheitert - dann greifen die eingebauten Texte als Rueckfall.
   const [stepTips, setStepTips] = useState<Record<number, string>>({});
   const [isSpeakingTip, setIsSpeakingTip] = useState(false);
+  // Der Tipp wird weiter unten aus dem aktuellen Schritt berechnet, der
+  // Vorlese-Effekt steht aber weiter oben. Ein Ref ueberbrueckt das, ohne
+  // die Reihenfolge im Code umzustellen - und er ist beim Auslesen nach
+  // der Pause automatisch aktuell.
+  const brutzelTipRef = React.useRef('');
   const [brutzelVoice, setBrutzelVoice] = useState<string | undefined>(undefined);
   const [largeText, setLargeText] = useState(false);
   const [techniqueVideo, setTechniqueVideo] = useState<TechniqueVideoInfo | null>(null);
@@ -291,25 +296,60 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
   useEffect(() => {
     return () => {
       Speech.stop();
+      setIsSpeakingTip(false);
       cancelTimerNotification(timerNotificationIdRef.current);
     };
   }, []);
   useEffect(() => {
     Speech.stop();
     setIsSpeaking(false);
-    if (autoReadSteps && currentStep) {
-      setIsSpeaking(true);
-      Speech.speak(currentStep.text, {
-        language: SPEECH_LANGUAGE,
-        onDone: () => setIsSpeaking(false),
-        onStopped: () => setIsSpeaking(false),
-        onError: () => setIsSpeaking(false),
-      });
-    }
+    if (!autoReadSteps || !currentStep) return;
+
+    // Wird auf true gesetzt, sobald der Schritt gewechselt oder der Screen
+    // verlassen wird. Ohne dieses Flag wuerde Brutzels Tipp nach der Pause
+    // noch losreden, obwohl man laengst beim naechsten Schritt ist - der
+    // Timer laeuft ja unabhaengig weiter.
+    let abgebrochen = false;
+    let tippTimer: ReturnType<typeof setTimeout> | null = null;
+
+    setIsSpeaking(true);
+    Speech.speak(currentStep.text, {
+      language: SPEECH_LANGUAGE,
+      onStopped: () => setIsSpeaking(false),
+      onError: () => setIsSpeaking(false),
+      onDone: () => {
+        setIsSpeaking(false);
+        // Brutzels Tipp im Anschluss - aber nur, wenn er ueberhaupt
+        // eingeschaltet ist und es einen Tipp gibt.
+        if (abgebrochen || !showBrutzel || !brutzelTipRef.current) return;
+
+        // Kurze Pause dazwischen: Ohne sie klingt es wie ein einziger
+        // langer Satz, und man haelt den Tipp fuer einen Teil des
+        // Arbeitsschritts.
+        tippTimer = setTimeout(() => {
+          if (abgebrochen) return;
+          setIsSpeakingTip(true);
+          Speech.speak(`Brutzels Tipp. ${brutzelTipRef.current}`, {
+            language: SPEECH_LANGUAGE,
+            voice: brutzelVoice,
+            pitch: BRUTZEL_PITCH,
+            rate: BRUTZEL_RATE,
+            onDone: () => setIsSpeakingTip(false),
+            onStopped: () => setIsSpeakingTip(false),
+            onError: () => setIsSpeakingTip(false),
+          });
+        }, 900);
+      },
+    });
+
+    return () => {
+      abgebrochen = true;
+      if (tippTimer) clearTimeout(tippTimer);
+    };
     // currentStep bewusst nicht in den Dependencies - haengt schon an
     // currentIndex/level, die Referenz waere bei jedem Render neu
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentIndex, level, autoReadSteps, recipe]);
+  }, [currentIndex, level, autoReadSteps, recipe, showBrutzel, brutzelVoice]);
 
   // Timer-Zustand: nur aktiv, wenn der aktuelle Schritt timer_seconds hat
   // und der Nutzer ihn gestartet hat. Echtes setInterval, keine Attrappe.
@@ -408,6 +448,8 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
             'Bei dieser Technik lohnt sich besondere Aufmerksamkeit – nimm dir kurz Zeit dafür.')
          : GENERIC_BRUTZEL_TIPS[currentIndex % GENERIC_BRUTZEL_TIPS.length]))
     : '';
+  brutzelTipRef.current = brutzelTip;
+
 
 
   // Technik-Video zum aktuellen Schritt laden, falls ein technique_tag
