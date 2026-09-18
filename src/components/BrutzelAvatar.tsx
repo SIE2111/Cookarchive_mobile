@@ -10,14 +10,17 @@ interface Props {
   variant?: 'head' | 'full';
 }
 
-const FULL_ASPECT_RATIO = 789 / 983; // Breite/Hoehe von assets/brutzel-full.png
+// Breite/Hoehe von assets/brutzel-full.png. Muss zum tatsaechlichen Bild
+// passen - stimmt das Verhaeltnis nicht, wird die Figur gestaucht oder
+// gestreckt, was bei einer gezeichneten Figur sofort auffaellt.
+const FULL_ASPECT_RATIO = 735 / 1024;
 
 /**
  * Brutzel - echte Illustrations-Assets (assets/brutzel-avatar.png fuer den
  * Kopf, assets/brutzel-full.png fuer die ganze Figur), ersetzen die
  * fruehere programmatische SVG-Annaeherung.
  */
-export default function BrutzelAvatar({ size = 28, variant = 'head' }: Props) {
+export default function BrutzelAvatar({ size = 44, variant = 'head' }: Props) {
   if (variant === 'full') {
     const height = size;
     const width = Math.round(height * FULL_ASPECT_RATIO);

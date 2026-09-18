@@ -3,6 +3,7 @@ import { View, Text, Switch, Pressable, StyleSheet, ActivityIndicator, Alert, Sc
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme, type BackgroundStyle, type AccentColor } from '../theme/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import BrutzelVoicePicker from '../components/BrutzelVoicePicker';
 import { useServerSync } from '../context/ServerSyncContext';
 import { api, ApiError } from '../api/client';
 import { useFocusEffect, type CompositeScreenProps } from '@react-navigation/native';
@@ -452,6 +453,9 @@ export default function ProfileScreen({ navigation }: Props) {
       <Pressable onPress={() => signOut()} style={[styles.signOutButton, { borderColor: '#DC2626', borderRadius: radius.md }]}>
         <Text style={styles.signOutText}>Abmelden</Text>
       </Pressable>
+
+      {/* Nur sinnvoll, wenn Brutzel ueberhaupt gezeigt wird. */}
+      {prefs.show_brutzel && <BrutzelVoicePicker />}
 
       <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 30 }]}>KONTO</Text>
       <Pressable

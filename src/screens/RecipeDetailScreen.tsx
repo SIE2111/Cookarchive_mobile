@@ -616,7 +616,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
 
       <View style={[styles.sidesCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
         <View style={styles.sidesHeader}>
-          <BrutzelAvatar size={36} />
+          <BrutzelAvatar size={52} />
           <Text style={[styles.sidesTitle, { color: colors.text }]}>Passt eine Beilage dazu?</Text>
         </View>
 
@@ -670,7 +670,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
 
       <View style={[styles.sidesCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
         <View style={styles.sidesHeader}>
-          <BrutzelAvatar size={36} />
+          <BrutzelAvatar size={52} />
           <Text style={[styles.sidesTitle, { color: colors.text }]}>Rezept auf Verbesserungen prüfen?</Text>
         </View>
 

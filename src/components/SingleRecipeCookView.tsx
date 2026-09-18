@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, Modal, TextInput, Linking, Alert, ScrollView, Keyboard } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import * as Speech from 'expo-speech';
-import { SPEECH_LANGUAGE } from '../utils/speech';
+import { SPEECH_LANGUAGE, BRUTZEL_PITCH, BRUTZEL_RATE, loadBrutzelVoice } from '../utils/speech';
 import { useTheme } from '../theme/ThemeContext';
 import { api, ApiError } from '../api/client';
 import { pickStepsForLevel, HaubenLevel, RecipeStep } from '../utils/stepLevels';
@@ -239,13 +239,11 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
   // gesprochen wird oder Brutzel dazwischenredet. Gibt es nur eine
   // deutsche Stimme, bleibt es bei der Standardstimme - dann sorgen
   // Tonhoehe und Tempo unten fuer den Unterschied.
+  // Brutzels Stimme kommt jetzt aus der Auswahl im Profil. Vorher wurde
+  // einfach die letzte deutsche Systemstimme genommen - das war Zufall
+  // und klang je nach Geraet beliebig.
   useEffect(() => {
-    Speech.getAvailableVoicesAsync()
-      .then((voices) => {
-        const german = voices.filter((v) => v.language?.toLowerCase().startsWith('de'));
-        if (german.length > 1) setBrutzelVoice(german[german.length - 1].identifier);
-      })
-      .catch(() => {});
+    loadBrutzelVoice().then(setBrutzelVoice);
   }, []);
 
   const handleSpeakTip = (text: string) => {
@@ -262,8 +260,8 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
     Speech.speak(text, {
       language: SPEECH_LANGUAGE,
       voice: brutzelVoice,
-      pitch: 1.15,
-      rate: 0.95,
+      pitch: BRUTZEL_PITCH,
+      rate: BRUTZEL_RATE,
       onDone: () => setIsSpeakingTip(false),
       onStopped: () => setIsSpeakingTip(false),
       onError: () => setIsSpeakingTip(false),
