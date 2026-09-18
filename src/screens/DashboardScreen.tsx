@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
 import ScanFab from '../components/ScanFab';
+import IncomingSharesCard from '../components/IncomingSharesCard';
 import PublishToPoolButton from '../components/PublishToPoolButton';
 import BrutzelGreetingOverlay from '../components/BrutzelGreetingOverlay';
 import { useAuth } from '../context/AuthContext';

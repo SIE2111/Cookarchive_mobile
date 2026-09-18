@@ -4,6 +4,7 @@ import * as Sharing from 'expo-sharing';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
 import PublishToPoolButton from '../components/PublishToPoolButton';
+import ShareRecipeButton from '../components/ShareRecipeButton';
 import { api, ApiError } from '../api/client';
 import BrutzelAvatar from '../components/BrutzelAvatar';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -499,6 +500,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
             beides sind Entscheidungen ueber DIESES Rezept, und wer es
             gerade gekocht hat, entscheidet hier, ob es andere sehen
             sollen. */}
+        <ShareRecipeButton recipeId={recipe.id} recipeTitle={recipe.title} size={23} style={{ paddingLeft: 8 }} />
         <PublishToPoolButton recipeId={recipe.id} recipeTitle={recipe.title} size={24} style={{ paddingLeft: 8 }} />
         <Pressable onPress={handleToggleFavorite} disabled={isSavingFavorite} hitSlop={10} style={{ paddingLeft: 8 }}>
           <MaterialCommunityIcons
