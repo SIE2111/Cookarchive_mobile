@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Switch, Pressable, StyleSheet, ActivityIndicator, Alert, ScrollView, TextInput, Modal } from 'react-native';
+import { View, Text, Switch, Pressable, StyleSheet, ActivityIndicator, Alert, ScrollView, TextInput, Modal, Linking } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme, type BackgroundStyle, type AccentColor } from '../theme/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -30,13 +30,20 @@ interface Preferences {
   default_servings: number;
   display_name: string | null;
   household_role: string | null;
+  notifications_enabled: boolean;
+  ai_enabled: boolean;
+  ai_calls_this_month: number;
+  ai_monthly_limit: number;
 }
 
-type PreferenceKey = 'show_brutzel' | 'large_text' | 'auto_read_steps' | 'server_sync_enabled' | 'show_greeting_animation';
+type PreferenceKey = 'show_brutzel' | 'large_text' | 'auto_read_steps' | 'server_sync_enabled' | 'show_greeting_animation' | 'notifications_enabled' | 'ai_enabled';
 
 // Kurzbezeichnungen der Speicherorte fuer die Profil-Zeile. Bewusst nur
 // die Modi - welcher Drittanbieter verbunden ist, steht im Speicherort-
 // Screen selbst; hier wuerde es die Zeile ueberfrachten.
+const AGB_URL = 'https://www.homearchive.at/meinkochbuch/agb';
+const DATENSCHUTZ_URL = 'https://www.homearchive.at/meinkochbuch/datenschutz';
+
 const STORAGE_MODE_LABELS: Record<string, string> = {
   lokal: 'Nur lokal – bleibt auf diesem Gerät',
   nas: 'NAS',
@@ -468,6 +475,70 @@ export default function ProfileScreen({ navigation }: Props) {
 
       <Pressable onPress={() => signOut()} style={[styles.signOutButton, { borderColor: '#DC2626', borderRadius: radius.md }]}>
         <Text style={styles.signOutText}>Abmelden</Text>
+      </Pressable>
+
+      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 26 }]}>BENACHRICHTIGUNGEN</Text>
+      <View style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}>
+        <MaterialCommunityIcons name="bell-outline" size={20} color={colors.muted} style={styles.rowIcon} />
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.rowTitle, { color: colors.text }]}>Benachrichtigungen</Text>
+          <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
+            Timer-Ende beim Kochen und Erinnerungen aus dem Wochenplan
+          </Text>
+        </View>
+        <Switch
+          value={prefs.notifications_enabled}
+          onValueChange={(v) => handleToggle('notifications_enabled', v)}
+        />
+      </View>
+
+      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 26 }]}>KI-FUNKTIONEN</Text>
+      <View style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}>
+        <MaterialCommunityIcons name="auto-fix" size={20} color={colors.muted} style={styles.rowIcon} />
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.rowTitle, { color: colors.text }]}>KI-Analyse</Text>
+          {/* Der Verbrauch steht dabei, nicht nur die Grenze: Wer erst beim
+              Anschlagen der Grenze davon erfaehrt, haelt es fuer einen
+              Fehler. */}
+          <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
+            Fotos auslesen, Rezepte erzeugen, Tipps und Beilagen
+            {` (${prefs.ai_calls_this_month}/${prefs.ai_monthly_limit} diesen Monat)`}
+          </Text>
+        </View>
+        <Switch value={prefs.ai_enabled} onValueChange={(v) => handleToggle('ai_enabled', v)} />
+      </View>
+
+      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 26 }]}>HILFE</Text>
+      <Pressable
+        onPress={() => navigation.getParent()?.navigate('Support')}
+        style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}
+      >
+        <MaterialCommunityIcons name="lifebuoy" size={20} color={colors.muted} style={styles.rowIcon} />
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.rowTitle, { color: colors.text }]}>Support kontaktieren</Text>
+          <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
+            Fehler melden oder eine Funktion vorschlagen
+          </Text>
+        </View>
+        <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>
+      </Pressable>
+
+      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 26 }]}>RECHTLICHES</Text>
+      <Pressable
+        onPress={() => Linking.openURL(AGB_URL).catch(() => {})}
+        style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}
+      >
+        <MaterialCommunityIcons name="file-document-outline" size={20} color={colors.muted} style={styles.rowIcon} />
+        <Text style={[styles.rowTitle, { color: colors.text, flex: 1 }]}>AGB</Text>
+        <MaterialCommunityIcons name="open-in-new" size={15} color={colors.muted} />
+      </Pressable>
+      <Pressable
+        onPress={() => Linking.openURL(DATENSCHUTZ_URL).catch(() => {})}
+        style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}
+      >
+        <MaterialCommunityIcons name="shield-lock-outline" size={20} color={colors.muted} style={styles.rowIcon} />
+        <Text style={[styles.rowTitle, { color: colors.text, flex: 1 }]}>Datenschutzerklärung</Text>
+        <MaterialCommunityIcons name="open-in-new" size={15} color={colors.muted} />
       </Pressable>
 
       <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 30 }]}>KONTO</Text>
