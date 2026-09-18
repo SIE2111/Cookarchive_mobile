@@ -31,7 +31,6 @@ interface RecipeSummary {
   last_cooked_at: string | null;
 }
 
-const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 // Modul-weites Flag statt Component-State - die Begruessung soll nur EINMAL
 // pro App-Start erscheinen, nicht bei jedem Zurueckwechseln zum Dashboard-
@@ -44,7 +43,7 @@ export default function DashboardScreen({ navigation }: Props) {
   const { session } = useAuth();
   const [recipes, setRecipes] = useState<RecipeSummary[]>([]);
   const [folders, setFolders] = useState<{ id: string; name: string }[]>([]);
-  const [folderCount, setFolderCount] = useState(0);
+  const [stats, setStats] = useState<{ total_recipes: number; cooked_this_week: number; cooked_total: number } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -84,9 +83,17 @@ export default function DashboardScreen({ navigation }: Props) {
         // kommen (siehe mainCourseCandidates).
         api.get<{ id: string; name: string }[]>('/folders/'),
       ]);
+      // Eigener Aufruf statt aus der Rezeptliste gerechnet: Wie oft
+      // gekocht wurde, steht im Kochprotokoll und nicht am Rezept - ein
+      // dreimal gekochtes Rezept ist ein Rezept, aber drei Kochvorgaenge.
+      api.get<{ total_recipes: number; cooked_this_week: number; cooked_total: number }>('/recipes/stats')
+        .then(setStats)
+        .catch(() => {
+          // Zahlen sind Beiwerk - faellt der Aufruf aus, bleibt die Zeile
+          // eben leer statt das ganze Dashboard scheitern zu lassen.
+        });
       setRecipes(recipeData);
       setFolders(folderData);
-      setFolderCount(folderData.length);
       setError(null);
     } catch (err) {
       setError(err instanceof ApiError ? err.detail : 'Konnte nicht geladen werden');
@@ -114,11 +121,6 @@ export default function DashboardScreen({ navigation }: Props) {
     await load();
     setIsRefreshing(false);
   };
-
-  const newThisWeek = useMemo(
-    () => recipes.filter((r) => Date.now() - new Date(r.created_at).getTime() < ONE_WEEK_MS).length,
-    [recipes],
-  );
 
   // "Rezept des Tages" - deterministisch nach Kalendertag, damit es sich
   // nicht bei jedem App-Start aendert, aber trotzdem taeglich wechselt.
@@ -216,12 +218,12 @@ export default function DashboardScreen({ navigation }: Props) {
           <Text style={[styles.statLabel, { color: colors.muted }]}>Rezepte</Text>
         </View>
         <View style={[styles.statCard, { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.cardBorder }]}>
-          <Text style={[styles.statValue, { color: colors.text }]}>{newThisWeek}</Text>
-          <Text style={[styles.statLabel, { color: colors.muted }]}>Neu (Woche)</Text>
+          <Text style={[styles.statValue, { color: colors.text }]}>{stats?.cooked_this_week ?? '–'}</Text>
+          <Text style={[styles.statLabel, { color: colors.muted }]}>Diese Woche{'\n'}gekocht</Text>
         </View>
         <View style={[styles.statCard, { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.cardBorder }]}>
-          <Text style={[styles.statValue, { color: colors.text }]}>{folderCount}</Text>
-          <Text style={[styles.statLabel, { color: colors.muted }]}>Ordner</Text>
+          <Text style={[styles.statValue, { color: colors.text }]}>{stats?.cooked_total ?? '–'}</Text>
+          <Text style={[styles.statLabel, { color: colors.muted }]}>Insgesamt{'\n'}gekocht</Text>
         </View>
       </View>
 
@@ -270,6 +272,11 @@ export default function DashboardScreen({ navigation }: Props) {
           <Text style={[styles.actionText, { color: colors.text }]}>Wochenplaner</Text>
         </Pressable>
       </View>
+
+      {/* Ganz oben, weil eine Sendung von einer echten Person kommt und
+          untergeht, wenn sie unter Listen und Kategorien liegt. Die Karte
+          blendet sich selbst aus, wenn nichts offen ist. */}
+      <IncomingSharesCard />
 
       {/* Kategorien - aus den tatsaechlich vorkommenden Tags abgeleitet, plus
           eine feste Lieblingsgerichte-Kachel, immer sichtbar */}
