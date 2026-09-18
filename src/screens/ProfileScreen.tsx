@@ -3,7 +3,6 @@ import { View, Text, Switch, Pressable, StyleSheet, ActivityIndicator, Alert, Sc
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme, type BackgroundStyle, type AccentColor } from '../theme/ThemeContext';
 import { useAuth } from '../context/AuthContext';
-import BrutzelVoicePicker from '../components/BrutzelVoicePicker';
 import { useServerSync } from '../context/ServerSyncContext';
 import { api, ApiError } from '../api/client';
 import { useFocusEffect, type CompositeScreenProps } from '@react-navigation/native';
@@ -68,7 +67,10 @@ const ACCENT_OPTIONS: { key: AccentColor; title: string; color: string }[] = [
 const ROWS: { key: PreferenceKey; title: string; subtitle: string; lockedWhen?: (p: Preferences) => boolean }[] = [
   { key: 'show_brutzel', title: 'Brutzel anzeigen', subtitle: 'Tipps & Begrüßungen im Kochbuch' },
   { key: 'large_text', title: 'Große Schrift', subtitle: 'Größerer Text in der ganzen App' },
-  { key: 'auto_read_steps', title: 'Schritte automatisch vorlesen', subtitle: 'Praktisch bei schmutzigen Händen' },
+  // 'auto_read_steps' steht bewusst NICHT mehr hier, sondern im
+  // Unterschirm 'Vorlesen & Stimme' - zusammen mit der Stimmenauswahl,
+  // zu der er gehoert. An zwei Stellen derselbe Schalter waere eine
+  // Einladung, dass einer davon irgendwann nicht mehr mitgepflegt wird.
   // Umbenannt: Der Schalter steuert nicht nur die Begruessung, sondern
   // jeden bewegten Auftritt von Brutzel - auch die Feier am Ende des
   // Kochens. Der Feldname in der Datenbank bleibt show_greeting_animation,
@@ -420,8 +422,22 @@ export default function ProfileScreen({ navigation }: Props) {
       )}
 
       <Pressable
-        onPress={() => navigation.navigate('StorageSettings')}
-        style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md, marginTop: 20 }]}
+        onPress={() => navigation.getParent()?.navigate('VoiceSettings')}
+        style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}
+      >
+        <MaterialCommunityIcons name="account-voice" size={20} color={colors.muted} style={styles.rowIcon} />
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.rowTitle, { color: colors.text }]}>Vorlesen & Stimme</Text>
+          <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
+            Schritte automatisch vorlesen, Brutzels Stimme aussuchen
+          </Text>
+        </View>
+        <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>
+      </Pressable>
+
+      <Pressable
+        onPress={() => navigation.getParent()?.navigate('StorageSettings')}
+        style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}
       >
         <MaterialCommunityIcons name="cloud-outline" size={20} color={colors.muted} style={styles.rowIcon} />
         <View style={{ flex: 1 }}>
@@ -453,9 +469,6 @@ export default function ProfileScreen({ navigation }: Props) {
       <Pressable onPress={() => signOut()} style={[styles.signOutButton, { borderColor: '#DC2626', borderRadius: radius.md }]}>
         <Text style={styles.signOutText}>Abmelden</Text>
       </Pressable>
-
-      {/* Nur sinnvoll, wenn Brutzel ueberhaupt gezeigt wird. */}
-      {prefs.show_brutzel && <BrutzelVoicePicker />}
 
       <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 30 }]}>KONTO</Text>
       <Pressable

@@ -24,6 +24,7 @@ import CookModeScreen from '../screens/CookModeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import CommunityPoolScreen from '../screens/CommunityPoolScreen';
 import PoolRecipeDetailScreen from '../screens/PoolRecipeDetailScreen';
+import VoiceSettingsScreen from '../screens/VoiceSettingsScreen';
 import HouseholdScreen from '../screens/HouseholdScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import StorageSettingsScreen from '../screens/StorageSettingsScreen';
@@ -75,6 +76,7 @@ export type MainStackParamList = {
   // Aufruf aus dem Erfassen-Menue.
   CommunityPool: undefined;
   PoolRecipeDetail: { publicRecipeId: string; title?: string };
+  VoiceSettings: undefined;
   Household: undefined;
   Onboarding: undefined;
   StorageSettings: undefined;
@@ -201,6 +203,7 @@ function MainNavigator() {
         component={PoolRecipeDetailScreen}
         options={({ route }) => ({ title: route.params?.title ?? 'Rezept' })}
       />
+      <MainStack.Screen name="VoiceSettings" component={VoiceSettingsScreen} options={{ title: 'Vorlesen & Stimme' }} />
       <MainStack.Screen name="Household" component={HouseholdScreen} options={{ title: 'Haushalt' }} />
       <MainStack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false, gestureEnabled: false }} />
       <MainStack.Screen name="StorageSettings" component={StorageSettingsScreen} options={{ title: 'Speicherort' }} />
