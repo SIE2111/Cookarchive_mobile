@@ -38,10 +38,22 @@ export default function ShoppingListScreen({}: Props) {
 
   const load = useCallback(async () => {
     try {
-      const data = await api.get<{ categories: Record<string, ShoppingItem[]> }>('/shopping-list/');
+      const data = await api.get<{ categories: Record<string, ShoppingItem[]>; order?: string[] }>(
+        '/shopping-list/',
+      );
+      // Das Backend gibt die Reihenfolge der Abteilungen vor - Weg durch den
+      // Supermarkt, nicht Alphabet. Faellt 'order' weg (aeltere Version),
+      // bleibt es beim Alphabet, damit die Liste nicht durcheinandergeraet.
+      const order = data.order ?? [];
+      const rank = (title: string) => {
+        const i = order.indexOf(title);
+        return i === -1 ? order.length : i;
+      };
       const list = Object.entries(data.categories)
         .map(([title, items]) => ({ title, data: items }))
-        .sort((a, b) => a.title.localeCompare(b.title));
+        .sort((a, b) =>
+          order.length ? rank(a.title) - rank(b.title) : a.title.localeCompare(b.title),
+        );
       setSections(list);
       setError(null);
     } catch (err) {
