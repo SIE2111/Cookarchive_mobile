@@ -17,8 +17,7 @@ export default function RegisterScreen({ navigation }: Props) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [agbAccepted, setAgbAccepted] = useState(false);
-  const [datenschutzAccepted, setDatenschutzAccepted] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleRegister = async () => {
@@ -26,8 +25,8 @@ export default function RegisterScreen({ navigation }: Props) {
       Alert.alert('Fehlt noch was', 'Bitte E-Mail und Passwort eingeben.');
       return;
     }
-    if (!agbAccepted || !datenschutzAccepted) {
-      Alert.alert('Zustimmung erforderlich', 'Bitte AGB UND Datenschutzerklärung getrennt bestätigen.');
+    if (!termsAccepted) {
+      Alert.alert('Zustimmung erforderlich', 'Bitte bestätige AGB und Datenschutzerklärung, um fortzufahren.');
       return;
     }
     setIsSubmitting(true);
@@ -82,45 +81,34 @@ export default function RegisterScreen({ navigation }: Props) {
           onChangeText={setPassword}
         />
 
-        <Pressable
-          onPress={() => setAgbAccepted((prev) => !prev)}
-          style={styles.checkboxRow}
-        >
+        {/* EIN Haekchen fuer beides. Vorher waren es zwei getrennte - das
+            ist rechtlich nicht noetig und kostet nur einen zusaetzlichen
+            Tipp bei jeder Registrierung. Die beiden Dokumente stehen als
+            eigene Zeile darunter, damit sie trotzdem einzeln aufrufbar
+            sind und nicht im Fliesstext untergehen. */}
+        <Pressable onPress={() => setTermsAccepted((prev) => !prev)} style={styles.checkboxRow}>
           <View
             style={[
               styles.checkbox,
-              { borderRadius: radius.sm, backgroundColor: agbAccepted ? gradient[0] : 'transparent', borderColor: gradient[0] },
+              { borderRadius: radius.sm, backgroundColor: termsAccepted ? gradient[0] : 'transparent', borderColor: gradient[0] },
             ]}
           >
-            {agbAccepted && <Text style={styles.checkboxMark}>✓</Text>}
+            {termsAccepted && <Text style={styles.checkboxMark}>✓</Text>}
           </View>
           <Text style={[styles.checkboxLabel, { color: colors.muted }]}>
-            Ich akzeptiere die{' '}
-            <Text style={{ color: gradient[0], fontWeight: '600' }} onPress={() => Linking.openURL(AGB_URL)}>
-              AGB
-            </Text>
+            Ich akzeptiere die AGB und die Datenschutzerklärung.
           </Text>
         </Pressable>
 
-        <Pressable
-          onPress={() => setDatenschutzAccepted((prev) => !prev)}
-          style={styles.checkboxRow}
-        >
-          <View
-            style={[
-              styles.checkbox,
-              { borderRadius: radius.sm, backgroundColor: datenschutzAccepted ? gradient[0] : 'transparent', borderColor: gradient[0] },
-            ]}
-          >
-            {datenschutzAccepted && <Text style={styles.checkboxMark}>✓</Text>}
-          </View>
-          <Text style={[styles.checkboxLabel, { color: colors.muted }]}>
-            Ich akzeptiere die{' '}
-            <Text style={{ color: gradient[0], fontWeight: '600' }} onPress={() => Linking.openURL(DATENSCHUTZ_URL)}>
-              Datenschutzerklärung
-            </Text>
+        <View style={styles.legalLinksRow}>
+          <Text style={{ color: gradient[0], fontSize: 12, fontWeight: '600' }} onPress={() => Linking.openURL(AGB_URL)}>
+            AGB lesen
           </Text>
-        </Pressable>
+          <Text style={{ color: colors.muted, fontSize: 12 }}>·</Text>
+          <Text style={{ color: gradient[0], fontSize: 12, fontWeight: '600' }} onPress={() => Linking.openURL(DATENSCHUTZ_URL)}>
+            Datenschutzerklärung lesen
+          </Text>
+        </View>
 
         <Pressable onPress={handleRegister} disabled={isSubmitting} style={{ marginTop: 12 }}>
           <LinearGradient
@@ -154,6 +142,7 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 12, textAlign: 'center', marginBottom: 22 },
   label: { fontSize: 11, fontWeight: '500', marginBottom: 6, marginTop: 10 },
   input: { height: 44, paddingHorizontal: 14, fontSize: 14 },
+  legalLinksRow: { flexDirection: 'row', gap: 8, alignItems: 'center', marginTop: 6, marginLeft: 30 },
   checkboxRow: { flexDirection: 'row', alignItems: 'flex-start', marginTop: 16, gap: 9 },
   checkbox: { width: 16, height: 16, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
   checkboxMark: { color: '#fff', fontSize: 11, fontWeight: '700' },
