@@ -36,7 +36,15 @@ function toDateKey(d: Date): string {
 }
 
 function formatShort(d: Date): string {
-  return d.toLocaleDateString('de-AT', { day: '2-digit', month: '2-digit' });
+  // Von Hand statt toLocaleDateString('de-AT'): Die Datumsformatierung
+  // ueber Intl haengt auf Android davon ab, ob die JS-Engine mit vollem
+  // ICU gebaut wurde. Fehlt es, faellt sie stillschweigend auf ein
+  // amerikanisches Format zurueck - aus 24.12. wird 12/24. Zwei
+  // Zeilen selbst gerechnet sind hier verlaesslicher als eine Bibliothek,
+  // deren Verhalten je nach Geraet anders ist.
+  const tag = String(d.getDate()).padStart(2, '0');
+  const monat = String(d.getMonth() + 1).padStart(2, '0');
+  return `${tag}.${monat}.`;
 }
 
 // Montag der Woche zu einem gegebenen Referenzdatum + Wochen-Offset

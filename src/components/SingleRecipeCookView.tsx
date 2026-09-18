@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, Modal, TextInput, Linking, Alert, ScrollView, Keyboard } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import * as Speech from 'expo-speech';
+import { SPEECH_LANGUAGE } from '../utils/speech';
 import { useTheme } from '../theme/ThemeContext';
 import { api, ApiError } from '../api/client';
 import { pickStepsForLevel, HaubenLevel, RecipeStep } from '../utils/stepLevels';
@@ -259,7 +260,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
     setIsSpeaking(false);
     setIsSpeakingTip(true);
     Speech.speak(text, {
-      language: 'de-AT',
+      language: SPEECH_LANGUAGE,
       voice: brutzelVoice,
       pitch: 1.15,
       rate: 0.95,
@@ -278,7 +279,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
     }
     setIsSpeaking(true);
     Speech.speak(currentStep.text, {
-      language: 'de-AT',
+      language: SPEECH_LANGUAGE,
       onDone: () => setIsSpeaking(false),
       onStopped: () => setIsSpeaking(false),
       onError: () => setIsSpeaking(false),
@@ -301,7 +302,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
     if (autoReadSteps && currentStep) {
       setIsSpeaking(true);
       Speech.speak(currentStep.text, {
-        language: 'de-AT',
+        language: SPEECH_LANGUAGE,
         onDone: () => setIsSpeaking(false),
         onStopped: () => setIsSpeaking(false),
         onError: () => setIsSpeaking(false),
@@ -632,7 +633,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
           // sicher im Vordergrund, unabhaengig davon, ob Benachrichtigungs-
           // Berechtigung erteilt wurde - die geplante Push-Benachrichtigung
           // allein reichte offenbar nicht als verlaessliches Signal).
-          Speech.speak('Timer fertig!', { language: 'de-DE' });
+          Speech.speak('Timer fertig!', { language: SPEECH_LANGUAGE });
           return 0;
         }
         return prev - 1;
@@ -842,7 +843,11 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
           </Pressable>
           {techniqueVideo?.available && techniqueVideo.youtube_video_id && (
             <Pressable
-              onPress={() => Linking.openURL(`https://www.youtube.com/watch?v=${techniqueVideo.youtube_video_id}`)}
+              onPress={() => {
+                // openURL wirft, wenn keine App den Link oeffnen kann -
+                // ohne catch reisst das den Koch-Modus mit.
+                Linking.openURL(`https://www.youtube.com/watch?v=${techniqueVideo.youtube_video_id}`).catch(() => {});
+              }}
               style={styles.videoLink}
             >
               <MaterialCommunityIcons name="youtube" size={15} color="#DC2626" />

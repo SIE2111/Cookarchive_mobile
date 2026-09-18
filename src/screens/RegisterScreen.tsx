@@ -102,11 +102,11 @@ export default function RegisterScreen({ navigation }: Props) {
         </Pressable>
 
         <View style={styles.legalLinksRow}>
-          <Text style={{ color: gradient[0], fontSize: 12, fontWeight: '600' }} onPress={() => Linking.openURL(AGB_URL)}>
+          <Text style={{ color: gradient[0], fontSize: 12, fontWeight: '600' }} onPress={() => Linking.openURL(AGB_URL).catch(() => {})}>
             AGB lesen
           </Text>
           <Text style={{ color: colors.muted, fontSize: 12 }}>·</Text>
-          <Text style={{ color: gradient[0], fontSize: 12, fontWeight: '600' }} onPress={() => Linking.openURL(DATENSCHUTZ_URL)}>
+          <Text style={{ color: gradient[0], fontSize: 12, fontWeight: '600' }} onPress={() => Linking.openURL(DATENSCHUTZ_URL).catch(() => {})}>
             Datenschutzerklärung lesen
           </Text>
         </View>

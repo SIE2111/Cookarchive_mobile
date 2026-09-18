@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Animated } from 'react-native';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import * as Speech from 'expo-speech';
+import { SPEECH_LANGUAGE } from '../utils/speech';
 import { useTheme } from '../theme/ThemeContext';
 
 interface Props {
@@ -58,14 +59,14 @@ export default function BrutzelGreetingOverlay({ name, onDismiss }: Props) {
           GERMAN_MALE_VOICE_HINTS.some((hint) => v.identifier.toLowerCase().includes(hint) || v.name.toLowerCase().includes(hint)),
         );
         Speech.speak(greetingText, {
-          language: 'de-DE',
+          language: SPEECH_LANGUAGE,
           voice: (germanMale ?? germanVoices[0])?.identifier,
           pitch: 0.8,
           rate: 0.98,
         });
       })
       .catch(() => {
-        Speech.speak(greetingText, { language: 'de-DE', pitch: 0.8 });
+        Speech.speak(greetingText, { language: SPEECH_LANGUAGE, pitch: 0.8 });
       });
 
     return () => {

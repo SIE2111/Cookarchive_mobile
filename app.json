@@ -37,7 +37,9 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#131419"
-      }
+      },
+      "softwareKeyboardLayoutMode": "resize",
+      "edgeToEdgeEnabled": true
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -63,6 +65,11 @@
         "projectId": "43a2cb13-0013-40f7-81b2-d3c57d791bfd"
       }
     },
-    "owner": "sie2111s-team"
+    "owner": "sie2111s-team",
+    "androidStatusBar": {
+      "translucent": false,
+      "barStyle": "light-content",
+      "backgroundColor": "#131419"
+    }
   }
 }
