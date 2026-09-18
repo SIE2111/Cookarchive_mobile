@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, Switch, ScrollView } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, Switch, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -74,6 +74,16 @@ export default function OnboardingScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]} edges={['top']}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      {/* Nur wenn es ueberhaupt ein Zurueck gibt: Beim ersten Start nach
+          der Registrierung ist das hier der Anfang, da waere ein
+          Zurueck-Knopf sinnlos. Wird der Screen dagegen aus dem Profil
+          geoeffnet ('Starter-Rezepte importieren'), sass man bisher fest -
+          Kopfzeile und Wischgeste sind hier bewusst abgeschaltet. */}
+      {navigation.canGoBack() && (
+        <Pressable onPress={() => navigation.goBack()} hitSlop={10} style={styles.backRow}>
+          <Text style={{ color: gradient[0], fontSize: 14, fontWeight: '600' }}>‹ Zurück</Text>
+        </Pressable>
+      )}
       <Text style={[styles.title, { color: colors.text }]}>Willkommen bei Mein Kochbuch</Text>
       <Text style={[styles.subtitle, { color: colors.muted }]}>Ein paar Dinge zum Start</Text>
 
@@ -152,6 +162,7 @@ export default function OnboardingScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1 },
+  backRow: { paddingVertical: 6, marginBottom: 4, alignSelf: 'flex-start' },
   container: { padding: 20, paddingBottom: 32 },
   title: { fontSize: 19, fontWeight: '700' },
   subtitle: { fontSize: 12.5, marginTop: 4, marginBottom: 22 },
@@ -160,6 +171,7 @@ const styles = StyleSheet.create({
   rowSubtitle: { fontSize: 10.5, marginTop: 2 },
   sectionLabel: { fontSize: 10.5, fontWeight: '700', letterSpacing: 0.5, marginTop: 16, marginBottom: 10 },
   errorText: { fontSize: 12, marginTop: 8 },
+  removeRow: { marginTop: 22, paddingVertical: 10 },
   continueButton: { height: 48, alignItems: 'center', justifyContent: 'center', marginTop: 24 },
   continueButtonText: { color: '#fff', fontWeight: '700', fontSize: 14.5 },
 });
