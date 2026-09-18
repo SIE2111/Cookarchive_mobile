@@ -133,6 +133,12 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
   const [isIngredientsOpen, setIsIngredientsOpen] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [autoReadSteps, setAutoReadSteps] = useState(false);
+  const [showBrutzel, setShowBrutzel] = useState(true);
+  // Von der KI erzeugte Tipps je Schritt, per order. Bleibt leer, wenn der
+  // Abruf scheitert - dann greifen die eingebauten Texte als Rueckfall.
+  const [stepTips, setStepTips] = useState<Record<number, string>>({});
+  const [isSpeakingTip, setIsSpeakingTip] = useState(false);
+  const [brutzelVoice, setBrutzelVoice] = useState<string | undefined>(undefined);
   const [largeText, setLargeText] = useState(false);
   const [techniqueVideo, setTechniqueVideo] = useState<TechniqueVideoInfo | null>(null);
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
@@ -192,11 +198,12 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
 
   useEffect(() => {
     api
-      .get<{ auto_read_steps: boolean; default_hauben_level: HaubenLevel; large_text: boolean }>('/preferences/')
+      .get<{ auto_read_steps: boolean; default_hauben_level: HaubenLevel; large_text: boolean; show_brutzel: boolean }>('/preferences/')
       .then((prefs) => {
         setAutoReadSteps(prefs.auto_read_steps);
         setLevel(prefs.default_hauben_level);
         setLargeText(prefs.large_text);
+        setShowBrutzel(prefs.show_brutzel);
       })
       .catch(() => {
         // Praeferenz konnte nicht geladen werden - Auto-Vorlesen bleibt aus,
@@ -204,6 +211,63 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
         // den ganzen Koch-Modus zu blockieren
       });
   }, []);
+
+  // Brutzels Tipps zum Rezept holen. Nur wenn Brutzel ueberhaupt
+  // eingeschaltet ist - sonst waere es ein KI-Aufruf fuer etwas, das
+  // niemand zu sehen bekommt.
+  useEffect(() => {
+    if (!showBrutzel || !recipe) return;
+    api
+      .post<{ tips: { order: number; tip: string }[] }>(`/ai/step-tips/${recipeId}`)
+      .then((res) => {
+        const byOrder: Record<number, string> = {};
+        res.tips.forEach((t) => {
+          if (t.order != null) byOrder[t.order] = t.tip;
+        });
+        setStepTips(byOrder);
+      })
+      .catch(() => {
+        // Kein Grund, das Kochen zu stoeren - es greifen die eingebauten
+        // Texte weiter unten.
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showBrutzel, recipeId, !!recipe]);
+
+  // Eigene Stimme fuer Brutzel: eine ANDERE deutsche Stimme als die, die
+  // die Schritte vorliest. So ist ohne Hinsehen klar, ob gerade das Rezept
+  // gesprochen wird oder Brutzel dazwischenredet. Gibt es nur eine
+  // deutsche Stimme, bleibt es bei der Standardstimme - dann sorgen
+  // Tonhoehe und Tempo unten fuer den Unterschied.
+  useEffect(() => {
+    Speech.getAvailableVoicesAsync()
+      .then((voices) => {
+        const german = voices.filter((v) => v.language?.toLowerCase().startsWith('de'));
+        if (german.length > 1) setBrutzelVoice(german[german.length - 1].identifier);
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleSpeakTip = (text: string) => {
+    if (isSpeakingTip) {
+      Speech.stop();
+      setIsSpeakingTip(false);
+      return;
+    }
+    // Laufendes Schritt-Vorlesen zuerst stoppen, sonst reden beide
+    // gleichzeitig.
+    Speech.stop();
+    setIsSpeaking(false);
+    setIsSpeakingTip(true);
+    Speech.speak(text, {
+      language: 'de-AT',
+      voice: brutzelVoice,
+      pitch: 1.15,
+      rate: 0.95,
+      onDone: () => setIsSpeakingTip(false),
+      onStopped: () => setIsSpeakingTip(false),
+      onError: () => setIsSpeakingTip(false),
+    });
+  };
 
   const handleSpeak = () => {
     if (!currentStep) return;
@@ -333,6 +397,19 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
 
   const derivedSteps = recipe ? pickStepsForLevel(recipe, level) : [];
   const currentStep = derivedSteps[currentIndex];
+
+  // KI-Tipp zu genau diesem Schritt, sonst der eingebaute Technik-Tipp,
+  // sonst ein allgemeiner. Die Reihenfolge ist Absicht: Der schrittgenaue
+  // Hinweis ist der einzige, der wirklich hilft - die anderen sind
+  // Rueckfall, falls die KI nicht erreichbar war.
+  const brutzelTip = currentStep
+    ? (stepTips[currentStep.order] ??
+       (currentStep.technique_tag
+         ? (BRUTZEL_TIPS[currentStep.technique_tag] ??
+            'Bei dieser Technik lohnt sich besondere Aufmerksamkeit – nimm dir kurz Zeit dafür.')
+         : GENERIC_BRUTZEL_TIPS[currentIndex % GENERIC_BRUTZEL_TIPS.length]))
+    : '';
+
 
   // Technik-Video zum aktuellen Schritt laden, falls ein technique_tag
   // gesetzt ist. Oeffentlicher Endpoint, kein Login-Overhead noetig.
@@ -740,16 +817,27 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
         </View>
       )}
 
+      {/* Brutzel nur zeigen, wenn er im Profil eingeschaltet ist. Wer ihn
+          dort abschaltet, will ihn nirgends sehen - auch nicht mitten im
+          Kochen. */}
+      {showBrutzel && (
       <View style={[styles.brutzelCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
         <BrutzelAvatar size={88} variant="full" />
         <View style={{ flex: 1 }}>
           <Text style={[styles.brutzelText, { color: colors.muted }]}>
             <Text style={{ fontWeight: '700', color: gradient[0] }}>Brutzel: </Text>
-            {currentStep.technique_tag
-              ? (BRUTZEL_TIPS[currentStep.technique_tag] ??
-                'Bei dieser Technik lohnt sich besondere Aufmerksamkeit – nimm dir kurz Zeit dafür.')
-              : GENERIC_BRUTZEL_TIPS[currentIndex % GENERIC_BRUTZEL_TIPS.length]}
+            {brutzelTip}
           </Text>
+          <Pressable onPress={() => handleSpeakTip(brutzelTip)} hitSlop={8} style={styles.videoLink}>
+            <MaterialCommunityIcons
+              name={isSpeakingTip ? 'stop-circle-outline' : 'volume-high'}
+              size={15}
+              color={gradient[0]}
+            />
+            <Text style={[styles.videoLinkText, { color: gradient[0] }]}>
+              {isSpeakingTip ? 'Stopp' : 'Vorlesen'}
+            </Text>
+          </Pressable>
           {techniqueVideo?.available && techniqueVideo.youtube_video_id && (
             <Pressable
               onPress={() => Linking.openURL(`https://www.youtube.com/watch?v=${techniqueVideo.youtube_video_id}`)}
@@ -761,6 +849,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
           )}
         </View>
       </View>
+      )}
 
       {currentStep.user_note ? (
         <Pressable
