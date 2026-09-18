@@ -161,6 +161,14 @@ export default function RecipesScreen({ navigation, route }: Props) {
   );
   visibleRecipes = [...visibleRecipes].sort((a, b) => {
     if (sortOption === 'az') return a.title.localeCompare(b.title, 'de');
+    // Starter-Rezepte stehen bei der Datumssortierung immer hinten. Ein
+    // Starter-Import legt ueber hundert Rezepte in derselben Sekunde an und
+    // schiebt sich damit als Block vor alles, was der Nutzer selbst erfasst
+    // hat - sein eben fotografiertes Rezept landet dann mitten in der Liste.
+    // Bei A-Z bleibt es bei reiner Alphabetsortierung.
+    const aStarter = a.source_type === 'starter_pack';
+    const bStarter = b.source_type === 'starter_pack';
+    if (aStarter !== bStarter) return aStarter ? 1 : -1;
     const diff = +new Date(b.created_at) - +new Date(a.created_at);
     return sortOption === 'newest' ? diff : -diff;
   });
