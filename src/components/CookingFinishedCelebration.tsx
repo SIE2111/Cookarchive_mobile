@@ -29,11 +29,15 @@ interface Props {
  * soll Brutzel trotzdem behalten duerfen.
  */
 // Wie oft gekocht sein muss, bevor die Bitte ueberhaupt erscheint, und in
-// welchem Abstand danach. Nach dem ersten Kochen zu fragen waere
+// welchem Abstand danach. Nach dem ERSTEN Kochen zu fragen waere
 // aufdringlich und bringt schlechte Bewertungen - wer noch nichts erlebt
-// hat, hat auch nichts zu loben. Danach hoechstens jedes 5. Mal.
-const PROMO_FIRST_AFTER = 3;
-const PROMO_EVERY = 5;
+// hat, hat auch nichts zu loben. Ab dem zweiten Mal ist das anders.
+//
+// Vorher 3 und 5, also bei Kochvorgang 3, 8, 13 - das war so selten, dass
+// die Karte beim Ausprobieren praktisch nie auftauchte und wie ein Fehler
+// wirkte. Jetzt bei 2, 5, 8, 11.
+const PROMO_FIRST_AFTER = 2;
+const PROMO_EVERY = 3;
 const COOK_COUNT_KEY = 'cook_finished_count';
 
 export default function CookingFinishedCelebration({ recipeTitle, onDone }: Props) {
