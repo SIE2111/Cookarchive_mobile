@@ -24,7 +24,7 @@ interface InviteListItem {
   invitee_name: string | null;
   invitee_email: string | null;
   expires_at: string;
-  status: 'beigetreten' | 'offen' | 'abgelaufen';
+  status: 'beigetreten' | 'ausgetreten' | 'offen' | 'abgelaufen';
 }
 
 export default function HouseholdScreen() {
@@ -266,6 +266,11 @@ export default function HouseholdScreen() {
       keyboardShouldPersistTaps="handled"
     >
       <Text style={[styles.householdName, { color: colors.text }]}>{household.name}</Text>
+      <Text style={[styles.hint, { color: colors.muted, marginTop: 14 }]}>
+        Alle Mitglieder sehen dieselben Rezepte, dieselbe Einkaufsliste und denselben Wochenplan.
+        Ändern und löschen kann ein Rezept nur, wer es angelegt hat.
+      </Text>
+
       <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 20 }]}>MITGLIEDER</Text>
       {household.members.map((member) => (
         <View key={member.user_id} style={[styles.memberRow, { backgroundColor: colors.card, borderRadius: radius.md }]}>
@@ -330,9 +335,11 @@ export default function HouseholdScreen() {
                 <Text style={{ fontSize: 11, marginTop: 2, color: invite.status === 'beigetreten' ? '#16A34A' : colors.muted }}>
                   {invite.status === 'beigetreten'
                     ? 'Beigetreten'
-                    : invite.status === 'abgelaufen'
-                      ? 'Abgelaufen'
-                      : `Offen · Code ${invite.code}`}
+                    : invite.status === 'ausgetreten'
+                      ? 'War beigetreten, hat den Haushalt verlassen'
+                      : invite.status === 'abgelaufen'
+                        ? 'Abgelaufen'
+                        : `Offen · Code ${invite.code}`}
                   {invite.invitee_name && invite.invitee_email ? ` · ${invite.invitee_email}` : ''}
                 </Text>
               </View>
