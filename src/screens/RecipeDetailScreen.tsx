@@ -559,7 +559,15 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
       )}
 
       <Pressable
-        onPress={() =>
+        onPress={() => {
+          // Merken, welche Beilagen tatsaechlich mitgekocht werden - beim
+          // START, nicht beim Auswaehlen: Ausgewaehlt wird viel, gekocht
+          // wird das, was wirklich zusammengehoert. Beim naechsten Mal
+          // stehen diese Beilagen ganz oben, noch vor den KI-Vorschlaegen.
+          // Fehler hier duerfen das Kochen nicht aufhalten.
+          if (selectedSideIds.length > 0) {
+            api.post(`/ai/remember-sides/${recipeId}`, { side_recipe_ids: selectedSideIds }).catch(() => {});
+          }
           navigation.navigate('CookMode', {
             recipeIds: [recipeId, ...selectedSideIds],
             sessionNote: sessionOnlyNote ?? undefined,
@@ -567,8 +575,8 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
               sessionIngredientsOverride || sessionStepsOverride
                 ? { ingredients: sessionIngredientsOverride ?? undefined, steps: sessionStepsOverride ?? undefined }
                 : undefined,
-          })
-        }
+          });
+        }}
         style={[styles.cookButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}
       >
         <Text style={styles.cookButtonText}>Zubereitung starten</Text>

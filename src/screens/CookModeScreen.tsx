@@ -16,6 +16,12 @@ export default function CookModeScreen({ route, navigation }: Props) {
   const recipeIds = route.params.recipeIds.slice(0, MAX_PARALLEL_RECIPES);
 
   const [activeIndex, setActiveIndex] = useState(0);
+  // Welche Rezepte tatsaechlich fertiggekocht sind - NICHT ueber den
+  // aktiven Reiter ableitbar. Genau das war der Fehler: Geprueft wurde, ob
+  // der aktive Reiter der letzte in der Liste ist. Wer beim Parallelkochen
+  // zuerst das dritte Rezept fertig hatte, beendete damit den gesamten
+  // Vorgang, obwohl eins und zwei noch offen waren.
+  const [completedIds, setCompletedIds] = useState<string[]>([]);
   const [titles, setTitles] = useState<Record<string, string>>({});
   const [showCelebration, setShowCelebration] = useState(false);
 
@@ -29,7 +35,17 @@ export default function CookModeScreen({ route, navigation }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleFinished = (completed: boolean) => {
+  const finishSession = () => {
+    // Nur das HAUPTGERICHT (recipeIds[0]) zaehlt als "zubereitet" fuers
+    // Dashboard - mitgekochte Beilagen bleiben davon bewusst ausgenommen.
+    api.post(`/recipes/${recipeIds[0]}/mark-cooked`).catch(() => {
+      // Nicht kritisch fuers eigentliche Kochen - ein Fehler hier soll die
+      // Feier/den Abschluss nicht blockieren.
+    });
+    setShowCelebration(true);
+  };
+
+  const handleFinished = (recipeId: string, completed: boolean) => {
     if (!completed) {
       // Am ersten Schritt "Zurueck" gedrueckt = Kochvorgang abgebrochen/
       // verlassen, nicht tatsaechlich fertig gekocht - einfach verlassen,
@@ -38,22 +54,20 @@ export default function CookModeScreen({ route, navigation }: Props) {
       navigation.goBack();
       return;
     }
-    if (recipeIds.length === 1) {
-      // Nur das HAUPTGERICHT (recipeIds[0]) zaehlt als "zubereitet" fuers
-      // Dashboard - mitgekochte Beilagen bleiben davon bewusst ausgenommen.
-      api.post(`/recipes/${recipeIds[0]}/mark-cooked`).catch(() => {
-        // Nicht kritisch fuers eigentliche Kochen - Fehler hier soll die
-        // Feier/den Abschluss nicht blockieren
-      });
-      setShowCelebration(true);
+
+    const nowCompleted = completedIds.includes(recipeId) ? completedIds : [...completedIds, recipeId];
+    setCompletedIds(nowCompleted);
+
+    const stillOpen = recipeIds.filter((id) => !nowCompleted.includes(id));
+    if (stillOpen.length === 0) {
+      finishSession();
       return;
     }
-    if (activeIndex < recipeIds.length - 1) {
-      setActiveIndex((i) => i + 1);
-    } else {
-      api.post(`/recipes/${recipeIds[0]}/mark-cooked`).catch(() => {});
-      setShowCelebration(true);
-    }
+
+    // Zum naechsten NOCH OFFENEN Rezept wechseln, nicht stur zum
+    // naechsten in der Reihenfolge - sonst landet man auf einem, das
+    // schon fertig ist.
+    setActiveIndex(recipeIds.indexOf(stillOpen[0]));
   };
 
   if (showCelebration) {
@@ -93,7 +107,9 @@ export default function CookModeScreen({ route, navigation }: Props) {
                   { color: index === activeIndex ? gradient[0] : colors.muted, fontWeight: index === activeIndex ? '700' : '500' },
                 ]}
               >
-                {titles[id] ?? '…'}
+                {/* Haken auf fertigen Reitern: Beim Parallelkochen muss
+                    auf einen Blick erkennbar sein, was noch aussteht. */}
+                {completedIds.includes(id) ? '✓ ' : ''}{titles[id] ?? '…'}
               </Text>
             </Pressable>
           ))}
@@ -106,7 +122,7 @@ export default function CookModeScreen({ route, navigation }: Props) {
           recipeId={id}
           isActive={index === activeIndex}
           onTitleLoaded={(title) => setTitles((prev) => ({ ...prev, [id]: title }))}
-          onFinished={handleFinished}
+          onFinished={(completed) => handleFinished(id, completed)}
           sessionOverrides={index === 0 ? route.params.sessionOverrides : undefined}
         />
       ))}
