@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Animated, Share, Linking, Platform } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Animated, Share, Linking, Platform, ScrollView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { VideoView, useVideoPlayer } from 'expo-video';
@@ -110,10 +110,13 @@ export default function CookingFinishedCelebration({ recipeTitle, onDone }: Prop
   }, [prefsLoaded, showBrutzel, animated]);
 
   return (
-    <View style={[styles.overlay, { backgroundColor: colors.bg }]}>
-      {/* Oben, weil der Blick nach dem Kochen zuerst hier landet - aber nur
-          gelegentlich (siehe PROMO_EVERY) und erst, wenn jemand die App
-          wirklich benutzt hat. */}
+    <ScrollView
+      style={{ backgroundColor: colors.bg }}
+      contentContainerStyle={styles.overlay}
+    >
+      {/* Steht als erstes im Bildschirm - der Blick landet nach dem
+          Kochen zuerst oben. Nur gelegentlich (siehe PROMO_EVERY) und
+          erst, wenn jemand die App wirklich benutzt hat. */}
       {showPromo && (
         <View style={[styles.promoCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
           <Text style={[styles.promoTitle, { color: colors.text }]}>Schmeckt's mit Mein Kochbuch?</Text>
@@ -161,14 +164,24 @@ export default function CookingFinishedCelebration({ recipeTitle, onDone }: Prop
           </Pressable>
         </Animated.View>
       )}
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
+  // Scrollbar und OBEN ausgerichtet, nicht vertikal zentriert.
+  //
+  // Vorher war es ein zentrierter Stapel fester Hoehe. Kam die
+  // Empfehlungs-Karte zum Video (260 Punkte), Titel, Untertitel und Knopf
+  // dazu, wurde der Inhalt hoeher als der Bildschirm - und was oben
+  // hinausragte, war schlicht weg. Genau deshalb fehlte die Karte,
+  // sobald die Animation lief.
+  //
+  // Oben ausgerichtet steht sie ausserdem bei jedem Rezept an derselben
+  // Stelle, statt je nach Inhaltshoehe in der Mitte herumzuschwimmen.
+  overlay: { flexGrow: 1, alignItems: 'center', justifyContent: 'flex-start', padding: 24, paddingTop: 32 },
   video: { width: '100%', height: 260, marginBottom: 20 },
-  promoCard: { width: '100%', padding: 14, marginBottom: 20 },
+  promoCard: { width: '100%', padding: 14, marginBottom: 24 },
   promoTitle: { fontSize: 14, fontWeight: '700' },
   promoText: { fontSize: 12, lineHeight: 17, marginTop: 3 },
   promoRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
