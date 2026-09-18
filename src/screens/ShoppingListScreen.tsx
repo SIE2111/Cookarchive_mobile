@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, SectionList, Pressable, StyleSheet, ActivityIndicator, TextInput, Alert, Keyboard } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
 import ScanFab from '../components/ScanFab';
 import { api, ApiError } from '../api/client';
@@ -50,6 +51,19 @@ export default function ShoppingListScreen({}: Props) {
   useEffect(() => {
     load().finally(() => setIsLoading(false));
   }, [load]);
+
+  // Bei jeder Rueckkehr auf diesen Tab neu laden.
+  //
+  // Das war der Grund, warum die Einkaufsliste nach "Zutaten der Woche zur
+  // Einkaufsliste" leer blieb, obwohl die Eintraege in der Datenbank
+  // standen: Tab-Bildschirme bleiben geladen. Der useEffect oben laeuft
+  // nur EINMAL, beim ersten Anzeigen - wer den Einkauf-Tab vorher schon
+  // offen hatte, sah danach unveraendert den alten, leeren Stand.
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
 
   const handleToggle = async (item: ShoppingItem) => {
     // Optimistisch umschalten, damit es sich sofort reaktionsschnell anfuehlt

@@ -222,7 +222,7 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
       ) : (
         <ScrollView
       keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="on-drag" contentContainerStyle={{ paddingBottom: 40, paddingTop: 6 }}>
+      keyboardDismissMode="on-drag" contentContainerStyle={{ paddingBottom: 40, paddingTop: 4 }}>
           {weekDays.map((day, i) => {
             const dateKey = toDateKey(day);
             const isToday = toDateKey(new Date()) === dateKey;
@@ -311,12 +311,21 @@ const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: 18, paddingTop: 12 },
   weekNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   weekLabel: { fontSize: 15, fontWeight: '700' },
-  addAllButton: { flexDirection: 'row', gap: 7, alignItems: 'center', justifyContent: 'center', height: 44 },
+  // marginBottom, damit die erste Zeile des Montags nicht direkt unter
+  // dem Knopf klebt und angeschnitten wirkt.
+  addAllButton: { flexDirection: 'row', gap: 7, alignItems: 'center', justifyContent: 'center', height: 44, marginBottom: 12 },
   addAllButtonText: { color: '#fff', fontWeight: '700', fontSize: 12.5 },
   daySection: { marginBottom: 18 },
   dayLabel: { fontSize: 13.5, fontWeight: '700', marginBottom: 8 },
   slotRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 11, marginBottom: 6 },
-  slotLabel: { fontSize: 11, fontWeight: '600', width: 70 },
+  // flexShrink 0 ist hier der entscheidende Teil, nicht die Breite: In
+  // einer Flex-Zeile darf ein Element standardmaessig unter seine
+  // angegebene Breite schrumpfen, wenn rechts daneben Platz gebraucht
+  // wird. React Native bricht dann INNERHALB des Wortes um - aus
+  // "Fruehstueck" wurde "Fruehstuec / k". Feste Breite statt flex, damit
+  // die drei Labels buendig untereinander stehen; "Mittag" und "Abend"
+  // sind kuerzer und ruecken sonst unterschiedlich weit ein.
+  slotLabel: { fontSize: 11, fontWeight: '600', width: 82, flexShrink: 0 },
   slotFilled: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   slotRecipeTitle: { fontSize: 13, fontWeight: '600', flex: 1 },
   slotEmpty: { fontSize: 12, fontWeight: '600' },
