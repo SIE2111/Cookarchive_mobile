@@ -43,7 +43,12 @@ interface ScanPhotoResponse {
 export default function PhotoCaptureScreen({ navigation }: Props) {
   const { colors, gradient, radius } = useTheme();
 
-  const [imageUri, setImageUri] = useState<string | null>(null);
+  // Mehrere Fotos statt einem: Ein gedrucktes Rezept geht oft ueber zwei
+  // Buchseiten, und in einer Zeitschrift steht die Zutatenliste in einer
+  // anderen Spalte als die Zubereitung. Mit nur einem Bild fehlte dann die
+  // Haelfte.
+  const [imageUris, setImageUris] = useState<string[]>([]);
+  const imageUri = imageUris[0] ?? null;
   const [isScanning, setIsScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [result, setResult] = useState<ScanPhotoResponse | null>(null);
@@ -68,12 +73,22 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
     });
   }, []);
 
-  const runScan = async (uri: string, mimeType: string) => {
+  const runScan = async (uris: string[]) => {
+    if (uris.length === 0) return;
     setIsScanning(true);
     setScanError(null);
     try {
-      const fileName = uri.split('/').pop() ?? 'foto.jpg';
-      const scanResult = await api.uploadImage('/ai/scan-photo', uri, fileName, mimeType);
+      // Alle Fotos GEMEINSAM in einem Aufruf - nur so erkennt die KI, dass
+      // Zutaten vom einen und Schritte vom anderen Bild zusammengehoeren.
+      // Nacheinander ausgewertet kaemen mehrere halbe Rezepte heraus.
+      const scanResult = await api.uploadImages<ScanPhotoResponse>(
+        '/ai/scan-photos',
+        uris.map((u, i) => ({
+          uri: u,
+          name: u.split('/').pop() ?? `foto-${i + 1}.jpg`,
+          type: 'image/jpeg',
+        })),
+      );
       const typedResult = scanResult as unknown as ScanPhotoResponse;
       setResult(typedResult);
       setTitle(typedResult.title);
@@ -104,11 +119,12 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
       Alert.alert('Zugriff verweigert', 'Ohne Kamera-Zugriff kann kein Foto aufgenommen werden.');
       return;
     }
-    const pickerResult = await ImagePicker.launchCameraAsync({ quality: 0.8 });
+    // allowsEditing blendet nach der Aufnahme einen Zuschnitt-Rahmen ein.
+    // Wichtig bei Zeitschriften: Ohne ihn landet die halbe Nachbarspalte
+    // oder der Tisch mit in der Auswertung.
+    const pickerResult = await ImagePicker.launchCameraAsync({ quality: 0.8, allowsEditing: true });
     if (!pickerResult.canceled && pickerResult.assets[0]) {
-      const asset = pickerResult.assets[0];
-      setImageUri(asset.uri);
-      await runScan(asset.uri, asset.mimeType ?? 'image/jpeg');
+      setImageUris((prev) => [...prev, pickerResult.assets[0].uri]);
     }
   };
 
@@ -117,11 +133,10 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
     const pickerResult = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       quality: 0.8,
+      allowsEditing: true,
     });
     if (!pickerResult.canceled && pickerResult.assets[0]) {
-      const asset = pickerResult.assets[0];
-      setImageUri(asset.uri);
-      await runScan(asset.uri, asset.mimeType ?? 'image/jpeg');
+      setImageUris((prev) => [...prev, pickerResult.assets[0].uri]);
     }
   };
 
@@ -179,22 +194,6 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
     }
   };
 
-  if (!imageUri) {
-    return (
-      <View style={[styles.centered, { backgroundColor: colors.bg, padding: 24 }]}>
-        <Text style={[styles.introText, { color: colors.text }]}>
-          Fotografiere eine Kochbuchseite, einen handschriftlichen Zettel oder ein Zutaten-Etikett.
-        </Text>
-        <Pressable onPress={handleTakePhoto} style={[styles.primaryButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}>
-          <Text style={styles.primaryButtonText}>📷 Foto aufnehmen</Text>
-        </Pressable>
-        <Pressable onPress={handlePickFromLibrary} style={[styles.secondaryButton, { borderColor: gradient[0], borderRadius: radius.md }]}>
-          <Text style={[styles.secondaryButtonText, { color: gradient[0] }]}>Aus Galerie wählen</Text>
-        </Pressable>
-      </View>
-    );
-  }
-
   if (isScanning) {
     return (
       <View style={[styles.centered, { backgroundColor: colors.bg }]}>
@@ -210,15 +209,75 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
       <View style={[styles.centered, { backgroundColor: colors.bg, padding: 24 }]}>
         <Text style={{ color: '#DC2626', fontSize: 13, textAlign: 'center', marginBottom: 16 }}>{scanError}</Text>
         <Pressable
-          onPress={() => {
-            setImageUri(null);
-            setScanError(null);
-          }}
+          onPress={() => setScanError(null)}
           style={[styles.primaryButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}
         >
-          <Text style={styles.primaryButtonText}>Erneut versuchen</Text>
+          {/* Die Fotos bleiben erhalten - nach einem Netzwerkfehler noch
+            einmal alles abfotografieren waere aergerlich. */}
+        <Text style={styles.primaryButtonText}>Zurück zu den Fotos</Text>
         </Pressable>
       </View>
+    );
+  }
+
+
+  // Solange nicht ausgewertet wurde: Fotos sammeln. Erst der Knopf startet
+  // die Erfassung - frueher lief sie sofort nach dem ersten Foto los, ein
+  // zweites Bild war damit gar nicht vorgesehen.
+  if (!result) {
+    return (
+      <ScrollView
+        style={{ backgroundColor: colors.bg }}
+        contentContainerStyle={{ padding: 24, alignItems: 'center' }}
+      >
+        <Text style={[styles.introText, { color: colors.text }]}>
+          Fotografiere eine Kochbuchseite, einen handschriftlichen Zettel oder ein Zutaten-Etikett.
+        </Text>
+        <Text style={{ color: colors.muted, fontSize: 12, lineHeight: 18, textAlign: 'center', marginBottom: 18 }}>
+          Geht das Rezept über zwei Seiten oder stehen Zutaten und Zubereitung getrennt?
+          Nimm mehrere Fotos auf – sie werden zu einem Rezept zusammengefügt.
+        </Text>
+
+        {imageUris.length > 0 && (
+          <View style={styles.thumbRow}>
+            {imageUris.map((uri, i) => (
+              <View key={uri + i} style={styles.thumbWrap}>
+                <Image source={{ uri }} style={[styles.thumb, { borderRadius: radius.sm }]} />
+                <Pressable
+                  onPress={() => setImageUris((prev) => prev.filter((_, idx) => idx !== i))}
+                  hitSlop={8}
+                  style={styles.thumbRemove}
+                >
+                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>×</Text>
+                </Pressable>
+                <Text style={{ color: colors.muted, fontSize: 10, textAlign: 'center', marginTop: 3 }}>
+                  {i + 1}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        <Pressable onPress={handleTakePhoto} style={[styles.primaryButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}>
+          <Text style={styles.primaryButtonText}>
+            {imageUris.length === 0 ? '📷 Foto aufnehmen' : '📷 Weiteres Foto'}
+          </Text>
+        </Pressable>
+        <Pressable onPress={handlePickFromLibrary} style={[styles.secondaryButton, { borderColor: gradient[0], borderRadius: radius.md }]}>
+          <Text style={[styles.secondaryButtonText, { color: gradient[0] }]}>Aus Galerie wählen</Text>
+        </Pressable>
+
+        {imageUris.length > 0 && (
+          <Pressable
+            onPress={() => runScan(imageUris)}
+            style={[styles.primaryButton, { backgroundColor: gradient[0], borderRadius: radius.md, marginTop: 18 }]}
+          >
+            <Text style={styles.primaryButtonText}>
+              {imageUris.length === 1 ? 'Rezept erfassen' : `Aus ${imageUris.length} Fotos erfassen`}
+            </Text>
+          </Pressable>
+        )}
+      </ScrollView>
     );
   }
 
@@ -310,6 +369,13 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: { padding: 18, paddingBottom: 60 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  thumbRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'center', marginBottom: 18 },
+  thumbWrap: { width: 78 },
+  thumb: { width: 78, height: 78 },
+  thumbRemove: {
+    position: 'absolute', top: -6, right: -6, width: 22, height: 22, borderRadius: 11,
+    backgroundColor: '#DC2626', alignItems: 'center', justifyContent: 'center',
+  },
   introText: { fontSize: 14, textAlign: 'center', lineHeight: 21, marginBottom: 28 },
   primaryButton: { height: 48, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, marginBottom: 12, width: '100%' },
   primaryButtonText: { color: '#fff', fontWeight: '700', fontSize: 14 },
