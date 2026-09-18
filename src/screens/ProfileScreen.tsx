@@ -41,6 +41,7 @@ type PreferenceKey = 'show_brutzel' | 'large_text' | 'auto_read_steps' | 'server
 // Kurzbezeichnungen der Speicherorte fuer die Profil-Zeile. Bewusst nur
 // die Modi - welcher Drittanbieter verbunden ist, steht im Speicherort-
 // Screen selbst; hier wuerde es die Zeile ueberfrachten.
+const HILFE_URL = 'https://www.homearchive.at/meinkochbuch/hilfe';
 const AGB_URL = 'https://www.homearchive.at/meinkochbuch/agb';
 const DATENSCHUTZ_URL = 'https://www.homearchive.at/meinkochbuch/datenschutz';
 
@@ -509,6 +510,20 @@ export default function ProfileScreen({ navigation }: Props) {
       </View>
 
       <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 26 }]}>HILFE</Text>
+      <Pressable
+        onPress={() => Linking.openURL(HILFE_URL).catch(() => {})}
+        style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}
+      >
+        <MaterialCommunityIcons name="help-circle-outline" size={20} color={colors.muted} style={styles.rowIcon} />
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.rowTitle, { color: colors.text }]}>Hilfe & Anleitung</Text>
+          <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
+            Antworten zu allen Funktionen
+          </Text>
+        </View>
+        <MaterialCommunityIcons name="open-in-new" size={15} color={colors.muted} />
+      </Pressable>
+
       <Pressable
         onPress={() => navigation.getParent()?.navigate('Support')}
         style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}
