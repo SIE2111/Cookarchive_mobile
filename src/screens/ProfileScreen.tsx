@@ -68,7 +68,11 @@ const ROWS: { key: PreferenceKey; title: string; subtitle: string; lockedWhen?: 
   { key: 'show_brutzel', title: 'Brutzel anzeigen', subtitle: 'Tipps & Begrüßungen im Kochbuch' },
   { key: 'large_text', title: 'Große Schrift', subtitle: 'Größerer Text in der ganzen App' },
   { key: 'auto_read_steps', title: 'Schritte automatisch vorlesen', subtitle: 'Praktisch bei schmutzigen Händen' },
-  { key: 'show_greeting_animation', title: 'Begrüßungs-Animation', subtitle: 'Animierter Brutzel-Empfang beim Öffnen des Dashboards' },
+  // Umbenannt: Der Schalter steuert nicht nur die Begruessung, sondern
+  // jeden bewegten Auftritt von Brutzel - auch die Feier am Ende des
+  // Kochens. Der Feldname in der Datenbank bleibt show_greeting_animation,
+  // eine Spaltenumbenennung waere reines Risiko ohne Gewinn.
+  { key: 'show_greeting_animation', title: 'Brutzel-Animation', subtitle: 'Bewegte Auftritte: Begrüßung und Fertigstellung. Aus = Brutzel bleibt, steht aber still' },
   {
     key: 'server_sync_enabled',
     title: 'Server-Sync',

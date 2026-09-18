@@ -56,10 +56,13 @@ export default function DashboardScreen({ navigation }: Props) {
   // eine Aenderung im Profil nie mitbekam.
   const loadDisplayName = useCallback(() => {
     api
-      .get<{ display_name: string | null; show_greeting_animation: boolean }>('/preferences/')
+      .get<{ display_name: string | null; show_greeting_animation: boolean; show_brutzel: boolean }>('/preferences/')
       .then((prefs) => {
         setProfileDisplayName(prefs.display_name);
-        if (prefs.show_greeting_animation && !hasShownGreetingThisSession) {
+        // Auch show_brutzel pruefen: Wer Brutzel ganz abgeschaltet hat,
+        // soll ihn nicht ausgerechnet beim Oeffnen der App ueber den
+        // Bildschirm laufen sehen.
+        if (prefs.show_brutzel && prefs.show_greeting_animation && !hasShownGreetingThisSession) {
           hasShownGreetingThisSession = true;
           setShowGreeting(true);
         }
