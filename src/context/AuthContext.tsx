@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
+import { spracheZumServer } from '../i18n';
 import { supabase } from '../api/supabaseClient';
 import { api } from '../api/client';
 
@@ -65,6 +66,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { data: subscription } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
+      // Die Sprachwahl vor dem Login kam nie beim Server an - da gab es
+      // noch kein Konto. Jetzt nachholen, sonst verschickt der Server
+      // deutsche Mails an jemanden, der die App auf Englisch gestellt hat.
+      if (newSession) spracheZumServer();
     });
 
     return () => subscription.subscription.unsubscribe();

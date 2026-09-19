@@ -132,6 +132,27 @@ export async function spracheSetzen(wahl: Sprachwahl): Promise<void> {
     // Nicht speichern zu koennen ist aergerlich, aber kein Grund,
     // die Umschaltung zurueckzunehmen - sie gilt fuer diese Sitzung.
   }
+  await spracheZumServer();
+}
+
+/**
+ * Die Sprache auch beim Server hinterlegen.
+ *
+ * Oertlich reicht sie nur fuer die Oberflaeche. Alles, was der Server
+ * schreibt, braucht sie ebenfalls: die Vorgaben an die KI (sonst liest
+ * Brutzel deutsche Tipps in einer englischen App vor) und die E-Mails,
+ * die beim Empfaenger landen, lange nachdem die App geschlossen ist.
+ *
+ * Fehler werden geschluckt: Vor der Anmeldung gibt es noch kein Konto,
+ * und die Umschaltung darf daran nicht scheitern.
+ */
+export async function spracheZumServer(): Promise<void> {
+  try {
+    const { api } = await import('../api/client');
+    await api.patch('/preferences/', { locale: aktiveSprache });
+  } catch {
+    // Nicht angemeldet oder offline - beim naechsten Umschalten erneut.
+  }
 }
 
 /**
