@@ -16,6 +16,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
 import CategoryPicker from '../components/CategoryPicker';
 import ImageCropper from '../components/ImageCropper';
+import { zutatZerlegen } from '../utils/zutaten';
 import { askWhatNext } from '../utils/afterRecipeSaved';
 import { api, ApiError } from '../api/client';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -223,9 +224,13 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
     }
     setIsSaving(true);
     try {
+      // Zeile in Menge, Einheit und Name zerlegen. Bisher landete die
+      // ganze Zeile im Namen - mit der Folge, dass im Rezept-PDF in jeder
+      // Portionsspalte "nach Bedarf" stand, die Einkaufsliste Posten ohne
+      // Menge bekam und das Umrechnen auf andere Portionen nichts tat.
       const ingredients = ingredientLines
         .filter((line) => line.trim())
-        .map((line) => ({ name: line.trim(), amount: null, unit: null }));
+        .map((line) => zutatZerlegen(line));
       const steps = stepLines
         .filter((line) => line.trim())
         .map((line, i) => ({ order: i + 1, text: line.trim() }));
