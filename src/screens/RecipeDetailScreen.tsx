@@ -458,7 +458,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
     if (!recipe) return;
     const zeilen: string[] = [];
     zeilen.push(zeigtUebersetzung ? uebersetzung!.title : recipe.title);
-    if (recipe.servings) zeilen.push(t('detail.fuerPortionen', { anzahl: recipe.servings }));
+    if (angezeigtePortionen) zeilen.push(t('detail.fuerPortionen', { anzahl: angezeigtePortionen }));
     zeilen.push('');
     zeilen.push(`${t('detail.zutaten')}:`);
     currentIngredients.forEach((ing) => {
@@ -499,33 +499,26 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
     }
   };
 
-  const [isSavingServings, setIsSavingServings] = useState(false);
-  const servingsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Portionen sind eine Anzeige fuer diesen Besuch, kein Rezeptwert mehr.
+  // Vorgabe ist die Zahl aus dem Profil; das Rezept behaelt seine eigene.
+  // Frueher schrieb der Regler per PATCH ins Rezept - was nichts bewirkte,
+  // weil die Zutatenmengen davon unberuehrt blieben. Umgerechnet wird im
+  // Koch-Modus, und der richtet sich nach genau dieser Zahl.
+  const [portionen, setPortionen] = useState<number | null>(null);
+  useEffect(() => {
+    api
+      .get<{ default_servings: number }>('/preferences/')
+      .then((prefs) => setPortionen(prefs.default_servings))
+      .catch(() => {
+        // Profil nicht erreichbar: Der Rezeptwert ist die naechstbeste
+        // Auskunft, besser als ein leeres Feld.
+      });
+  }, []);
+
+  const angezeigtePortionen = portionen ?? recipe?.servings ?? null;
+
   const handleChangeServings = (delta: number) => {
-    setRecipe((prev) => {
-      if (!prev) return prev;
-      const newValue = Math.max(1, (prev.servings ?? 1) + delta);
-      if (newValue === prev.servings) return prev;
-
-      // Entprellen: bei schnell mehrfachem Antippen von +/- nicht bei jedem
-      // einzelnen Tap sofort speichern (das liess den Ladekreis dazwischen
-      // aufblitzen und wirkte hakelig) - erst 500ms nach dem letzten Tap
-      // tatsaechlich einen PATCH schicken, die Anzeige zaehlt zwischendurch
-      // aber weiterhin sofort optimistisch mit.
-      if (servingsDebounceRef.current) clearTimeout(servingsDebounceRef.current);
-      servingsDebounceRef.current = setTimeout(async () => {
-        setIsSavingServings(true);
-        try {
-          await api.patch(`/recipes/${recipeId}`, { servings: newValue });
-        } catch (err) {
-          Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('detail.portionenNichtGespeichert'));
-        } finally {
-          setIsSavingServings(false);
-        }
-      }, 500);
-
-      return { ...prev, servings: newValue };
-    });
+    setPortionen((prev) => Math.max(1, (prev ?? recipe?.servings ?? 1) + delta));
   };
 
   const [isSavingFavorite, setIsSavingFavorite] = useState(false);
@@ -656,20 +649,18 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
         <View style={styles.servingsControlRow}>
           <Pressable
             onPress={() => handleChangeServings(-1)}
-            disabled={isSavingServings || (recipe.servings ?? 1) <= 1}
-            style={[styles.servingsButton, { backgroundColor: colors.bg, borderRadius: radius.sm, opacity: (recipe.servings ?? 1) <= 1 ? 0.4 : 1 }]}
+            disabled={(angezeigtePortionen ?? 1) <= 1}
+            style={[styles.servingsButton, { backgroundColor: colors.bg, borderRadius: radius.sm, opacity: (angezeigtePortionen ?? 1) <= 1 ? 0.4 : 1 }]}
           >
             <MaterialCommunityIcons name="minus" size={22} color={colors.text} />
           </Pressable>
-          <Text style={[styles.servingsValue, { color: colors.text }]}>{recipe.servings ?? '–'}</Text>
+          <Text style={[styles.servingsValue, { color: colors.text }]}>{angezeigtePortionen ?? '–'}</Text>
           <Pressable
             onPress={() => handleChangeServings(1)}
-            disabled={isSavingServings}
             style={[styles.servingsButton, { backgroundColor: colors.bg, borderRadius: radius.sm }]}
           >
             <MaterialCommunityIcons name="plus" size={22} color={colors.text} />
           </Pressable>
-          {isSavingServings && <ActivityIndicator color={colors.muted} size="small" style={{ marginLeft: 8 }} />}
         </View>
       </View>
 
