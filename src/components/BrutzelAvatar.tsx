@@ -11,9 +11,9 @@ interface Props {
 }
 
 // Breite/Hoehe von assets/brutzel-full.png. Muss zum tatsaechlichen Bild
-// passen - stimmt das Verhaeltnis nicht, wird die Figur gestaucht oder
-// gestreckt, was bei einer gezeichneten Figur sofort auffaellt.
-const FULL_ASPECT_RATIO = 735 / 1024;
+// passen - stimmt das Verhaeltnis nicht, entsteht leerer Rand neben dem
+// Bild. Seit der neuen Zeichnung ist es ein quadratisches Abzeichen.
+const FULL_ASPECT_RATIO = 1;
 
 /**
  * Brutzel - echte Illustrations-Assets (assets/brutzel-avatar.png fuer den
