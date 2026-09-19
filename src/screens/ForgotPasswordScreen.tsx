@@ -98,7 +98,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
             placeholder={t('passwort.codeEingeben')}
             placeholderTextColor={colors.muted}
             keyboardType="number-pad"
-            maxLength={6}
+            maxLength={4}
             value={code}
             onChangeText={setCode}
           />
@@ -116,10 +116,10 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
 
       <Pressable
         onPress={schritt === 'email' ? codeAnfordern : passwortSetzen}
-        disabled={laeuft || (schritt === 'code' && (code.trim().length < 6 || passwort.length < 8))}
+        disabled={laeuft || (schritt === 'code' && (code.trim().length < 4 || passwort.length < 8))}
         style={[styles.knopf, {
           backgroundColor: gradient[0], borderRadius: radius.md,
-          opacity: laeuft || (schritt === 'code' && (code.trim().length < 6 || passwort.length < 8)) ? 0.5 : 1,
+          opacity: laeuft || (schritt === 'code' && (code.trim().length < 4 || passwort.length < 8)) ? 0.5 : 1,
         }]}
       >
         {laeuft ? (
