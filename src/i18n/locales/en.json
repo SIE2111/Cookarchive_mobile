@@ -281,7 +281,11 @@
     "nurDiesenKochvorgang": "Only for this cooking session",
     "alsNachricht": "Share as a message",
     "geteiltMit": "Created with Mein Kochbuch",
-    "fuerPortionen": "for {anzahl} servings"
+    "fuerPortionen": "for {anzahl} servings",
+    "loeschenText": "\"{titel}\" will be deleted permanently. This cannot be undone.",
+    "fremdesRezept": "Someone else's recipe",
+    "fremdesRezeptText": "\"{titel}\" belongs to another member of your household. Deleting it removes it for them too – without notice and without any way to get it back.",
+    "trotzdemLoeschen": "Delete anyway"
   },
   "kochen": {
     "tipp": {

@@ -549,7 +549,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
     if (!recipe) return;
     Alert.alert(
       t('detail.rezeptLoeschen'),
-      `"${recipe.title}" wird dauerhaft gelöscht. Das kann nicht rückgängig gemacht werden.`,
+      t('detail.loeschenText', { titel: recipe.title }),
       [
         { text: t('allgemein.abbrechen'), style: 'cancel' },
         {
@@ -560,6 +560,31 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
               await api.delete(`/recipes/${recipeId}`);
               navigation.goBack();
             } catch (err) {
+              // 409 heisst: Das Rezept gehoert jemand anderem im
+              // Haushalt. Kein Fehler, sondern eine Rueckfrage - loeschen
+              // darf man es, aber die Folge ist eine andere als beim
+              // eigenen Rezept.
+              if (err instanceof ApiError && err.status === 409) {
+                Alert.alert(t('detail.fremdesRezept'), t('detail.fremdesRezeptText'), [
+                  { text: t('allgemein.abbrechen'), style: 'cancel' },
+                  {
+                    text: t('detail.trotzdemLoeschen'),
+                    style: 'destructive',
+                    onPress: async () => {
+                      try {
+                        await api.delete(`/recipes/${recipeId}?bestaetigt_fremd=true`);
+                        navigation.goBack();
+                      } catch (zweiter) {
+                        Alert.alert(
+                          t('profil.loeschenFehlgeschlagen'),
+                          zweiter instanceof ApiError ? zweiter.detail : t('profil.unbekannterFehler'),
+                        );
+                      }
+                    },
+                  },
+                ]);
+                return;
+              }
               Alert.alert(t('profil.loeschenFehlgeschlagen'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
             }
           },
