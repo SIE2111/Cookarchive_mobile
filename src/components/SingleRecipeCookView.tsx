@@ -31,10 +31,6 @@ interface RecipeForCooking {
 
 const HAT_COUNT_TO_LEVEL: Record<number, HaubenLevel> = { 1: 'anfaenger', 2: 'fortgeschritten', 3: 'profi' };
 
-// Gelb nur auf der GEWAEHLTEN Stufe: Die anderen beiden Knoepfe stehen auf
-// hellem Grund, dort waere Gelb auf Weiss nicht mehr lesbar.
-const STUFE_AKTIV_FARBE = '#FFD84D';
-
 function formatTime(totalSeconds: number): string {
   const m = Math.floor(totalSeconds / 60);
   const s = totalSeconds % 60;
@@ -860,32 +856,25 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
             <Pressable
               key={hatCount}
               onPress={() => handleLevelChange(stufe)}
+              // Ohne Beschriftung braucht der Knopf einen Namen fuer die
+              // Sprachausgabe - die Anzahl der Gesichter allein ist fuer
+              // Bedienungshilfen nichts.
+              accessibilityRole="button"
+              accessibilityState={{ selected: aktiv }}
+              accessibilityLabel={t(stufe === 'anfaenger' ? 'profil.haubenAnfaenger'
+                : stufe === 'profi' ? 'profil.haubenProfi'
+                : 'profil.haubenFortgeschritten')}
               style={[styles.levelButton, {
                 backgroundColor: aktiv ? gradient[0] : colors.card,
                 borderRadius: radius.sm,
               }]}
             >
-              {/* Dieselben Koch-Gesichter wie im Profil, eines je Stufe:
-                  Dort steht die Standard-Stufe, hier wird sie umgestellt -
-                  zwei Darstellungen fuer dieselbe Sache waeren verwirrend. */}
+              {/* Nur die Gesichter, kein Text: "Fortgeschritten" passte nie
+                  in ein Drittel der Breite und wurde abgeschnitten. Die
+                  Anzahl sagt dasselbe und braucht keinen Platz. */}
               {Array.from({ length: hatCount }).map((_, i) => (
                 <Text key={i} style={styles.levelHat}>👨‍🍳</Text>
               ))}
-              {/* numberOfLines: "Fortgeschritten" brach auf zwei Zeilen um und
-                  sprengte den Knopf, weil alle drei gleich breit sind.
-                  Abgeschnitten mit Auslassungspunkten bleibt die Reihe ruhig. */}
-              <Text
-                numberOfLines={1}
-                style={[
-                  styles.levelButtonText,
-                  { color: aktiv ? STUFE_AKTIV_FARBE : colors.text },
-                  aktiv && styles.levelButtonTextAktiv,
-                ]}
-              >
-                {t(stufe === 'anfaenger' ? 'profil.haubenAnfaenger'
-                   : stufe === 'profi' ? 'profil.haubenProfi'
-                   : 'profil.haubenFortgeschritten')}
-              </Text>
             </Pressable>
           );
         })}
@@ -1265,11 +1254,9 @@ const styles = StyleSheet.create({
   levelRow: { flexDirection: 'row', marginBottom: 12, gap: 6 },
   levelButton: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 1, minHeight: 40, paddingHorizontal: 6,
+    gap: 3, minHeight: 44, paddingHorizontal: 6,
   },
-  levelHat: { fontSize: 12 },
-  levelButtonText: { fontSize: 12.5, fontWeight: '600', flexShrink: 1, marginLeft: 2 },
-  levelButtonTextAktiv: { fontWeight: '800' },
+  levelHat: { fontSize: 17 },
   ingredientsToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12, marginBottom: 4 },
   ingredientsToggleText: { fontSize: 12.5, fontWeight: '600' },
   ingredientsList: { padding: 12, marginBottom: 16 },
