@@ -447,7 +447,14 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
         />
       ))}
 
-      <Pressable onPress={() => handleSave(false)} disabled={isSaving} style={[styles.saveButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}>
+      {/* Waehrend ein Bild erzeugt wird, darf nicht gespeichert werden -
+          sonst wird das alte Bild uebernommen und die Arbeit war umsonst. */}
+      {isGeneratingImage && (
+        <Text style={{ color: colors.muted, fontSize: 12.5, textAlign: 'center', marginTop: 12 }}>
+          {t('erfassen.bildLaeuftNoch')}
+        </Text>
+      )}
+      <Pressable onPress={() => handleSave(false)} disabled={isSaving || isGeneratingImage} style={[styles.saveButton, { backgroundColor: gradient[0], borderRadius: radius.md, opacity: isGeneratingImage ? 0.5 : 1 }]}>
         {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveButtonText}>{t('erfassen.rezeptSpeichern')}</Text>}
       </Pressable>
 
@@ -455,7 +462,7 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
           Kochbuch stehen haben. Das Rezept wird trotzdem kurz angelegt -
           Timer, Schritt-Tipps und Hauben-Stufen haengen alle an einer
           Rezept-ID - und nach dem Kochen wieder entfernt. */}
-      <Pressable onPress={() => handleSave(true)} disabled={isSaving} style={{ marginTop: 12, paddingVertical: 8 }}>
+      <Pressable onPress={() => handleSave(true)} disabled={isSaving || isGeneratingImage} style={{ marginTop: 12, paddingVertical: 8, opacity: isGeneratingImage ? 0.5 : 1 }}>
         <Text style={{ color: colors.muted, fontSize: 12.5, textAlign: 'center' }}>
           Nur <Text style={{ color: gradient[0], fontWeight: '600' }}>jetzt kochen</Text>, nicht im Kochbuch behalten
         </Text>

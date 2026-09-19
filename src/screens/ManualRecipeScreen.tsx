@@ -521,7 +521,14 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
         <Text style={[styles.addLink, { color: gradient[0] }]}>+ Schritt hinzufügen</Text>
       </Pressable>
 
-      <Pressable onPress={handleSave} disabled={isSaving} style={[styles.saveButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}>
+      {/* Waehrend ein Bild erzeugt wird, darf nicht gespeichert werden -
+          sonst wird das alte Bild uebernommen und die Arbeit war umsonst. */}
+      {isGeneratingImage && (
+        <Text style={{ color: colors.muted, fontSize: 12.5, textAlign: 'center', marginTop: 12 }}>
+          {t('erfassen.bildLaeuftNoch')}
+        </Text>
+      )}
+      <Pressable onPress={handleSave} disabled={isSaving || isGeneratingImage} style={[styles.saveButton, { backgroundColor: gradient[0], borderRadius: radius.md, opacity: isGeneratingImage ? 0.5 : 1 }]}>
         {isSaving ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <ActivityIndicator color="#fff" />

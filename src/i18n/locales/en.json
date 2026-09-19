@@ -417,7 +417,8 @@
     "bildBehalten": "Keep the page",
     "zuschnittHinweis": "Drag the frame to pick a section – useful when two recipes share one page.",
     "zuschneiden": "Crop",
-    "ganzesBild": "Whole image"
+    "ganzesBild": "Whole image",
+    "bildLaeuftNoch": "Brutzel is still drawing – almost done"
   },
   "haushalt": {
     "nichtGeladen": "The household could not be loaded",
