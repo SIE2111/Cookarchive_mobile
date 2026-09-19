@@ -8,6 +8,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../theme/ThemeContext';
 import LoginScreen from '../screens/LoginScreen';
+import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import ConfirmEmailScreen from '../screens/ConfirmEmailScreen';
 import DashboardScreen from '../screens/DashboardScreen';
@@ -34,6 +35,7 @@ import StorageSettingsScreen from '../screens/StorageSettingsScreen';
 import PhotoCaptureScreen from '../screens/PhotoCaptureScreen';
 
 export type AuthStackParamList = {
+  ForgotPassword: undefined;
   Login: undefined;
   Register: undefined;
   ConfirmEmail: { email: string };
@@ -99,6 +101,7 @@ function AuthNavigator() {
       <AuthStack.Screen name="Login" component={LoginScreen} />
       <AuthStack.Screen name="Register" component={RegisterScreen} />
       <AuthStack.Screen name="ConfirmEmail" component={ConfirmEmailScreen} />
+      <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
     </AuthStack.Navigator>
   );
 }

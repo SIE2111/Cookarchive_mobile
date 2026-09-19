@@ -93,6 +93,18 @@ export default function LoginScreen({ navigation }: Props) {
           </Text>
         </Pressable>
 
+        <Pressable
+
+          onPress={() => navigation.navigate('ForgotPassword')}
+
+          style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
+
+        >
+
+          <Text style={{ color: colors.muted, fontSize: 13.5 }}>{t('passwort.vergessen')}</Text>
+
+        </Pressable>
+
         <LanguageSwitchRow />
       </View>
     </DismissKeyboardView>

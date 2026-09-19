@@ -614,5 +614,19 @@
     "uebersetzungAnzeigen": "Show translation",
     "spracheDe": "German",
     "spracheEn": "English"
+  },
+  "passwort": {
+    "vergessen": "Forgot your password?",
+    "vergessenTitel": "New password",
+    "vergessenText": "Enter your email address. We'll send you a code to set a new password.",
+    "codeSchicken": "Send code",
+    "codeGeschickt": "If an account exists for this address, the code is on its way. It is valid for 15 minutes.",
+    "codeEingeben": "Code from the email",
+    "neuesPasswort": "New password (at least 8 characters)",
+    "passwortSetzen": "Set password",
+    "geaendert": "Password changed",
+    "geaendertText": "You can now sign in with your new password.",
+    "zurueckZurAnmeldung": "Back to sign in",
+    "fehlgeschlagen": "That didn't work"
   }
 }

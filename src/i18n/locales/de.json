@@ -614,5 +614,19 @@
     "uebersetzungAnzeigen": "Übersetzung anzeigen",
     "spracheDe": "Deutsch",
     "spracheEn": "Englisch"
+  },
+  "passwort": {
+    "vergessen": "Passwort vergessen?",
+    "vergessenTitel": "Neues Passwort",
+    "vergessenText": "Trag deine E-Mail-Adresse ein. Wir schicken dir einen Code, mit dem du ein neues Passwort setzen kannst.",
+    "codeSchicken": "Code schicken",
+    "codeGeschickt": "Wenn es ein Konto mit dieser Adresse gibt, ist der Code unterwegs. Er ist 15 Minuten gültig.",
+    "codeEingeben": "Code aus der E-Mail",
+    "neuesPasswort": "Neues Passwort (mind. 8 Zeichen)",
+    "passwortSetzen": "Passwort setzen",
+    "geaendert": "Passwort geändert",
+    "geaendertText": "Du kannst dich jetzt mit dem neuen Passwort anmelden.",
+    "zurueckZurAnmeldung": "Zurück zur Anmeldung",
+    "fehlgeschlagen": "Hat nicht geklappt"
   }
 }
