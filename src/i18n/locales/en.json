@@ -414,7 +414,10 @@
     "bildFrage": "The photographed page is currently used as the cover image.",
     "bildHinweis": "Brutzel can create a picture of the dish instead – the page stays as your source.",
     "bildErzeugen": "Create image",
-    "bildBehalten": "Keep the page"
+    "bildBehalten": "Keep the page",
+    "zuschnittHinweis": "Drag the frame to pick a section – useful when two recipes share one page.",
+    "zuschneiden": "Crop",
+    "ganzesBild": "Whole image"
   },
   "haushalt": {
     "nichtGeladen": "The household could not be loaded",

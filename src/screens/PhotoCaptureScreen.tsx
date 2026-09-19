@@ -15,6 +15,7 @@ import { ensureMediaLibraryAccess } from '../utils/mediaPermissions';
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
 import CategoryPicker from '../components/CategoryPicker';
+import ImageCropper from '../components/ImageCropper';
 import { askWhatNext } from '../utils/afterRecipeSaved';
 import { api, ApiError } from '../api/client';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -66,6 +67,8 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
   const [folders, setFolders] = useState<{ id: string; name: string }[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [tags, setTags] = useState<string[]>([]);
+  // Frisch aufgenommenes Foto, das noch durch den Zuschnitt geht.
+  const [zuschnittUri, setZuschnittUri] = useState<string | null>(null);
   const [aiGeneratedImageUrl, setAiGeneratedImageUrl] = useState<string | null>(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
@@ -172,7 +175,7 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
     // zurecht, mit einem fehlenden Drittel der Seite nicht.
     const pickerResult = await ImagePicker.launchCameraAsync({ quality: 0.9 });
     if (!pickerResult.canceled && pickerResult.assets[0]) {
-      setImageUris((prev) => [...prev, pickerResult.assets[0].uri]);
+      setZuschnittUri(pickerResult.assets[0].uri);
     }
   };
 
@@ -184,7 +187,7 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
       quality: 0.9,
     });
     if (!pickerResult.canceled && pickerResult.assets[0]) {
-      setImageUris((prev) => [...prev, pickerResult.assets[0].uri]);
+      setZuschnittUri(pickerResult.assets[0].uri);
     }
   };
 
@@ -342,6 +345,15 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
           <Text style={styles.warningText}>⚠️ {result.low_confidence_note}</Text>
         </View>
       )}
+
+      <ImageCropper
+        uri={zuschnittUri}
+        onAbbruch={() => setZuschnittUri(null)}
+        onFertig={(uri) => {
+          setImageUris((prev) => [...prev, uri]);
+          setZuschnittUri(null);
+        }}
+      />
 
       <Text style={[styles.label, { color: colors.muted }]}>{t('erfassen.rezeptname')}</Text>
       <TextInput

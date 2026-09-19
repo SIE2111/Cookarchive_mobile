@@ -414,7 +414,10 @@
     "bildFrage": "Als Titelbild dient gerade die abfotografierte Seite.",
     "bildHinweis": "Brutzel kann stattdessen ein Bild des Gerichts erzeugen – die Seite bleibt als Vorlage erhalten.",
     "bildErzeugen": "Bild erzeugen",
-    "bildBehalten": "Seite behalten"
+    "bildBehalten": "Seite behalten",
+    "zuschnittHinweis": "Rahmen ziehen, um einen Ausschnitt zu wählen – etwa wenn zwei Rezepte auf einer Seite stehen.",
+    "zuschneiden": "Zuschneiden",
+    "ganzesBild": "Ganzes Bild"
   },
   "haushalt": {
     "nichtGeladen": "Haushalt konnte nicht geladen werden",
