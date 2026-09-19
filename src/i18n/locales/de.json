@@ -567,5 +567,17 @@
     "trennen": "Trennen",
     "reaktivierenFehlgeschlagen": "Reaktivieren fehlgeschlagen",
     "trennenFehlgeschlagen": "Trennen fehlgeschlagen"
+  },
+  "uebersetzung": {
+    "angebotTitel": "Dieses Rezept ist auf {sprache} verfasst.",
+    "angebotText": "Soll Brutzel es für dich übersetzen? Das Original bleibt erhalten – du kannst jederzeit umschalten.",
+    "uebersetzen": "Übersetzen",
+    "laeuft": "Wird übersetzt…",
+    "fehlgeschlagen": "Die Übersetzung ist fehlgeschlagen",
+    "zeigtUebersetzung": "Übersetzt von Brutzel",
+    "originalAnzeigen": "Original anzeigen",
+    "uebersetzungAnzeigen": "Übersetzung anzeigen",
+    "spracheDe": "Deutsch",
+    "spracheEn": "Englisch"
   }
 }

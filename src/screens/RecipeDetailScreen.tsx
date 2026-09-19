@@ -1,10 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Pressable, Image, Alert, Modal, TextInput, Keyboard } from 'react-native';
 import * as Sharing from 'expo-sharing';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
 import NutritionCard from '../components/NutritionCard';
+import TranslationBanner from '../components/TranslationBanner';
 import PublishToPoolButton from '../components/PublishToPoolButton';
 import ShareRecipeButton from '../components/ShareRecipeButton';
 import { api, ApiError } from '../api/client';
@@ -38,6 +39,8 @@ interface RecipeDetail {
   source_type: string;
   is_favorite: boolean;
   equipment: string[] | null;
+  locale: string | null;
+  available_translations: string[];
   calories_kcal: number | null;
   protein_g: number | null;
   fat_g: number | null;
@@ -68,7 +71,7 @@ const MAX_SELECTABLE_SIDES = 2;
 
 export default function RecipeDetailScreen({ route, navigation }: Props) {
   const { colors, gradient, radius } = useTheme();
-  const { t } = useUebersetzung();
+  const { t, sprache } = useUebersetzung();
   const { recipeId } = route.params;
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -266,8 +269,53 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
   const [ingredientDraft, setIngredientDraft] = useState({ name: '', amount: '', unit: '' });
   const [isSavingIngredient, setIsSavingIngredient] = useState(false);
 
-  const currentIngredients = sessionIngredientsOverride ?? recipe?.ingredients ?? [];
-  const currentSteps = sessionStepsOverride ?? recipe?.steps ?? [];
+  // --- Uebersetzung ---------------------------------------------------
+  // Das Original bleibt immer erhalten; die Uebersetzung wird nur
+  // darueber gelegt. Deshalb zwei Zustaende statt eines: was vorliegt,
+  // und was gerade gezeigt wird.
+  const quellsprache = (recipe?.locale || 'de').slice(0, 2);
+  const brauchtUebersetzung = !!recipe && quellsprache !== sprache;
+  const [uebersetzung, setUebersetzung] = useState<
+    { title: string; ingredients: Ingredient[]; steps: Step[] } | null
+  >(null);
+  const [zeigeUebersetzung, setZeigeUebersetzung] = useState(true);
+  const [uebersetztGerade, setUebersetztGerade] = useState(false);
+  const [uebersetzungsfehler, setUebersetzungsfehler] = useState<string | null>(null);
+
+  const holeUebersetzung = useCallback(async () => {
+    if (!recipe) return;
+    setUebersetztGerade(true);
+    setUebersetzungsfehler(null);
+    try {
+      const res = await api.post<{ title: string; ingredients: Ingredient[]; steps: Step[] }>(
+        `/ai/translate/${recipe.id}?locale=${sprache}`,
+        {},
+      );
+      setUebersetzung(res);
+      setZeigeUebersetzung(true);
+    } catch (err) {
+      setUebersetzungsfehler(err instanceof ApiError ? err.detail : t('uebersetzung.fehlgeschlagen'));
+    } finally {
+      setUebersetztGerade(false);
+    }
+  }, [recipe?.id, sprache]);
+
+  // Liegt sie schon vor, kostet das Holen keinen KI-Aufruf - dann ohne
+  // Nachfrage laden, sonst muesste man jedes Mal neu bestaetigen.
+  useEffect(() => {
+    if (brauchtUebersetzung && recipe?.available_translations?.includes(sprache) && !uebersetzung) {
+      holeUebersetzung();
+    }
+  }, [brauchtUebersetzung, recipe?.id, sprache]);
+
+  const zeigtUebersetzung = !!uebersetzung && zeigeUebersetzung;
+
+  const currentIngredients = sessionIngredientsOverride
+    ?? (zeigtUebersetzung ? uebersetzung!.ingredients : recipe?.ingredients)
+    ?? [];
+  const currentSteps = sessionStepsOverride
+    ?? (zeigtUebersetzung ? uebersetzung!.steps : recipe?.steps)
+    ?? [];
 
   const saveRecipeChangeWithScope = (
     updatedFields: { ingredients?: Ingredient[]; steps?: Step[] },
@@ -502,7 +550,9 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
         <Image source={{ uri: recipe.cover_image_url }} style={[styles.heroImage, { borderRadius: radius.md }]} />
       )}
       <View style={styles.titleRow}>
-        <Text style={[styles.title, { color: colors.text, flex: 1 }]}>{recipe.title}</Text>
+        <Text style={[styles.title, { color: colors.text, flex: 1 }]}>
+          {zeigtUebersetzung ? uebersetzung!.title : recipe.title}
+        </Text>
         {/* Veroeffentlichen sitzt bewusst direkt neben dem Favoriten-Herz:
             beides sind Entscheidungen ueber DIESES Rezept, und wer es
             gerade gekocht hat, entscheidet hier, ob es andere sehen
@@ -757,6 +807,18 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
         )}
       </View>
 
+      {brauchtUebersetzung && (
+        <TranslationBanner
+          quellsprache={quellsprache}
+          zeigtUebersetzung={zeigtUebersetzung}
+          vorhanden={!!uebersetzung}
+          laeuft={uebersetztGerade}
+          fehler={uebersetzungsfehler}
+          onUebersetzen={holeUebersetzung}
+          onUmschalten={() => setZeigeUebersetzung((v) => !v)}
+        />
+      )}
+
       <NutritionCard
         recipeId={recipeId}
         gespeichert={{
@@ -769,12 +831,22 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
 
       <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('detail.zutaten')}</Text>
       {currentIngredients.map((ing, i) => (
-        <Pressable key={i} onPress={() => handleOpenIngredientEdit(i)} style={styles.ingredientRow}>
+        <Pressable
+          key={i}
+          onPress={() => !zeigtUebersetzung && handleOpenIngredientEdit(i)}
+          disabled={zeigtUebersetzung}
+          style={styles.ingredientRow}
+        >
           <Text style={[styles.ingredient, { color: colors.text, fontSize: largeText ? 16.5 : 13.5, flex: 1 }]}>
             {ing.amount ? `${ing.amount} ${ing.unit ?? ''} ` : ''}
             {ing.name}
           </Text>
-          <MaterialCommunityIcons name="pencil-outline" size={15} color={colors.muted} />
+          {/* Bearbeiten gilt immer dem ORIGINAL. Waehrend die Uebersetzung
+              angezeigt wird, waere der Stift eine Falle: Man aenderte
+              deutschen Text, waehrend englischer dasteht. */}
+          {!zeigtUebersetzung && (
+            <MaterialCommunityIcons name="pencil-outline" size={15} color={colors.muted} />
+          )}
         </Pressable>
       ))}
 
@@ -783,7 +855,12 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
         <View key={step.order} style={[styles.stepCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <Text style={[styles.stepNumber, { color: colors.muted }]}>{t('detail.schritt', { nummer: step.order })}</Text>
-            <Pressable onPress={() => handleOpenStepEdit(i)} hitSlop={8}>
+            <Pressable
+              onPress={() => handleOpenStepEdit(i)}
+              hitSlop={8}
+              disabled={zeigtUebersetzung}
+              style={{ opacity: zeigtUebersetzung ? 0 : 1 }}
+            >
               <MaterialCommunityIcons name="pencil-outline" size={15} color={colors.muted} />
             </Pressable>
           </View>

@@ -567,5 +567,17 @@
     "trennen": "Disconnect",
     "reaktivierenFehlgeschlagen": "Could not reactivate",
     "trennenFehlgeschlagen": "Could not disconnect"
+  },
+  "uebersetzung": {
+    "angebotTitel": "This recipe is written in {sprache}.",
+    "angebotText": "Would you like Brutzel to translate it? The original stays – you can switch back any time.",
+    "uebersetzen": "Translate",
+    "laeuft": "Translating…",
+    "fehlgeschlagen": "The translation failed",
+    "zeigtUebersetzung": "Translated by Brutzel",
+    "originalAnzeigen": "Show original",
+    "uebersetzungAnzeigen": "Show translation",
+    "spracheDe": "German",
+    "spracheEn": "English"
   }
 }
