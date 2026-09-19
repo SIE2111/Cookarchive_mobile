@@ -865,11 +865,12 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
                 borderRadius: radius.sm,
               }]}
             >
-              <MaterialCommunityIcons
-                name="chef-hat"
-                size={15}
-                color={aktiv ? STUFE_AKTIV_FARBE : colors.muted}
-              />
+              {/* Dieselben Koch-Gesichter wie im Profil, eines je Stufe:
+                  Dort steht die Standard-Stufe, hier wird sie umgestellt -
+                  zwei Darstellungen fuer dieselbe Sache waeren verwirrend. */}
+              {Array.from({ length: hatCount }).map((_, i) => (
+                <Text key={i} style={styles.levelHat}>👨‍🍳</Text>
+              ))}
               {/* numberOfLines: "Fortgeschritten" brach auf zwei Zeilen um und
                   sprengte den Knopf, weil alle drei gleich breit sind.
                   Abgeschnitten mit Auslassungspunkten bleibt die Reihe ruhig. */}
@@ -1264,9 +1265,10 @@ const styles = StyleSheet.create({
   levelRow: { flexDirection: 'row', marginBottom: 12, gap: 6 },
   levelButton: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 5, minHeight: 40, paddingHorizontal: 6,
+    gap: 1, minHeight: 40, paddingHorizontal: 6,
   },
-  levelButtonText: { fontSize: 12.5, fontWeight: '600', flexShrink: 1 },
+  levelHat: { fontSize: 12 },
+  levelButtonText: { fontSize: 12.5, fontWeight: '600', flexShrink: 1, marginLeft: 2 },
   levelButtonTextAktiv: { fontWeight: '800' },
   ingredientsToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12, marginBottom: 4 },
   ingredientsToggleText: { fontSize: 12.5, fontWeight: '600' },
