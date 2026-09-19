@@ -588,7 +588,20 @@
     "anlegen": "Create",
     "trennen": "Disconnect",
     "reaktivierenFehlgeschlagen": "Could not reactivate",
-    "trennenFehlgeschlagen": "Could not disconnect"
+    "trennenFehlgeschlagen": "Could not disconnect",
+    "nasTitel": "NAS (WebDAV)",
+    "nasHinweis": "Your NAS must be reachable from the internet – our server cannot reach a home-network address (192.168.…). On Synology, QNAP, TrueNAS and Nextcloud the setting is called \"WebDAV\".",
+    "nasAdresse": "Address (https://…)",
+    "nasBenutzer": "Username",
+    "nasPasswort": "Password",
+    "nasOrdner": "Folder (default: MeinKochbuch)",
+    "nasPruefen": "Test connection",
+    "nasSpeichern": "Connect",
+    "nasTrennen": "Disconnect",
+    "nasVerbunden": "Connected to {adresse}",
+    "nasPasswortBleibt": "Leave the password empty to keep the stored one.",
+    "nasGeprueft": "Connection works",
+    "nasFehler": "Connection failed"
   },
   "uebersetzung": {
     "angebotTitel": "This recipe is written in {sprache}.",

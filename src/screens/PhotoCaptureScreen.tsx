@@ -17,6 +17,7 @@ import { useUebersetzung } from '../i18n';
 import CategoryPicker from '../components/CategoryPicker';
 import ImageCropper from '../components/ImageCropper';
 import { zutatZerlegen } from '../utils/zutaten';
+import { titelbildAblegen } from '../utils/titelbild';
 import { askWhatNext } from '../utils/afterRecipeSaved';
 import { api, ApiError } from '../api/client';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -77,6 +78,8 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
   // Voreinstellung aus dem Profil einspringen - alle Mengen haengen
   // daran, und eine falsche Zahl faellt erst beim Kochen auf.
   const [portionenUnklar, setPortionenUnklar] = useState(false);
+  // Entscheidet, ob das Titelbild hochgeladen oder nur am Geraet abgelegt wird.
+  const [storageMode, setStorageMode] = useState<string | null>(null);
   // Frisch aufgenommenes Foto, das noch durch den Zuschnitt geht.
   const [zuschnittUri, setZuschnittUri] = useState<string | null>(null);
   const [aiGeneratedImageUrl, setAiGeneratedImageUrl] = useState<string | null>(null);
@@ -87,8 +90,9 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
       // Ordner sind hier nur "nice to have" - schlaegt das Laden fehl,
       // bleibt die Auswahl einfach leer, das Speichern selbst funktioniert trotzdem
     });
-    api.get<{ default_servings: number }>('/preferences/').then((prefs) => {
+    api.get<{ default_servings: number; storage_mode: string | null }>('/preferences/').then((prefs) => {
       setServings(String(prefs.default_servings));
+      setStorageMode(prefs.storage_mode ?? null);
     }).catch(() => {
       // Vorlage konnte nicht geladen werden - Feld bleibt einfach leer
     });
@@ -242,21 +246,17 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
       // wer es angefordert hat, will es auch sehen.
       let coverImageUrl: string | null = aiGeneratedImageUrl;
       if (!coverImageUrl && imageUri) {
-        const fileName = imageUri.split('/').pop() ?? 'foto.jpg';
-        const extension = fileName.split('.').pop()?.toLowerCase();
-        const mimeType = extension === 'png' ? 'image/png' : 'image/jpeg';
         try {
-          const uploadResult = await api.uploadImage('/images/upload', imageUri, fileName, mimeType, {
-            folder_name: folders.find((f) => f.id === selectedFolderId)?.name ?? '',
-            recipe_title: title.trim(),
-          });
+          // Bei "nur lokal" bleibt das Bild am Geraet, sonst geht es wie
+          // bisher zum Server bzw. in die verbundene Cloud.
+          const uploadResult = await titelbildAblegen(imageUri, storageMode);
           coverImageUrl = uploadResult.url;
-          if (uploadResult.storage_warning) {
+          if (uploadResult.warnung) {
             // Fallback-Logik im Backend (storage-architektur-standard.md):
             // Drittanbieter-Upload ist fehlgeschlagen, Bild liegt stattdessen
             // in der Cloud - Nutzer soll das sichtbar erfahren, nicht unbemerkt
             // woanders landen als gewaehlt.
-            Alert.alert(t('erfassen.hinweis'), uploadResult.storage_warning);
+            Alert.alert(t('erfassen.hinweis'), uploadResult.warnung);
           }
         } catch (uploadErr) {
           // Bild-Upload-Fehler soll das Speichern des Rezepts selbst nicht

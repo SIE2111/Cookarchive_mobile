@@ -588,7 +588,20 @@
     "anlegen": "Anlegen",
     "trennen": "Trennen",
     "reaktivierenFehlgeschlagen": "Reaktivieren fehlgeschlagen",
-    "trennenFehlgeschlagen": "Trennen fehlgeschlagen"
+    "trennenFehlgeschlagen": "Trennen fehlgeschlagen",
+    "nasTitel": "NAS (WebDAV)",
+    "nasHinweis": "Das NAS muss aus dem Internet erreichbar sein – eine Adresse im Heimnetz (192.168.…) kann unser Server nicht erreichen. Bei Synology, QNAP, TrueNAS und Nextcloud heißt die Einstellung „WebDAV\".",
+    "nasAdresse": "Adresse (https://…)",
+    "nasBenutzer": "Benutzername",
+    "nasPasswort": "Passwort",
+    "nasOrdner": "Ordner (Vorgabe: MeinKochbuch)",
+    "nasPruefen": "Verbindung prüfen",
+    "nasSpeichern": "Verbinden",
+    "nasTrennen": "Trennen",
+    "nasVerbunden": "Verbunden mit {adresse}",
+    "nasPasswortBleibt": "Passwort leer lassen, um das gespeicherte zu behalten.",
+    "nasGeprueft": "Verbindung steht",
+    "nasFehler": "Verbindung fehlgeschlagen"
   },
   "uebersetzung": {
     "angebotTitel": "Dieses Rezept ist auf {sprache} verfasst.",

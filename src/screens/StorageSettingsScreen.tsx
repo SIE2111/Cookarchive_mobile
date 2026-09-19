@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert, ScrollView, Linking } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert, ScrollView, Linking, TextInput } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
@@ -16,9 +16,20 @@ interface Preferences {
   drittanbieter_provider: string | null;
 }
 
+// Angeboten wird nur, was auch wirklich funktioniert.
+//
+// 'lokal' und 'nas' standen hier, ohne dass dahinter Code lag: Beide
+// verhielten sich exakt wie 'eigene_cloud'. Der Untertitel bei 'lokal'
+// versprach sogar "Verbleibt ausschliesslich auf diesem Geraet" - das
+// war schlicht unwahr, und vor einer Veroeffentlichung ist so ein Satz
+// nicht nur ein Schoenheitsfehler.
+//
+// Der Unterbau fuer eine lokale Kopie ist gebaut (src/utils/titelbild.ts
+// legt Bilder bei storage_mode 'lokal' im Geraeteverzeichnis ab, nach
+// dem Vorbild von HomeArchive). Angeboten wird die Wahl erst, wenn auch
+// das Rezept-PDF diesen Weg geht - vorher waere es ein halbes
+// Versprechen.
 const STORAGE_OPTIONS: { key: StorageMode; title: string; subtitle: string; icon: keyof typeof MaterialCommunityIcons.glyphMap }[] = [
-  { key: 'lokal', title: 'sonstiges.speicherNurLokal', subtitle: 'sonstiges.speicherNurLokalText', icon: 'folder-outline' },
-  { key: 'nas', title: 'NAS', subtitle: 'Deine Rezepte, deine Daten – nur für die Anmeldung wird unser Server kontaktiert.', icon: 'nas' },
   { key: 'eigene_cloud', title: 'Eigene Cloud', subtitle: 'sonstiges.speicherEigeneCloudText', icon: 'cloud-outline' },
 ];
 
@@ -59,6 +70,67 @@ export default function StorageSettingsScreen({ navigation }: Props) {
     const unsubscribe = navigation.addListener('focus', loadPrefs);
     return unsubscribe;
   }, [navigation]);
+
+  // --- NAS ------------------------------------------------------------
+  const [nas, setNas] = useState<{ eingerichtet: boolean; url?: string | null; user?: string | null; folder?: string | null } | null>(null);
+  const [nasUrl, setNasUrl] = useState('');
+  const [nasUser, setNasUser] = useState('');
+  const [nasPasswort, setNasPasswort] = useState('');
+  const [nasOrdner, setNasOrdner] = useState('');
+  const [nasLaeuft, setNasLaeuft] = useState(false);
+
+  useEffect(() => {
+    api.get<{ eingerichtet: boolean; url?: string | null; user?: string | null; folder?: string | null }>('/nas/')
+      .then((res) => {
+        setNas(res);
+        setNasUrl(res.url ?? '');
+        setNasUser(res.user ?? '');
+        setNasOrdner(res.folder ?? '');
+      })
+      .catch(() => setNas({ eingerichtet: false }));
+  }, []);
+
+  const nasAufruf = async (was: 'test' | 'speichern') => {
+    setNasLaeuft(true);
+    try {
+      const koerper = {
+        url: nasUrl.trim(),
+        user: nasUser.trim(),
+        password: nasPasswort || undefined,
+        folder: nasOrdner.trim() || undefined,
+      };
+      if (was === 'test') {
+        await api.post('/nas/test', koerper);
+        Alert.alert(t('sonstiges.nasGeprueft'), '');
+      } else {
+        const res = await api.put<{ eingerichtet: boolean; url: string; user: string; folder: string }>('/nas/', koerper);
+        setNas(res);
+        // Das Passwort wird nach dem Speichern nicht mehr gebraucht und
+        // bleibt nicht im Formular stehen.
+        setNasPasswort('');
+        setPrefs((alt) => (alt ? { ...alt, storage_mode: 'nas' } : alt));
+      }
+    } catch (err) {
+      Alert.alert(t('sonstiges.nasFehler'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
+    } finally {
+      setNasLaeuft(false);
+    }
+  };
+
+  const nasTrennen = async () => {
+    setNasLaeuft(true);
+    try {
+      await api.delete('/nas/');
+      setNas({ eingerichtet: false });
+      setNasPasswort('');
+      const aktualisiert = await api.get<Preferences>('/preferences/');
+      setPrefs(aktualisiert);
+    } catch (err) {
+      Alert.alert(t('sonstiges.nasFehler'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
+    } finally {
+      setNasLaeuft(false);
+    }
+  };
 
   const handleConnectProvider = async (providerKey: string, apiPrefix: string) => {
     setConnectingProvider(providerKey);
@@ -141,8 +213,8 @@ export default function StorageSettingsScreen({ navigation }: Props) {
           >
             <MaterialCommunityIcons name={option.icon} size={20} color={colors.muted} style={styles.rowIcon} />
             <View style={{ flex: 1 }}>
-              <Text style={[styles.rowTitle, { color: colors.text }]}>{option.title}</Text>
-              <Text style={[styles.rowSubtitle, { color: colors.muted }]}>{option.subtitle}</Text>
+              <Text style={[styles.rowTitle, { color: colors.text }]}>{t(option.title)}</Text>
+              <Text style={[styles.rowSubtitle, { color: colors.muted }]}>{t(option.subtitle)}</Text>
             </View>
             {savingKey === 'storage_mode' && isSelected ? (
               <ActivityIndicator color={colors.muted} />
@@ -156,6 +228,68 @@ export default function StorageSettingsScreen({ navigation }: Props) {
           </Pressable>
         );
       })}
+
+      {prefs.storage_mode === 'nas' && (
+        <View style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md, flexDirection: 'column', alignItems: 'stretch' }]}>
+          {nas?.eingerichtet && (
+            <Text style={{ color: colors.muted, fontSize: 12.5, marginBottom: 10 }}>
+              {t('sonstiges.nasVerbunden', { adresse: nas.url ?? '' })}
+            </Text>
+          )}
+          <TextInput
+            style={[styles.eingabe, { backgroundColor: colors.bg, color: colors.text, borderRadius: radius.sm }]}
+            placeholder={t('sonstiges.nasAdresse')} placeholderTextColor={colors.muted}
+            autoCapitalize="none" autoCorrect={false} keyboardType="url"
+            value={nasUrl} onChangeText={setNasUrl}
+          />
+          <TextInput
+            style={[styles.eingabe, { backgroundColor: colors.bg, color: colors.text, borderRadius: radius.sm }]}
+            placeholder={t('sonstiges.nasBenutzer')} placeholderTextColor={colors.muted}
+            autoCapitalize="none" autoCorrect={false}
+            value={nasUser} onChangeText={setNasUser}
+          />
+          <TextInput
+            style={[styles.eingabe, { backgroundColor: colors.bg, color: colors.text, borderRadius: radius.sm }]}
+            placeholder={t('sonstiges.nasPasswort')} placeholderTextColor={colors.muted}
+            secureTextEntry autoCapitalize="none"
+            value={nasPasswort} onChangeText={setNasPasswort}
+          />
+          {nas?.eingerichtet && (
+            <Text style={{ color: colors.muted, fontSize: 11.5, marginBottom: 8 }}>
+              {t('sonstiges.nasPasswortBleibt')}
+            </Text>
+          )}
+          <TextInput
+            style={[styles.eingabe, { backgroundColor: colors.bg, color: colors.text, borderRadius: radius.sm }]}
+            placeholder={t('sonstiges.nasOrdner')} placeholderTextColor={colors.muted}
+            autoCapitalize="none" autoCorrect={false}
+            value={nasOrdner} onChangeText={setNasOrdner}
+          />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 }}>
+            <Pressable
+              onPress={() => nasAufruf('test')} disabled={nasLaeuft}
+              style={{ minHeight: 44, paddingHorizontal: 12, justifyContent: 'center' }}
+            >
+              <Text style={{ color: gradient[0], fontSize: 13.5, fontWeight: '600' }}>{t('sonstiges.nasPruefen')}</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => nasAufruf('speichern')} disabled={nasLaeuft}
+              style={{ minHeight: 44, paddingHorizontal: 18, justifyContent: 'center', backgroundColor: gradient[0], borderRadius: radius.sm }}
+            >
+              {nasLaeuft ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>{t('sonstiges.nasSpeichern')}</Text>
+              )}
+            </Pressable>
+            {nas?.eingerichtet && (
+              <Pressable onPress={nasTrennen} disabled={nasLaeuft} style={{ minHeight: 44, justifyContent: 'center', marginLeft: 'auto' }}>
+                <Text style={{ color: '#DC2626', fontSize: 13.5 }}>{t('sonstiges.nasTrennen')}</Text>
+              </Pressable>
+            )}
+          </View>
+        </View>
+      )}
 
       {CLOUD_PROVIDERS.map((p) => {
         const hasTokens = prefs.drittanbieter_provider === p.key;
@@ -208,6 +342,7 @@ export default function StorageSettingsScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
+  eingabe: { minHeight: 44, paddingHorizontal: 12, fontSize: 14, marginBottom: 8 },
   container: { padding: 18, paddingBottom: 40 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', padding: 14, marginBottom: 8 },
