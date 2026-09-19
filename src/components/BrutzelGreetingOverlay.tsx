@@ -108,8 +108,8 @@ export default function BrutzelGreetingOverlay({ name, onDismiss }: Props) {
           Kochvorgangs vorkam -, steht hier Brutzel statt einer Luecke.
           Spielt das Video, verdeckt es das Bild vollstaendig. */}
       <View style={styles.videoBox}>
-        <Image source={require('../../assets/brutzel-full.png')} style={styles.videoFallback} resizeMode="contain" />
-        <VideoView player={player} style={styles.video} contentFit="contain" nativeControls={false} />
+        <Image source={require('../../assets/brutzel-full.png')} style={styles.videoFallback} resizeMode="cover" />
+        <VideoView player={player} style={styles.video} contentFit="cover" nativeControls={false} />
       </View>
 
       {showText && (
@@ -133,7 +133,11 @@ const styles = StyleSheet.create({
   brandTextBlock: { flexShrink: 1 },
   brandTitle: { fontSize: 17, fontWeight: '700' },
   brandClaim: { fontSize: 11, marginTop: 1 },
-  videoBox: { width: '100%', height: 260, marginBottom: 20 },
+  // 'cover' statt 'contain' bei beiden: Das Standbild ist hochformatig, das
+  // Video breit - eingepasst blieben Raender frei und das Bild schaute unter
+  // dem Video hervor. Randlos fuellend verdeckt das Video es vollstaendig.
+  // overflow verhindert, dass der beschnittene Teil ueber die Ecken laeuft.
+  videoBox: { width: '100%', height: 300, marginBottom: 20, borderRadius: 16, overflow: 'hidden' },
   videoFallback: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' },
   video: { width: '100%', height: '100%' },
   title: { fontSize: 22, fontWeight: '700', marginBottom: 6 },
