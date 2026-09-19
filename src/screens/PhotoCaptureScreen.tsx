@@ -41,6 +41,7 @@ interface ScanPhotoResponse {
   ingredients: ScannedIngredient[];
   steps: ScannedStep[];
   low_confidence_note: string | null;
+  notes?: string | null;
   tags?: string[] | null;
   folder_suggestion?: string | null;
 }
@@ -67,6 +68,10 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
   const [folders, setFolders] = useState<{ id: string; name: string }[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [tags, setTags] = useState<string[]>([]);
+  // Anmerkungen aus der Vorlage: Wahlmoeglichkeiten ("wahlweise Pute"),
+  // Backangaben, Bemerkungen der schreibenden Person. Die passen in keine
+  // der beiden Listen und gingen beim Uebertragen bisher verloren.
+  const [notiz, setNotiz] = useState('');
   // Frisch aufgenommenes Foto, das noch durch den Zuschnitt geht.
   const [zuschnittUri, setZuschnittUri] = useState<string | null>(null);
   const [aiGeneratedImageUrl, setAiGeneratedImageUrl] = useState<string | null>(null);
@@ -142,6 +147,7 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
         if (treffer) setSelectedFolderId(treffer.id);
       }
       if (typedResult.tags?.length) setTags(typedResult.tags);
+      if (typedResult.notes?.trim()) setNotiz(typedResult.notes.trim());
     } catch (err) {
       // Statt eines generischen Platzhaltertexts die tatsaechliche Ursache
       // zeigen - auch bei Netzwerk-/Timeout-Fehlern (kein ApiError), die
@@ -238,7 +244,7 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
         }
       }
 
-      const saved = await api.post<{ id: string; title: string }>('/recipes/', { title: title.trim(), servings: servings ? Number(servings) : null, ingredients, steps, cover_image_url: coverImageUrl, folder_id: selectedFolderId, tags, source_type: 'photo_scan' });
+      const saved = await api.post<{ id: string; title: string }>('/recipes/', { title: title.trim(), servings: servings ? Number(servings) : null, ingredients, steps, cover_image_url: coverImageUrl, folder_id: selectedFolderId, tags, personal_note: notiz.trim() || null, source_type: 'photo_scan' });
       askWhatNext(navigation, { id: saved.id, title: saved.title }, cookOnly);
     } catch (err) {
       Alert.alert(t('erfassen.speichernFehlgeschlagen'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
@@ -431,6 +437,24 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
             })}
           </View>
         </>
+      )}
+
+      <Text style={[styles.label, { color: colors.muted, marginTop: 16 }]}>{t('erfassen.notiz')}</Text>
+      <TextInput
+        style={[styles.input, {
+          backgroundColor: colors.card, color: colors.text, borderRadius: radius.md,
+          height: 88, paddingTop: 12, textAlignVertical: 'top',
+        }]}
+        multiline
+        placeholder={t('erfassen.notizPlatzhalter')}
+        placeholderTextColor={colors.muted}
+        value={notiz}
+        onChangeText={setNotiz}
+      />
+      {!!result?.notes && (
+        <Text style={{ color: colors.muted, fontSize: 11.5, marginTop: 4 }}>
+          {t('erfassen.notizAusVorlage')}
+        </Text>
       )}
 
       <Text style={[styles.label, { color: colors.muted, marginTop: 16 }]}>{t('erfassen.kategorien')}</Text>

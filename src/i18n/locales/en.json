@@ -418,7 +418,10 @@
     "zuschnittHinweis": "Drag the frame to pick a section – useful when two recipes share one page.",
     "zuschneiden": "Crop",
     "ganzesBild": "Whole image",
-    "bildLaeuftNoch": "Brutzel is still drawing – almost done"
+    "bildLaeuftNoch": "Brutzel is still drawing – almost done",
+    "notiz": "Note",
+    "notizPlatzhalter": "Remarks about the recipe (optional)",
+    "notizAusVorlage": "Taken from your source – you can edit or delete it."
   },
   "haushalt": {
     "nichtGeladen": "The household could not be loaded",

@@ -418,7 +418,10 @@
     "zuschnittHinweis": "Rahmen ziehen, um einen Ausschnitt zu wählen – etwa wenn zwei Rezepte auf einer Seite stehen.",
     "zuschneiden": "Zuschneiden",
     "ganzesBild": "Ganzes Bild",
-    "bildLaeuftNoch": "Brutzel malt noch – gleich fertig"
+    "bildLaeuftNoch": "Brutzel malt noch – gleich fertig",
+    "notiz": "Notiz",
+    "notizPlatzhalter": "Anmerkungen zum Rezept (optional)",
+    "notizAusVorlage": "Aus der Vorlage übernommen – du kannst sie ändern oder löschen."
   },
   "haushalt": {
     "nichtGeladen": "Haushalt konnte nicht geladen werden",
