@@ -96,9 +96,18 @@ export default function BrutzelGreetingOverlay({ name, onDismiss }: Props) {
           <Text style={[styles.brandTitle, { color: colors.text }]} numberOfLines={1}>
             Mein Kochbuch
           </Text>
-          <Text style={[styles.brandClaim, { color: colors.muted }]} numberOfLines={1}>
-            powered by HomeArchive AI
-          </Text>
+          {/* "AI" sitzt in einem eigenen Kaestchen statt als verschachtelter
+              Text mit Hintergrundfarbe: Innenabstand wirkt bei verschachteltem
+              Text auf iOS nicht zuverlaessig, das Kaestchen waere dort eng am
+              Buchstaben geklebt. */}
+          <View style={styles.brandClaimRow}>
+            <Text style={[styles.brandClaim, { color: colors.muted }]} numberOfLines={1}>
+              powered by HomeArchive
+            </Text>
+            <View style={[styles.brandBadge, { backgroundColor: gradient[0] }]}>
+              <Text style={styles.brandBadgeText}>AI</Text>
+            </View>
+          </View>
         </View>
       </View>
 
@@ -129,7 +138,10 @@ const styles = StyleSheet.create({
   // schrumpft statt ueberzulaufen, wenn der Platz eng wird
   brandTextBlock: { flexShrink: 1 },
   brandTitle: { fontSize: 17, fontWeight: '700' },
-  brandClaim: { fontSize: 11, marginTop: 1 },
+  brandClaimRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
+  brandClaim: { fontSize: 11 },
+  brandBadge: { marginLeft: 4, paddingHorizontal: 4, paddingVertical: 1, borderRadius: 3 },
+  brandBadgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
   // 'cover' statt 'contain' bei beiden: Das Standbild ist hochformatig, das
   // Video breit - eingepasst blieben Raender frei und das Bild schaute unter
   // dem Video hervor. Randlos fuellend verdeckt das Video es vollstaendig.
