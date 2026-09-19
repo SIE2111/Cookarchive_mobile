@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Refre
 import { LinearGradient } from 'expo-linear-gradient';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
+import { useUebersetzung } from '../i18n';
 import ScanFab from '../components/ScanFab';
 import IncomingSharesCard from '../components/IncomingSharesCard';
 import PublishToPoolButton from '../components/PublishToPoolButton';
@@ -40,6 +41,7 @@ let hasShownGreetingThisSession = false;
 
 export default function DashboardScreen({ navigation }: Props) {
   const { colors, gradient, radius } = useTheme();
+  const { t } = useUebersetzung();
   const { session } = useAuth();
   const [recipes, setRecipes] = useState<RecipeSummary[]>([]);
   const [folders, setFolders] = useState<{ id: string; name: string }[]>([]);
@@ -96,7 +98,7 @@ export default function DashboardScreen({ navigation }: Props) {
       setFolders(folderData);
       setError(null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : 'Konnte nicht geladen werden');
+      setError(err instanceof ApiError ? err.detail : t('dashboard.nichtGeladen'));
     }
   }, []);
 
@@ -215,15 +217,15 @@ export default function DashboardScreen({ navigation }: Props) {
       <View style={styles.statsRow}>
         <View style={[styles.statCard, { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.cardBorder }]}>
           <Text style={[styles.statValue, { color: colors.text }]}>{recipes.length}</Text>
-          <Text style={[styles.statLabel, { color: colors.muted }]}>Rezepte</Text>
+          <Text style={[styles.statLabel, { color: colors.muted }]}>{t('dashboard.rezepte')}</Text>
         </View>
         <View style={[styles.statCard, { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.cardBorder }]}>
           <Text style={[styles.statValue, { color: colors.text }]}>{stats?.cooked_this_week ?? '–'}</Text>
-          <Text style={[styles.statLabel, { color: colors.muted }]}>Diese Woche{'\n'}gekocht</Text>
+          <Text style={[styles.statLabel, { color: colors.muted }]}>{t('dashboard.dieseWocheGekocht')}</Text>
         </View>
         <View style={[styles.statCard, { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.cardBorder }]}>
           <Text style={[styles.statValue, { color: colors.text }]}>{stats?.cooked_total ?? '–'}</Text>
-          <Text style={[styles.statLabel, { color: colors.muted }]}>Insgesamt{'\n'}gekocht</Text>
+          <Text style={[styles.statLabel, { color: colors.muted }]}>{t('dashboard.insgesamtGekocht')}</Text>
         </View>
       </View>
 
@@ -236,7 +238,7 @@ export default function DashboardScreen({ navigation }: Props) {
           style={[styles.dailyCard, { borderRadius: radius.lg }]}
         >
           <View style={[styles.dailyBadge, { backgroundColor: gradient[0] }]}>
-            <Text style={styles.dailyBadgeText}>REZEPT DES TAGES</Text>
+            <Text style={styles.dailyBadgeText}>{t('dashboard.rezeptDesTages')}</Text>
           </View>
           {recipeOfTheDay.cover_image_url ? (
             <Image source={{ uri: recipeOfTheDay.cover_image_url }} style={styles.dailyImage} />
@@ -249,7 +251,7 @@ export default function DashboardScreen({ navigation }: Props) {
             </Text>
             <Text style={[styles.dailyMeta, { color: colors.muted }]}>
               {recipeOfTheDay.prep_time_minutes ? `⏱ ${recipeOfTheDay.prep_time_minutes} Min.` : ''}
-              {recipeOfTheDay.servings ? `  ·  🍽 ${recipeOfTheDay.servings} Port.` : ''}
+              {recipeOfTheDay.servings ? `  ·  🍽 ${recipeOfTheDay.servings} ${t('dashboard.portionenKurz')}` : ''}
             </Text>
           </View>
         </Pressable>
@@ -262,14 +264,14 @@ export default function DashboardScreen({ navigation }: Props) {
           style={[styles.actionButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}
         >
           <MaterialCommunityIcons name="cart-outline" size={18} color="#fff" />
-          <Text style={styles.actionText}>Einkaufszettel</Text>
+          <Text style={styles.actionText}>{t('dashboard.einkaufszettel')}</Text>
         </Pressable>
         <Pressable
           onPress={() => navigation.navigate('WeeklyPlan')}
           style={[styles.actionButton, { backgroundColor: colors.card, borderRadius: radius.md }]}
         >
           <MaterialCommunityIcons name="calendar-week-outline" size={18} color={colors.text} />
-          <Text style={[styles.actionText, { color: colors.text }]}>Wochenplaner</Text>
+          <Text style={[styles.actionText, { color: colors.text }]}>{t('dashboard.wochenplaner')}</Text>
         </Pressable>
       </View>
 
@@ -280,7 +282,7 @@ export default function DashboardScreen({ navigation }: Props) {
 
       {/* Kategorien - aus den tatsaechlich vorkommenden Tags abgeleitet, plus
           eine feste Lieblingsgerichte-Kachel, immer sichtbar */}
-      <Text style={[styles.sectionLabel, { color: colors.text }]}>Kategorien</Text>
+      <Text style={[styles.sectionLabel, { color: colors.text }]}>{t('dashboard.kategorien')}</Text>
       <View
         style={[
           styles.categoriesClip,
@@ -294,7 +296,7 @@ export default function DashboardScreen({ navigation }: Props) {
             style={[styles.categoryChip, { backgroundColor: colors.card, borderRadius: radius.sm }]}
           >
             <MaterialCommunityIcons name="heart" size={13} color={gradient[0]} style={{ marginRight: 5 }} />
-            <Text style={[styles.categoryText, { color: colors.text }]}>Favoriten</Text>
+            <Text style={[styles.categoryText, { color: colors.text }]}>{t('dashboard.favoriten')}</Text>
           </Pressable>
           {categories.map((tag) => (
             <Pressable
@@ -310,14 +312,14 @@ export default function DashboardScreen({ navigation }: Props) {
       {categoriesOverflow && (
         <Pressable onPress={() => setCategoriesExpanded((prev) => !prev)} style={styles.categoriesToggle}>
           <Text style={[styles.categoriesToggleText, { color: gradient[0] }]}>
-            {categoriesExpanded ? 'Weniger anzeigen ▲' : 'Mehr anzeigen ▼'}
+            {categoriesExpanded ? t('dashboard.wenigerAnzeigen') : t('dashboard.mehrAnzeigen')}
           </Text>
         </Pressable>
       )}
 
       {/* Zuletzt zubereitet (nur Hauptgerichte, keine mitgekochten Beilagen -
           siehe CookModeScreen.tsx, ruft mark-cooked nur fuer recipeIds[0] auf) */}
-      <Text style={[styles.sectionLabel, { color: colors.text }]}>Zuletzt zubereitet</Text>
+      <Text style={[styles.sectionLabel, { color: colors.text }]}>{t('dashboard.zuletztZubereitet')}</Text>
       {recentlyCooked.length === 0 ? (
         <Text style={[styles.emptyText, { color: colors.muted }]}>
           Noch nichts zubereitet – starte die Zubereitung eines Rezepts, dann erscheint es hier.
@@ -340,7 +342,7 @@ export default function DashboardScreen({ navigation }: Props) {
                   {r.title}
                 </Text>
                 <Text style={[styles.recentMeta, { color: colors.muted }]}>
-                  {(r.tags && r.tags[0]) || 'Rezept'}
+                  {(r.tags && r.tags[0]) || t('dashboard.rezept')}
                   {r.prep_time_minutes ? ` · ${r.prep_time_minutes} Min.` : ''}
                 </Text>
               </View>

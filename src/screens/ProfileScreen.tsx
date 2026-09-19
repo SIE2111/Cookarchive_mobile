@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, Switch, Pressable, StyleSheet, ActivityIndicator, Alert, ScrollView, TextInput, Modal, Linking } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme, type BackgroundStyle, type AccentColor } from '../theme/ThemeContext';
+import { useUebersetzung } from '../i18n';
 import { useAuth } from '../context/AuthContext';
 import { useServerSync } from '../context/ServerSyncContext';
 import { api, ApiError } from '../api/client';
@@ -45,36 +46,39 @@ const HILFE_URL = 'https://www.homearchive.at/meinkochbuch/hilfe';
 const AGB_URL = 'https://www.homearchive.at/meinkochbuch/agb';
 const DATENSCHUTZ_URL = 'https://www.homearchive.at/meinkochbuch/datenschutz';
 
+// Schluessel statt fertiger Texte: Die Tabellen stehen auf Modulebene und
+// werden einmal beim Laden ausgewertet - ein dort eingesetzter Text waere
+// fuer immer in der Sprache des ersten Starts.
 const STORAGE_MODE_LABELS: Record<string, string> = {
-  lokal: 'Nur lokal – bleibt auf diesem Gerät',
-  nas: 'NAS',
-  eigene_cloud: 'Eigene Cloud',
-  drittanbieter_cloud: 'Google Drive / OneDrive / Dropbox',
+  lokal: 'profil.speicherLokal',
+  nas: 'profil.speicherNas',
+  eigene_cloud: 'profil.speicherEigeneCloud',
+  drittanbieter_cloud: 'profil.speicherDrittanbieter',
 };
 
 const HAUBEN_OPTIONS: { key: HaubenLevel; title: string; hats: number }[] = [
-  { key: 'anfaenger', title: 'Anfänger', hats: 1 },
-  { key: 'fortgeschritten', title: 'Fortgeschritten', hats: 2 },
-  { key: 'profi', title: 'Profi', hats: 3 },
+  { key: 'anfaenger', title: 'profil.haubenAnfaenger', hats: 1 },
+  { key: 'fortgeschritten', title: 'profil.haubenFortgeschritten', hats: 2 },
+  { key: 'profi', title: 'profil.haubenProfi', hats: 3 },
 ];
 
 const BACKGROUND_OPTIONS: { key: BackgroundStyle; title: string }[] = [
-  { key: 'warm-hell', title: 'Hell (warm)' },
-  { key: 'kuehl-hell', title: 'Hell (kühl)' },
-  { key: 'dunkel', title: 'Dunkel' },
+  { key: 'warm-hell', title: 'profil.hintergrundWarm' },
+  { key: 'kuehl-hell', title: 'profil.hintergrundKuehl' },
+  { key: 'dunkel', title: 'profil.hintergrundDunkel' },
 ];
 
 const ACCENT_OPTIONS: { key: AccentColor; title: string; color: string }[] = [
-  { key: 'orange', title: 'Orange', color: '#EA580C' },
-  { key: 'gruen', title: 'Grün', color: '#16A34A' },
-  { key: 'tuerkis', title: 'Türkis', color: '#0D9488' },
-  { key: 'pink', title: 'Pink', color: '#DB2777' },
-  { key: 'gelb', title: 'Gelb', color: '#EAB308' },
+  { key: 'orange', title: 'profil.farbeOrange', color: '#EA580C' },
+  { key: 'gruen', title: 'profil.farbeGruen', color: '#16A34A' },
+  { key: 'tuerkis', title: 'profil.farbeTuerkis', color: '#0D9488' },
+  { key: 'pink', title: 'profil.farbePink', color: '#DB2777' },
+  { key: 'gelb', title: 'profil.farbeGelb', color: '#EAB308' },
 ];
 
 const ROWS: { key: PreferenceKey; title: string; subtitle: string; lockedWhen?: (p: Preferences) => boolean }[] = [
-  { key: 'show_brutzel', title: 'Brutzel anzeigen', subtitle: 'Tipps & Begrüßungen im Kochbuch' },
-  { key: 'large_text', title: 'Große Schrift', subtitle: 'Größerer Text in der ganzen App' },
+  { key: 'show_brutzel', title: 'profil.brutzelAnzeigen', subtitle: 'profil.brutzelAnzeigenSub' },
+  { key: 'large_text', title: 'profil.grosseSchrift', subtitle: 'profil.grosseSchriftSub' },
   // 'auto_read_steps' steht bewusst NICHT mehr hier, sondern im
   // Unterschirm 'Vorlesen & Stimme' - zusammen mit der Stimmenauswahl,
   // zu der er gehoert. An zwei Stellen derselbe Schalter waere eine
@@ -83,16 +87,17 @@ const ROWS: { key: PreferenceKey; title: string; subtitle: string; lockedWhen?: 
   // jeden bewegten Auftritt von Brutzel - auch die Feier am Ende des
   // Kochens. Der Feldname in der Datenbank bleibt show_greeting_animation,
   // eine Spaltenumbenennung waere reines Risiko ohne Gewinn.
-  { key: 'show_greeting_animation', title: 'Brutzel-Animation', subtitle: 'Bewegte Auftritte: Begrüßung und Fertigstellung. Aus = Brutzel bleibt, steht aber still' },
+  { key: 'show_greeting_animation', title: 'profil.brutzelAnimation', subtitle: 'profil.brutzelAnimationSub' },
   {
     key: 'server_sync_enabled',
-    title: 'Server-Sync',
-    subtitle: 'Nötig für den Community-Pool',
+    title: 'profil.serverSync',
+    subtitle: 'profil.serverSyncSub',
   },
 ];
 
 export default function ProfileScreen({ navigation }: Props) {
   const { colors, gradient, radius, theme, setTheme } = useTheme();
+  const { t } = useUebersetzung();
   const { signOut, session } = useAuth();
   const { refresh: refreshServerSync } = useServerSync();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -106,7 +111,7 @@ export default function ProfileScreen({ navigation }: Props) {
     api
       .get<Preferences>('/preferences/')
       .then(setPrefs)
-      .catch((err) => setError(err instanceof ApiError ? err.detail : 'Einstellungen konnten nicht geladen werden'));
+      .catch((err) => setError(err instanceof ApiError ? err.detail : t('profil.einstellungenNichtGeladen')));
   };
 
   // Bei jeder Rueckkehr auf diesen Screen neu laden - nach der Anbieter-
@@ -136,7 +141,7 @@ export default function ProfileScreen({ navigation }: Props) {
       setPrefs(updated);
     } catch (err) {
       setPrefs(previous);
-      Alert.alert('Konnte nicht gespeichert werden', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+      Alert.alert(t('profil.nichtGespeichert'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
     } finally {
       setSavingKey(null);
     }
@@ -152,7 +157,7 @@ export default function ProfileScreen({ navigation }: Props) {
       setPrefs(updated);
     } catch (err) {
       setPrefs(previous);
-      Alert.alert('Konnte nicht gespeichert werden', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+      Alert.alert(t('profil.nichtGespeichert'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
     } finally {
       setSavingKey(null);
     }
@@ -167,7 +172,7 @@ export default function ProfileScreen({ navigation }: Props) {
     if (!prefs) return;
     const value = Number(servingsInput);
     if (!value || value < 1 || value > 20) {
-      Alert.alert('Ungültiger Wert', 'Bitte eine Zahl zwischen 1 und 20 eingeben.');
+      Alert.alert(t('profil.ungueltigerWert'), t('profil.zahlZwischen'));
       setServingsInput(String(prefs.default_servings));
       return;
     }
@@ -181,7 +186,7 @@ export default function ProfileScreen({ navigation }: Props) {
     } catch (err) {
       setPrefs(previous);
       setServingsInput(String(previous.default_servings));
-      Alert.alert('Konnte nicht gespeichert werden', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+      Alert.alert(t('profil.nichtGespeichert'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
     } finally {
       setSavingKey(null);
     }
@@ -196,7 +201,7 @@ export default function ProfileScreen({ navigation }: Props) {
     if (!prefs) return;
     const trimmed = nameInput.trim();
     if (!trimmed) {
-      Alert.alert('Name fehlt', 'Bitte einen Namen eingeben.');
+      Alert.alert(t('profil.nameFehlt'), t('profil.bitteName'));
       setNameInput(prefs.display_name ?? '');
       return;
     }
@@ -210,7 +215,7 @@ export default function ProfileScreen({ navigation }: Props) {
     } catch (err) {
       setPrefs(previous);
       setNameInput(previous.display_name ?? '');
-      Alert.alert('Konnte nicht gespeichert werden', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+      Alert.alert(t('profil.nichtGespeichert'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
     } finally {
       setSavingKey(null);
     }
@@ -244,7 +249,7 @@ export default function ProfileScreen({ navigation }: Props) {
   // NUR auf iOS, unter Android passiert damit gar nichts.
   const handleDeleteAccount = async () => {
     if (deleteConfirmText.trim().toLowerCase() !== accountEmail.toLowerCase()) {
-      Alert.alert('Nicht gelöscht', 'Die eingegebene Adresse stimmt nicht überein.');
+      Alert.alert(t('profil.nichtGeloescht'), 'Die eingegebene Adresse stimmt nicht überein.');
       return;
     }
     setIsDeleting(true);
@@ -255,8 +260,8 @@ export default function ProfileScreen({ navigation }: Props) {
       // auf den Login-Screen, das ist Rueckmeldung genug.
       await signOut();
     } catch (err) {
-      const message = err instanceof ApiError ? err.detail : 'Löschen fehlgeschlagen';
-      Alert.alert('Löschen fehlgeschlagen', message);
+      const message = err instanceof ApiError ? err.detail : t('profil.loeschenFehlgeschlagen');
+      Alert.alert(t('profil.loeschenFehlgeschlagen'), message);
     } finally {
       setIsDeleting(false);
     }
@@ -266,7 +271,7 @@ export default function ProfileScreen({ navigation }: Props) {
     <ScrollView
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag" style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
-      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 4 }]}>NAME</Text>
+      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 4 }]}>{t('profil.name')}</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 }}>
         <TextInput
           style={[
@@ -290,7 +295,7 @@ export default function ProfileScreen({ navigation }: Props) {
             color={prefs.household_role === 'owner' ? '#fff' : colors.muted}
           />
           <Text style={{ color: prefs.household_role === 'owner' ? '#fff' : colors.muted, fontSize: 11.5, fontWeight: '700', marginLeft: 5 }}>
-            {prefs.household_role === 'owner' ? 'Admin (Haushalt-Ersteller)' : 'Mitglied'}
+            {prefs.household_role === 'owner' ? t('profil.rolleAdmin') : t('profil.rolleMitglied')}
           </Text>
         </View>
       )}
@@ -299,11 +304,11 @@ export default function ProfileScreen({ navigation }: Props) {
         onPress={() => navigation.getParent()?.navigate('Household')}
         style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md, marginTop: 16 }]}
       >
-        <Text style={[styles.rowTitle, { color: colors.text, flex: 1 }]}>Haushalt</Text>
+        <Text style={[styles.rowTitle, { color: colors.text, flex: 1 }]}>{t('profil.haushalt')}</Text>
         <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>
       </Pressable>
 
-      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 20 }]}>STANDARD-STUFE IM KOCH-MODUS</Text>
+      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 20 }]}>{t('profil.standardStufe')}</Text>
       <View style={styles.chipsRow}>
         {HAUBEN_OPTIONS.map((option) => {
           const isSelected = prefs.default_hauben_level === option.key;
@@ -324,7 +329,7 @@ export default function ProfileScreen({ navigation }: Props) {
                     <Text key={i} style={{ fontSize: 12 }}>👨‍🍳</Text>
                   ))}
                   <Text style={{ color: isSelected ? '#fff' : colors.text, fontSize: 12, fontWeight: '600', marginLeft: 4 }}>
-                    {option.title}
+                    {t(option.title)}
                   </Text>
                 </>
               )}
@@ -336,7 +341,7 @@ export default function ProfileScreen({ navigation }: Props) {
         Wird beim Start des Koch-Modus vorausgewählt, kannst du dort jederzeit ändern.
       </Text>
 
-      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 12 }]}>STANDARD-PORTIONENZAHL</Text>
+      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 12 }]}>{t('profil.standardPortionen')}</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 }}>
         <TextInput
           style={[
@@ -355,7 +360,7 @@ export default function ProfileScreen({ navigation }: Props) {
         Wird bei neuen Rezepten und im Wochenplan vorgeschlagen, kann jederzeit angepasst werden.
       </Text>
 
-      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 12 }]}>AKZENTFARBE</Text>
+      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 12 }]}>{t('profil.akzentfarbe')}</Text>
       <View style={styles.chipsRow}>
         {ACCENT_OPTIONS.map((option) => {
           const isSelected = theme.accent === option.key;
@@ -369,13 +374,13 @@ export default function ProfileScreen({ navigation }: Props) {
               ]}
             >
               <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: isSelected ? '#fff' : option.color, marginRight: 7 }} />
-              <Text style={{ color: isSelected ? '#fff' : colors.text, fontSize: 12, fontWeight: '600' }}>{option.title}</Text>
+              <Text style={{ color: isSelected ? '#fff' : colors.text, fontSize: 12, fontWeight: '600' }}>{t(option.title)}</Text>
             </Pressable>
           );
         })}
       </View>
 
-      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 12 }]}>DARSTELLUNG (HELL/DUNKEL)</Text>
+      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 12 }]}>{t('profil.darstellungHellDunkel')}</Text>
       <View style={styles.chipsRow}>
         {BACKGROUND_OPTIONS.map((option) => {
           const isSelected = theme.background === option.key;
@@ -389,23 +394,23 @@ export default function ProfileScreen({ navigation }: Props) {
               ]}
             >
               <Text style={{ color: isSelected ? '#fff' : colors.text, fontSize: 12, fontWeight: '600' }}>
-                {option.title}
+                {t(option.title)}
               </Text>
             </Pressable>
           );
         })}
       </View>
 
-      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 20 }]}>DARSTELLUNG &amp; BEDIENUNG</Text>
+      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 20 }]}>{t('profil.darstellungBedienung')}</Text>
 
       {ROWS.map((row) => {
         const isServerSyncLocked = row.key === 'server_sync_enabled' && prefs.storage_mode === 'eigene_cloud';
         return (
           <View key={row.key} style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.rowTitle, { color: colors.text }]}>{row.title}</Text>
+              <Text style={[styles.rowTitle, { color: colors.text }]}>{t(row.title)}</Text>
               <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
-                {isServerSyncLocked ? 'Bei "Eigene Cloud" automatisch aktiv' : row.subtitle}
+                {isServerSyncLocked ? t('profil.eigeneCloudAktiv') : t(row.subtitle)}
               </Text>
             </View>
             {savingKey === row.key ? (
@@ -435,9 +440,9 @@ export default function ProfileScreen({ navigation }: Props) {
       >
         <MaterialCommunityIcons name="account-voice" size={20} color={colors.muted} style={styles.rowIcon} />
         <View style={{ flex: 1 }}>
-          <Text style={[styles.rowTitle, { color: colors.text }]}>Vorlesen & Stimme</Text>
+          <Text style={[styles.rowTitle, { color: colors.text }]}>{t('profil.vorlesenStimme')}</Text>
           <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
-            Schritte automatisch vorlesen, Brutzels Stimme aussuchen
+            {t('profil.vorlesenStimmeSub')}
           </Text>
         </View>
         <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>
@@ -449,13 +454,15 @@ export default function ProfileScreen({ navigation }: Props) {
       >
         <MaterialCommunityIcons name="cloud-outline" size={20} color={colors.muted} style={styles.rowIcon} />
         <View style={{ flex: 1 }}>
-          <Text style={[styles.rowTitle, { color: colors.text }]}>Speicherort</Text>
+          <Text style={[styles.rowTitle, { color: colors.text }]}>{t('profil.speicherort')}</Text>
           {/* Zeigt den AKTUELL gewaehlten Ort statt einer Aufzaehlung aller
               moeglichen. Vorher stand hier immer derselbe Text - eine
               Aenderung im Speicherort-Screen blieb danach unsichtbar, man
               musste erneut hineinnavigieren, um sie zu sehen. */}
           <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
-            {STORAGE_MODE_LABELS[prefs.storage_mode] ?? 'Noch nicht gewählt'}
+            {prefs.storage_mode && STORAGE_MODE_LABELS[prefs.storage_mode]
+              ? t(STORAGE_MODE_LABELS[prefs.storage_mode])
+              : t('profil.nochNichtGewaehlt')}
           </Text>
         </View>
         <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>
@@ -467,9 +474,9 @@ export default function ProfileScreen({ navigation }: Props) {
       >
         <MaterialCommunityIcons name="translate" size={20} color={colors.muted} style={styles.rowIcon} />
         <View style={{ flex: 1 }}>
-          <Text style={[styles.rowTitle, { color: colors.text }]}>Sprache</Text>
+          <Text style={[styles.rowTitle, { color: colors.text }]}>{t('profil.sprache')}</Text>
           <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
-            Deutsch, English – oder wie am Gerät eingestellt
+            {t('profil.spracheSub')}
           </Text>
         </View>
         <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>
@@ -480,25 +487,25 @@ export default function ProfileScreen({ navigation }: Props) {
         style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md, marginTop: 8 }]}
       >
         <View style={{ flex: 1 }}>
-          <Text style={[styles.rowTitle, { color: colors.text }]}>Starter-Rezepte</Text>
+          <Text style={[styles.rowTitle, { color: colors.text }]}>{t('profil.starterRezepte')}</Text>
           <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
-            Standard, Vegetarisch & Vegan, Cocktails – holen oder entfernen
+            {t('profil.starterRezepteSub')}
           </Text>
         </View>
         <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>
       </Pressable>
 
       <Pressable onPress={() => signOut()} style={[styles.signOutButton, { borderColor: '#DC2626', borderRadius: radius.md }]}>
-        <Text style={styles.signOutText}>Abmelden</Text>
+        <Text style={styles.signOutText}>{t('profil.abmelden')}</Text>
       </Pressable>
 
-      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 26 }]}>BENACHRICHTIGUNGEN</Text>
+      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 26 }]}>{t('profil.benachrichtigungen')}</Text>
       <View style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}>
         <MaterialCommunityIcons name="bell-outline" size={20} color={colors.muted} style={styles.rowIcon} />
         <View style={{ flex: 1 }}>
-          <Text style={[styles.rowTitle, { color: colors.text }]}>Benachrichtigungen</Text>
+          <Text style={[styles.rowTitle, { color: colors.text }]}>{t('profil.benachrichtigungenZeile')}</Text>
           <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
-            Timer-Ende beim Kochen und Erinnerungen aus dem Wochenplan
+            {t('profil.benachrichtigungenSub')}
           </Text>
         </View>
         <Switch
@@ -507,32 +514,32 @@ export default function ProfileScreen({ navigation }: Props) {
         />
       </View>
 
-      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 26 }]}>KI-FUNKTIONEN</Text>
+      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 26 }]}>{t('profil.kiFunktionen')}</Text>
       <View style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}>
         <MaterialCommunityIcons name="auto-fix" size={20} color={colors.muted} style={styles.rowIcon} />
         <View style={{ flex: 1 }}>
-          <Text style={[styles.rowTitle, { color: colors.text }]}>KI-Analyse</Text>
+          <Text style={[styles.rowTitle, { color: colors.text }]}>{t('profil.kiAnalyse')}</Text>
           {/* Der Verbrauch steht dabei, nicht nur die Grenze: Wer erst beim
               Anschlagen der Grenze davon erfaehrt, haelt es fuer einen
               Fehler. */}
           <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
-            Fotos auslesen, Rezepte erzeugen, Tipps und Beilagen
-            {` (${prefs.ai_calls_this_month}/${prefs.ai_monthly_limit} diesen Monat)`}
+            {t('profil.kiAnalyseSub')}
+            {t('profil.kiVerbrauch', { verbraucht: prefs.ai_calls_this_month, grenze: prefs.ai_monthly_limit })}
           </Text>
         </View>
         <Switch value={prefs.ai_enabled} onValueChange={(v) => handleToggle('ai_enabled', v)} />
       </View>
 
-      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 26 }]}>HILFE</Text>
+      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 26 }]}>{t('profil.hilfe')}</Text>
       <Pressable
         onPress={() => Linking.openURL(HILFE_URL).catch(() => {})}
         style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}
       >
         <MaterialCommunityIcons name="help-circle-outline" size={20} color={colors.muted} style={styles.rowIcon} />
         <View style={{ flex: 1 }}>
-          <Text style={[styles.rowTitle, { color: colors.text }]}>Hilfe & Anleitung</Text>
+          <Text style={[styles.rowTitle, { color: colors.text }]}>{t('profil.hilfeAnleitung')}</Text>
           <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
-            Antworten zu allen Funktionen
+            {t('profil.hilfeAnleitungSub')}
           </Text>
         </View>
         <MaterialCommunityIcons name="open-in-new" size={15} color={colors.muted} />
@@ -544,21 +551,21 @@ export default function ProfileScreen({ navigation }: Props) {
       >
         <MaterialCommunityIcons name="lifebuoy" size={20} color={colors.muted} style={styles.rowIcon} />
         <View style={{ flex: 1 }}>
-          <Text style={[styles.rowTitle, { color: colors.text }]}>Support kontaktieren</Text>
+          <Text style={[styles.rowTitle, { color: colors.text }]}>{t('profil.support')}</Text>
           <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
-            Fehler melden oder eine Funktion vorschlagen
+            {t('profil.supportSub')}
           </Text>
         </View>
         <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>
       </Pressable>
 
-      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 26 }]}>RECHTLICHES</Text>
+      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 26 }]}>{t('profil.rechtliches')}</Text>
       <Pressable
         onPress={() => Linking.openURL(AGB_URL).catch(() => {})}
         style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}
       >
         <MaterialCommunityIcons name="file-document-outline" size={20} color={colors.muted} style={styles.rowIcon} />
-        <Text style={[styles.rowTitle, { color: colors.text, flex: 1 }]}>AGB</Text>
+        <Text style={[styles.rowTitle, { color: colors.text, flex: 1 }]}>{t('profil.agb')}</Text>
         <MaterialCommunityIcons name="open-in-new" size={15} color={colors.muted} />
       </Pressable>
       <Pressable
@@ -566,20 +573,20 @@ export default function ProfileScreen({ navigation }: Props) {
         style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}
       >
         <MaterialCommunityIcons name="shield-lock-outline" size={20} color={colors.muted} style={styles.rowIcon} />
-        <Text style={[styles.rowTitle, { color: colors.text, flex: 1 }]}>Datenschutzerklärung</Text>
+        <Text style={[styles.rowTitle, { color: colors.text, flex: 1 }]}>{t('profil.datenschutz')}</Text>
         <MaterialCommunityIcons name="open-in-new" size={15} color={colors.muted} />
       </Pressable>
 
-      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 30 }]}>KONTO</Text>
+      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 30 }]}>{t('profil.konto')}</Text>
       <Pressable
         onPress={() => { setDeleteConfirmText(''); setShowDeleteDialog(true); }}
         style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}
       >
         <MaterialCommunityIcons name="account-remove-outline" size={20} color="#DC2626" style={styles.rowIcon} />
         <View style={{ flex: 1 }}>
-          <Text style={[styles.rowTitle, { color: '#DC2626' }]}>Konto löschen</Text>
+          <Text style={[styles.rowTitle, { color: '#DC2626' }]}>{t('profil.kontoLoeschen')}</Text>
           <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
-            Entfernt dauerhaft alle Rezepte, Ordner, Wochenpläne und Einkaufslisten
+            {t('profil.kontoLoeschenSub')}
           </Text>
         </View>
         <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>
@@ -588,7 +595,7 @@ export default function ProfileScreen({ navigation }: Props) {
       <Modal visible={showDeleteDialog} transparent animationType="fade" onRequestClose={() => setShowDeleteDialog(false)}>
         <View style={styles.modalBackdrop}>
           <View style={[styles.modalCard, { backgroundColor: colors.bg, borderRadius: radius.lg }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Konto endgültig löschen</Text>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>{t('profil.kontoEndgueltig')}</Text>
             <Text style={[styles.modalBody, { color: colors.muted }]}>
               Alle deine Rezepte, Ordner, Wochenpläne und Einkaufslisten werden dauerhaft gelöscht.
               Das lässt sich nicht rückgängig machen.
@@ -612,7 +619,7 @@ export default function ProfileScreen({ navigation }: Props) {
               {isDeleting ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.modalDangerText}>Endgültig löschen</Text>
+                <Text style={styles.modalDangerText}>{t('profil.endgueltigLoeschen')}</Text>
               )}
             </Pressable>
             <Pressable onPress={() => setShowDeleteDialog(false)} disabled={isDeleting} style={{ marginTop: 14 }}>
