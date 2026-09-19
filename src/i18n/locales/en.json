@@ -410,7 +410,11 @@
     "zurueckZuFotos": "Back to the photos",
     "rezeptErfassen": "Capture recipe",
     "zutatenPruefen": "Ingredients (please check)",
-    "zubereitungPruefen": "Method (please check)"
+    "zubereitungPruefen": "Method (please check)",
+    "bildFrage": "The photographed page is currently used as the cover image.",
+    "bildHinweis": "Brutzel can create a picture of the dish instead – the page stays as your source.",
+    "bildErzeugen": "Create image",
+    "bildBehalten": "Keep the page"
   },
   "haushalt": {
     "nichtGeladen": "The household could not be loaded",

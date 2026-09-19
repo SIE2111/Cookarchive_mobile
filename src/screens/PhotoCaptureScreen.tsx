@@ -14,6 +14,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { ensureMediaLibraryAccess } from '../utils/mediaPermissions';
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
+import CategoryPicker from '../components/CategoryPicker';
 import { askWhatNext } from '../utils/afterRecipeSaved';
 import { api, ApiError } from '../api/client';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -39,6 +40,8 @@ interface ScanPhotoResponse {
   ingredients: ScannedIngredient[];
   steps: ScannedStep[];
   low_confidence_note: string | null;
+  tags?: string[] | null;
+  folder_suggestion?: string | null;
 }
 
 export default function PhotoCaptureScreen({ navigation }: Props) {
@@ -62,6 +65,9 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
   const [stepLines, setStepLines] = useState<string[]>([]);
   const [folders, setFolders] = useState<{ id: string; name: string }[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [tags, setTags] = useState<string[]>([]);
+  const [aiGeneratedImageUrl, setAiGeneratedImageUrl] = useState<string | null>(null);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
   useEffect(() => {
     api.get<{ id: string; name: string }[]>('/folders/').then(setFolders).catch(() => {
@@ -74,6 +80,34 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
       // Vorlage konnte nicht geladen werden - Feld bleibt einfach leer
     });
   }, []);
+
+  /**
+   * Ein abfotografiertes Rezept hat kein Bild vom Gericht - nur die Seite
+   * aus dem Buch. Die taugt als Vorlage, aber nicht als Titelbild in der
+   * Rezeptliste. Deshalb hier dasselbe Angebot wie bei der KI-Erfassung.
+   */
+  const erzeugeBild = async () => {
+    if (!title.trim()) {
+      Alert.alert(t('erfassen.rezeptnameFehlt'), t('erfassen.bitteNameFuerBild'));
+      return;
+    }
+    setIsGeneratingImage(true);
+    try {
+      const res = await api.post<{ url: string; storage_warning?: string | null }>(
+        '/ai/generate-recipe-image',
+        { title: title.trim(), folder_name: folders.find((f) => f.id === selectedFolderId)?.name },
+      );
+      setAiGeneratedImageUrl(res.url);
+      if (res.storage_warning) Alert.alert(t('erfassen.hinweis'), res.storage_warning);
+    } catch (err) {
+      Alert.alert(
+        t('erfassen.bildgenerierungFehlgeschlagen'),
+        err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'),
+      );
+    } finally {
+      setIsGeneratingImage(false);
+    }
+  };
 
   const runScan = async (uris: string[]) => {
     if (uris.length === 0) return;
@@ -94,6 +128,17 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
         typedResult.ingredients.map((ing) => `${ing.amount ?? ''} ${ing.unit ?? ''} ${ing.name}`.trim()),
       );
       setStepLines(typedResult.steps.map((s) => s.text));
+
+      // Ordner und Kategorien gleich mit vorauswaehlen. Ein Kuchen gehoert
+      // zu "Backen & Desserts" und ist "Suess" - das muss niemand von Hand
+      // nachtragen, wenn es auf dem Foto steht.
+      if (typedResult.folder_suggestion) {
+        const treffer = folders.find(
+          (f) => f.name.toLowerCase() === typedResult.folder_suggestion!.toLowerCase(),
+        );
+        if (treffer) setSelectedFolderId(treffer.id);
+      }
+      if (typedResult.tags?.length) setTags(typedResult.tags);
     } catch (err) {
       // Statt eines generischen Platzhaltertexts die tatsaechliche Ursache
       // zeigen - auch bei Netzwerk-/Timeout-Fehlern (kein ApiError), die
@@ -155,8 +200,10 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
       // Das aufgenommene/ausgewaehlte Foto (imageUri, siehe oben) als
       // Titelbild mit hochladen - bisher wurde es nur zur Kontrolle
       // angezeigt, aber beim Speichern nie tatsaechlich verwendet.
-      let coverImageUrl: string | null = null;
-      if (imageUri) {
+      // Das erzeugte Bild hat Vorrang vor der abfotografierten Seite -
+      // wer es angefordert hat, will es auch sehen.
+      let coverImageUrl: string | null = aiGeneratedImageUrl;
+      if (!coverImageUrl && imageUri) {
         const fileName = imageUri.split('/').pop() ?? 'foto.jpg';
         const extension = fileName.split('.').pop()?.toLowerCase();
         const mimeType = extension === 'png' ? 'image/png' : 'image/jpeg';
@@ -183,7 +230,7 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
         }
       }
 
-      const saved = await api.post<{ id: string; title: string }>('/recipes/', { title: title.trim(), servings: servings ? Number(servings) : null, ingredients, steps, cover_image_url: coverImageUrl, folder_id: selectedFolderId, source_type: 'photo_scan' });
+      const saved = await api.post<{ id: string; title: string }>('/recipes/', { title: title.trim(), servings: servings ? Number(servings) : null, ingredients, steps, cover_image_url: coverImageUrl, folder_id: selectedFolderId, tags, source_type: 'photo_scan' });
       askWhatNext(navigation, { id: saved.id, title: saved.title }, cookOnly);
     } catch (err) {
       Alert.alert(t('erfassen.speichernFehlgeschlagen'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
@@ -298,6 +345,39 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
         onChangeText={setTitle}
       />
 
+      {/* Bei einem abfotografierten Rezept ist das Titelbild die Seite aus
+          dem Buch. Als Vorlage richtig, in der Rezeptliste unbrauchbar -
+          deshalb hier das Angebot, stattdessen ein Bild erzeugen zu lassen. */}
+      <View style={[styles.imageOfferCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
+        {aiGeneratedImageUrl ? (
+          <Image source={{ uri: aiGeneratedImageUrl }} style={[styles.offerPreview, { borderRadius: radius.sm }]} />
+        ) : null}
+        <Text style={[styles.offerTitle, { color: colors.text }]}>
+          {aiGeneratedImageUrl ? t('erfassen.bildErzeugen') : t('erfassen.bildFrage')}
+        </Text>
+        {!aiGeneratedImageUrl && (
+          <Text style={[styles.offerText, { color: colors.muted }]}>{t('erfassen.bildHinweis')}</Text>
+        )}
+        <View style={styles.offerRow}>
+          <Pressable
+            onPress={erzeugeBild}
+            disabled={isGeneratingImage}
+            style={[styles.offerButton, { backgroundColor: gradient[0], borderRadius: radius.sm }]}
+          >
+            {isGeneratingImage ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.offerButtonText}>{t('erfassen.bildErzeugen')}</Text>
+            )}
+          </Pressable>
+          {aiGeneratedImageUrl && (
+            <Pressable onPress={() => setAiGeneratedImageUrl(null)} style={styles.offerSecondary}>
+              <Text style={{ color: colors.muted, fontSize: 13 }}>{t('erfassen.bildBehalten')}</Text>
+            </Pressable>
+          )}
+        </View>
+      </View>
+
       <Text style={[styles.label, { color: colors.muted, marginTop: 16 }]}>{t('erfassen.portionen')}</Text>
       <TextInput
         style={[styles.input, { width: 90, backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
@@ -325,6 +405,9 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
           </View>
         </>
       )}
+
+      <Text style={[styles.label, { color: colors.muted, marginTop: 16 }]}>{t('erfassen.kategorien')}</Text>
+      <CategoryPicker selected={tags} onChange={setTags} />
 
       <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('erfassen.zutatenPruefen')}</Text>
       {ingredientLines.map((line, i) => (
@@ -365,6 +448,14 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
+  imageOfferCard: { padding: 14, marginTop: 16 },
+  offerPreview: { width: '100%', height: 150, marginBottom: 10 },
+  offerTitle: { fontSize: 14, fontWeight: '700', marginBottom: 4 },
+  offerText: { fontSize: 12.5, lineHeight: 18, marginBottom: 10 },
+  offerRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  offerButton: { minHeight: 44, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center' },
+  offerButtonText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+  offerSecondary: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 6 },
   container: { padding: 18, paddingBottom: 60 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   thumbRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'center', marginBottom: 18 },

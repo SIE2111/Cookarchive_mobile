@@ -410,7 +410,11 @@
     "zurueckZuFotos": "Zurück zu den Fotos",
     "rezeptErfassen": "Rezept erfassen",
     "zutatenPruefen": "Zutaten (bitte prüfen)",
-    "zubereitungPruefen": "Zubereitung (bitte prüfen)"
+    "zubereitungPruefen": "Zubereitung (bitte prüfen)",
+    "bildFrage": "Als Titelbild dient gerade die abfotografierte Seite.",
+    "bildHinweis": "Brutzel kann stattdessen ein Bild des Gerichts erzeugen – die Seite bleibt als Vorlage erhalten.",
+    "bildErzeugen": "Bild erzeugen",
+    "bildBehalten": "Seite behalten"
   },
   "haushalt": {
     "nichtGeladen": "Haushalt konnte nicht geladen werden",
