@@ -5,6 +5,7 @@ import {
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
 import { api, ApiError } from '../api/client';
+import PasswortFeld from '../components/PasswortFeld';
 
 type Props = { navigation: any };
 
@@ -109,15 +110,12 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
               verdeckt den Platzhalter. Ein leeres Feld ohne Beschriftung
               erklaert nicht, warum der Knopf blass bleibt. */}
           <Text style={[styles.beschriftung, { color: colors.muted }]}>{t('passwort.feldPasswort')}</Text>
-          <TextInput
-            style={[styles.feld, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md, marginBottom: 4 }]}
+          <PasswortFeld
             placeholder={t('passwort.neuesPasswort')}
-            placeholderTextColor={colors.muted}
-            secureTextEntry
-            autoCapitalize="none"
             textContentType="newPassword"
             value={passwort}
             onChangeText={setPasswort}
+            style={{ marginBottom: 4 }}
           />
           <Text style={{
             color: passwort.length > 0 && passwort.length < 8 ? '#B45309' : colors.muted,

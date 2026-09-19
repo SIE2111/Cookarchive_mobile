@@ -3,6 +3,7 @@ import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, Alert,
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
+import PasswortFeld from '../components/PasswortFeld';
 import LanguageSwitchRow from '../components/LanguageSwitchRow';
 import DismissKeyboardView from '../components/DismissKeyboardView';
 import { useAuth } from '../context/AuthContext';
@@ -76,11 +77,8 @@ export default function RegisterScreen({ navigation }: Props) {
         />
 
         <Text style={[styles.label, { color: colors.muted }]}>{t('auth.passwort')}</Text>
-        <TextInput
-          style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
+        <PasswortFeld
           placeholder="••••••••••"
-          placeholderTextColor={colors.muted}
-          secureTextEntry
           value={password}
           onChangeText={setPassword}
         />

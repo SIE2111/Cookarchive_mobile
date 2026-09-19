@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert, ScrollView
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
+import PasswortFeld from '../components/PasswortFeld';
 import { api, ApiError } from '../api/client';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/AppNavigator';
@@ -248,11 +249,10 @@ export default function StorageSettingsScreen({ navigation }: Props) {
             autoCapitalize="none" autoCorrect={false}
             value={nasUser} onChangeText={setNasUser}
           />
-          <TextInput
-            style={[styles.eingabe, { backgroundColor: colors.bg, color: colors.text, borderRadius: radius.sm }]}
-            placeholder={t('sonstiges.nasPasswort')} placeholderTextColor={colors.muted}
-            secureTextEntry autoCapitalize="none"
+          <PasswortFeld
+            placeholder={t('sonstiges.nasPasswort')}
             value={nasPasswort} onChangeText={setNasPasswort}
+            style={{ marginBottom: 8 }}
           />
           {nas?.eingerichtet && (
             <Text style={{ color: colors.muted, fontSize: 11.5, marginBottom: 8 }}>
