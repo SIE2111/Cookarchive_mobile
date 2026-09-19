@@ -5,6 +5,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { ensureMediaLibraryAccess } from '../utils/mediaPermissions';
 import CategoryPicker from '../components/CategoryPicker';
 import { useTheme } from '../theme/ThemeContext';
+import { useUebersetzung } from '../i18n';
 import { api, ApiError } from '../api/client';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/AppNavigator';
@@ -23,6 +24,7 @@ interface StepDraft {
 
 export default function ManualRecipeScreen({ navigation, route }: Props) {
   const { colors, gradient, radius } = useTheme();
+  const { t } = useUebersetzung();
   const editingRecipeId = route.params?.recipeId ?? null;
   const [isLoadingExisting, setIsLoadingExisting] = useState(!!editingRecipeId);
   const [title, setTitle] = useState('');
@@ -121,7 +123,7 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
         }, 0);
       })
       .catch((err) => {
-        Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Rezept konnte nicht geladen werden');
+        Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('erfassen.rezeptNichtGeladen'));
         navigation.goBack();
       })
       .finally(() => setIsLoadingExisting(false));
@@ -141,10 +143,10 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
     if (isDirtyRef.current && !justSavedRef.current) {
       Alert.alert(
         'Änderungen verwerfen?',
-        'Es gibt ungespeicherte Änderungen an diesem Rezept.',
+        t('erfassen.ungespeicherteAenderungen'),
         [
-          { text: 'Weiter bearbeiten', style: 'cancel' },
-          { text: 'Verwerfen', style: 'destructive', onPress: () => navigation.goBack() },
+          { text: t('erfassen.weiterBearbeiten'), style: 'cancel' },
+          { text: t('erfassen.verwerfen'), style: 'destructive', onPress: () => navigation.goBack() },
         ],
       );
     } else {
@@ -190,7 +192,7 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
   const handleTakePhoto = async () => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Zugriff verweigert', 'Ohne Kamera-Zugriff kann kein Foto aufgenommen werden.');
+      Alert.alert(t('erfassen.zugriffVerweigert'), t('erfassen.ohneKamera'));
       return;
     }
     const result = await ImagePicker.launchCameraAsync({ quality: 0.7, allowsEditing: true, aspect: [4, 3] });
@@ -201,7 +203,7 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
 
   const handleGenerateAiImage = async () => {
     if (!title.trim()) {
-      Alert.alert('Rezeptname fehlt', 'Bitte zuerst einen Rezeptnamen eingeben, damit das Bild dazu passt.');
+      Alert.alert(t('erfassen.rezeptnameFehlt'), t('erfassen.bitteNameFuerBild'));
       return;
     }
     setIsGeneratingImage(true);
@@ -217,21 +219,21 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
       setLocalImageUri(null);
       setExistingCoverUrl(result.url);
       if (result.storage_warning) {
-        Alert.alert('Hinweis', result.storage_warning);
+        Alert.alert(t('erfassen.hinweis'), result.storage_warning);
       }
     } catch (err) {
-      Alert.alert('Bildgenerierung fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+      Alert.alert(t('erfassen.bildgenerierungFehlgeschlagen'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
     } finally {
       setIsGeneratingImage(false);
     }
   };
 
   const handleAddImagePress = () => {
-    Alert.alert('Titelbild hinzufügen', undefined, [
-      { text: 'Aus Galerie wählen', onPress: handlePickFromGallery },
-      { text: 'Foto aufnehmen', onPress: handleTakePhoto },
+    Alert.alert(t('erfassen.titelbildHinzufuegen'), undefined, [
+      { text: t('erfassen.ausGalerie'), onPress: handlePickFromGallery },
+      { text: t('erfassen.fotoAufnehmen'), onPress: handleTakePhoto },
       { text: 'KI-Bild generieren', onPress: handleGenerateAiImage },
-      { text: 'Abbrechen', style: 'cancel' },
+      { text: t('allgemein.abbrechen'), style: 'cancel' },
     ]);
   };
 
@@ -272,7 +274,7 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
 
   const handleSave = async () => {
     if (!title.trim()) {
-      Alert.alert('Titel fehlt', 'Bitte einen Rezeptnamen eingeben.');
+      Alert.alert(t('erfassen.titelFehlt'), t('erfassen.bitteName'));
       return;
     }
     const cleanIngredients = ingredients
@@ -287,7 +289,7 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
       .map((s, i) => ({ order: i + 1, text: s.text.trim() }));
 
     if (cleanSteps.length === 0) {
-      Alert.alert('Zubereitung fehlt', 'Bitte mindestens einen Schritt eintragen.');
+      Alert.alert(t('erfassen.zubereitungFehlt'), t('erfassen.bitteEinSchritt'));
       return;
     }
 
@@ -313,14 +315,14 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
             // Drittanbieter-Upload ist fehlgeschlagen, Bild liegt stattdessen
             // in der Cloud - Nutzer soll das sichtbar erfahren, nicht unbemerkt
             // woanders landen als gewaehlt.
-            Alert.alert('Hinweis', uploadResult.storage_warning);
+            Alert.alert(t('erfassen.hinweis'), uploadResult.storage_warning);
           }
         } catch (uploadErr) {
           // Bild-Upload-Fehler soll das Speichern des Rezepts selbst nicht
           // verhindern - vorheriges/kein Bild bleibt dann einfach bestehen
           Alert.alert(
-            'Bild-Upload fehlgeschlagen',
-            `Das Rezept wird ohne das neue Bild gespeichert. Fehler: ${uploadErr instanceof ApiError ? uploadErr.detail : 'Unbekannt'}`,
+            t('erfassen.bildUploadFehlgeschlagen'),
+            `Das Rezept wird ohne das neue Bild gespeichert. Fehler: ${uploadErr instanceof ApiError ? uploadErr.detail : t('erfassen.unbekannt')}`,
           );
         } finally {
           setIsUploadingImage(false);
@@ -363,7 +365,7 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
         navigation.navigate('MainTabs');
       }
     } catch (err) {
-      Alert.alert('Speichern fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+      Alert.alert(t('erfassen.speichernFehlgeschlagen'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
     } finally {
       setIsSaving(false);
     }
@@ -385,7 +387,7 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
         {isGeneratingImage ? (
           <>
             <ActivityIndicator color={colors.muted} />
-            <Text style={[styles.imagePickerText, { color: colors.muted, marginTop: 8 }]}>Brutzel malt ein Bild…</Text>
+            <Text style={[styles.imagePickerText, { color: colors.muted, marginTop: 8 }]}>{t('erfassen.brutzelMalt')}</Text>
           </>
         ) : localImageUri || existingCoverUrl ? (
           <Image source={{ uri: localImageUri ?? existingCoverUrl! }} style={[styles.imagePreview, { borderRadius: radius.md }]} />
@@ -394,31 +396,31 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
         )}
       </Pressable>
 
-      <Text style={[styles.label, { color: colors.muted }]}>Rezeptname</Text>
+      <Text style={[styles.label, { color: colors.muted }]}>{t('erfassen.rezeptname')}</Text>
       <TextInput
         style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-        placeholder="z.B. Zwiebelrostbraten"
+        placeholder={t('erfassen.namePlatzhalter')}
         placeholderTextColor={colors.muted}
         value={title}
         onChangeText={setTitle}
       />
 
-      <Text style={[styles.label, { color: colors.muted, marginTop: 16 }]}>Portionen</Text>
+      <Text style={[styles.label, { color: colors.muted, marginTop: 16 }]}>{t('erfassen.portionen')}</Text>
       <TextInput
         style={[styles.input, styles.servingsInput, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-        placeholder="z.B. 4"
+        placeholder={t('erfassen.portionenPlatzhalter')}
         placeholderTextColor={colors.muted}
         keyboardType="numeric"
         value={servings}
         onChangeText={setServings}
       />
 
-      <Text style={[styles.label, { color: colors.muted, marginTop: 16 }]}>Kategorien</Text>
+      <Text style={[styles.label, { color: colors.muted, marginTop: 16 }]}>{t('erfassen.kategorien')}</Text>
       <CategoryPicker selected={selectedTags} onChange={setSelectedTags} />
 
       {folders.length > 0 && (
         <>
-          <Text style={[styles.label, { color: colors.muted, marginTop: 16 }]}>Ordner (optional)</Text>
+          <Text style={[styles.label, { color: colors.muted, marginTop: 16 }]}>{t('erfassen.ordnerOptional')}</Text>
           <View style={styles.folderChipsRow}>
             {folders.map((folder) => {
               const isSelected = selectedFolderId === folder.id;
@@ -441,13 +443,13 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
         </>
       )}
 
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>Zutaten</Text>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('erfassen.zutaten')}</Text>
       {ingredients.map((ing, i) => (
         <View key={i}>
           <View style={styles.ingredientRow}>
             <TextInput
               style={[styles.input, styles.ingredientName, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-              placeholder="Zutat"
+              placeholder={t('erfassen.zutatPlatzhalter')}
               placeholderTextColor={colors.muted}
               value={ing.name}
               onChangeText={(v) => handleIngredientNameChange(i, v)}
@@ -455,7 +457,7 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
             />
             <TextInput
               style={[styles.input, styles.ingredientAmount, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-              placeholder="Menge"
+              placeholder={t('erfassen.mengePlatzhalter')}
               placeholderTextColor={colors.muted}
               keyboardType="numeric"
               value={ing.amount}
@@ -463,7 +465,7 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
             />
             <TextInput
               style={[styles.input, styles.ingredientUnit, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-              placeholder="Einh."
+              placeholder={t('erfassen.einheitPlatzhalter')}
               placeholderTextColor={colors.muted}
               value={ing.unit}
               onChangeText={(v) => updateIngredient(i, 'unit', v)}
@@ -493,13 +495,13 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
         <Text style={[styles.addLink, { color: gradient[0] }]}>+ Zutat hinzufügen</Text>
       </Pressable>
 
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>Zubereitung</Text>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('erfassen.zubereitung')}</Text>
       {steps.map((step, i) => (
         <View key={i} style={styles.stepRow}>
           <Text style={[styles.stepNumber, { color: colors.muted }]}>{i + 1}.</Text>
           <TextInput
             style={[styles.input, styles.stepInput, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-            placeholder="Was ist zu tun?"
+            placeholder={t('erfassen.schrittPlatzhalter')}
             placeholderTextColor={colors.muted}
             multiline
             value={step.text}
@@ -523,10 +525,10 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
         {isSaving ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <ActivityIndicator color="#fff" />
-            {isUploadingImage && <Text style={styles.saveButtonText}>Bild wird hochgeladen…</Text>}
+            {isUploadingImage && <Text style={styles.saveButtonText}>{t('erfassen.bildWirdHochgeladen')}</Text>}
           </View>
         ) : (
-          <Text style={styles.saveButtonText}>{editingRecipeId ? 'Änderungen speichern' : 'Rezept speichern'}</Text>
+          <Text style={styles.saveButtonText}>{editingRecipeId ? 'Änderungen speichern' : t('erfassen.rezeptSpeichern')}</Text>
         )}
       </Pressable>
     </ScrollView>

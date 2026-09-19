@@ -3,6 +3,7 @@ import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, Activi
 import * as ImagePicker from 'expo-image-picker';
 import { ensureMediaLibraryAccess } from '../utils/mediaPermissions';
 import { useTheme } from '../theme/ThemeContext';
+import { useUebersetzung } from '../i18n';
 import { askWhatNext } from '../utils/afterRecipeSaved';
 import { api, ApiError } from '../api/client';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -49,6 +50,7 @@ interface GeneratedRecipe {
 
 export default function AIGenerateScreen({ navigation }: Props) {
   const { colors, gradient, radius } = useTheme();
+  const { t } = useUebersetzung();
 
   // Vorgaben-Formular
   const [ingredientsText, setIngredientsText] = useState('');
@@ -95,7 +97,7 @@ export default function AIGenerateScreen({ navigation }: Props) {
   const handleTakePhoto = async () => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Zugriff verweigert', 'Ohne Kamera-Zugriff kann kein Foto aufgenommen werden.');
+      Alert.alert(t('erfassen.zugriffVerweigert'), t('erfassen.ohneKamera'));
       return;
     }
     const result = await ImagePicker.launchCameraAsync({ quality: 0.7, allowsEditing: true, aspect: [4, 3] });
@@ -107,7 +109,7 @@ export default function AIGenerateScreen({ navigation }: Props) {
 
   const handleGenerateAiImage = async () => {
     if (!title.trim()) {
-      Alert.alert('Rezeptname fehlt', 'Bitte zuerst einen Rezeptnamen eingeben, damit das Bild dazu passt.');
+      Alert.alert(t('erfassen.rezeptnameFehlt'), t('erfassen.bitteNameFuerBild'));
       return;
     }
     setIsGeneratingImage(true);
@@ -118,20 +120,20 @@ export default function AIGenerateScreen({ navigation }: Props) {
       });
       setLocalImageUri(null);
       setAiGeneratedImageUrl(result.url);
-      if (result.storage_warning) Alert.alert('Hinweis', result.storage_warning);
+      if (result.storage_warning) Alert.alert(t('erfassen.hinweis'), result.storage_warning);
     } catch (err) {
-      Alert.alert('Bildgenerierung fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+      Alert.alert(t('erfassen.bildgenerierungFehlgeschlagen'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
     } finally {
       setIsGeneratingImage(false);
     }
   };
 
   const handleAddImagePress = () => {
-    Alert.alert('Titelbild hinzufügen', undefined, [
-      { text: 'Aus Galerie wählen', onPress: handlePickFromGallery },
-      { text: 'Foto aufnehmen', onPress: handleTakePhoto },
+    Alert.alert(t('erfassen.titelbildHinzufuegen'), undefined, [
+      { text: t('erfassen.ausGalerie'), onPress: handlePickFromGallery },
+      { text: t('erfassen.fotoAufnehmen'), onPress: handleTakePhoto },
       { text: 'KI-Bild generieren', onPress: handleGenerateAiImage },
-      { text: 'Abbrechen', style: 'cancel' },
+      { text: t('allgemein.abbrechen'), style: 'cancel' },
     ]);
   };
 
@@ -176,7 +178,7 @@ export default function AIGenerateScreen({ navigation }: Props) {
         if (matchingFolder) setSelectedFolderId(matchingFolder.id);
       }
     } catch (err) {
-      Alert.alert('Generieren fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+      Alert.alert(t('erfassen.generierenFehlgeschlagen'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
     } finally {
       setIsGenerating(false);
     }
@@ -192,7 +194,7 @@ export default function AIGenerateScreen({ navigation }: Props) {
 
   const handleSave = async (cookOnly = false) => {
     if (!title.trim()) {
-      Alert.alert('Titel fehlt', 'Bitte einen Rezeptnamen eingeben.');
+      Alert.alert(t('erfassen.titelFehlt'), t('erfassen.bitteName'));
       return;
     }
     const cleanIngredients = ingredients
@@ -207,7 +209,7 @@ export default function AIGenerateScreen({ navigation }: Props) {
       .map((s, i) => ({ order: i + 1, text: s.text.trim() }));
 
     if (cleanSteps.length === 0) {
-      Alert.alert('Zubereitung fehlt', 'Bitte mindestens einen Schritt eintragen.');
+      Alert.alert(t('erfassen.zubereitungFehlt'), t('erfassen.bitteEinSchritt'));
       return;
     }
 
@@ -229,12 +231,12 @@ export default function AIGenerateScreen({ navigation }: Props) {
             // Drittanbieter-Upload ist fehlgeschlagen, Bild liegt stattdessen
             // in der Cloud - Nutzer soll das sichtbar erfahren, nicht unbemerkt
             // woanders landen als gewaehlt.
-            Alert.alert('Hinweis', uploadResult.storage_warning);
+            Alert.alert(t('erfassen.hinweis'), uploadResult.storage_warning);
           }
         } catch (uploadErr) {
           Alert.alert(
-            'Bild-Upload fehlgeschlagen',
-            `Das Rezept wird ohne Titelbild gespeichert. Fehler: ${uploadErr instanceof ApiError ? uploadErr.detail : 'Unbekannt'}`,
+            t('erfassen.bildUploadFehlgeschlagen'),
+            `Das Rezept wird ohne Titelbild gespeichert. Fehler: ${uploadErr instanceof ApiError ? uploadErr.detail : t('erfassen.unbekannt')}`,
           );
         }
       }
@@ -250,7 +252,7 @@ export default function AIGenerateScreen({ navigation }: Props) {
       });
       askWhatNext(navigation, { id: saved.id, title: saved.title }, cookOnly);
     } catch (err) {
-      Alert.alert('Speichern fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+      Alert.alert(t('erfassen.speichernFehlgeschlagen'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
     } finally {
       setIsSaving(false);
     }
@@ -267,19 +269,19 @@ export default function AIGenerateScreen({ navigation }: Props) {
           Alle Felder sind optional – je mehr du ausfüllst, desto passender wird der Vorschlag.
         </Text>
 
-        <Text style={[styles.label, { color: colors.muted }]}>Verfügbare Hauptzutaten (mit Komma getrennt)</Text>
+        <Text style={[styles.label, { color: colors.muted }]}>{t('erfassen.kiZutaten')}</Text>
         <TextInput
           style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-          placeholder="z.B. Zucchini, Faschiertes, Reis"
+          placeholder={t('erfassen.kiZutatenPlatzhalter')}
           placeholderTextColor={colors.muted}
           value={ingredientsText}
           onChangeText={setIngredientsText}
         />
 
-        <Text style={[styles.label, { color: colors.muted }]}>Diät (optional)</Text>
+        <Text style={[styles.label, { color: colors.muted }]}>{t('erfassen.kiDiaet')}</Text>
         <TextInput
           style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-          placeholder="z.B. vegan, glutenfrei, vegetarisch"
+          placeholder={t('erfassen.kiDiaetPlatzhalter')}
           placeholderTextColor={colors.muted}
           value={diet}
           onChangeText={setDiet}
@@ -287,10 +289,10 @@ export default function AIGenerateScreen({ navigation }: Props) {
 
         <View style={styles.row}>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.label, { color: colors.muted }]}>Max. Minuten</Text>
+            <Text style={[styles.label, { color: colors.muted }]}>{t('erfassen.kiMinuten')}</Text>
             <TextInput
               style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-              placeholder="z.B. 30"
+              placeholder={t('erfassen.kiMinutenPlatzhalter')}
               placeholderTextColor={colors.muted}
               keyboardType="numeric"
               value={maxMinutes}
@@ -298,10 +300,10 @@ export default function AIGenerateScreen({ navigation }: Props) {
             />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.label, { color: colors.muted }]}>Portionen</Text>
+            <Text style={[styles.label, { color: colors.muted }]}>{t('erfassen.portionen')}</Text>
             <TextInput
               style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-              placeholder="z.B. 4"
+              placeholder={t('erfassen.portionenPlatzhalter')}
               placeholderTextColor={colors.muted}
               keyboardType="numeric"
               value={servings}
@@ -310,10 +312,10 @@ export default function AIGenerateScreen({ navigation }: Props) {
           </View>
         </View>
 
-        <Text style={[styles.label, { color: colors.muted }]}>Sonstige Wünsche</Text>
+        <Text style={[styles.label, { color: colors.muted }]}>{t('erfassen.kiWuensche')}</Text>
         <TextInput
           style={[styles.input, styles.multilineInput, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-          placeholder="z.B. etwas Schnelles für Kinder"
+          placeholder={t('erfassen.kiWuenschePlatzhalter')}
           placeholderTextColor={colors.muted}
           multiline
           value={freeText}
@@ -325,7 +327,7 @@ export default function AIGenerateScreen({ navigation }: Props) {
           disabled={isGenerating}
           style={[styles.generateButton, { backgroundColor: gradient[0], borderRadius: radius.md, opacity: isGenerating ? 0.7 : 1 }]}
         >
-          {isGenerating ? <ActivityIndicator color="#fff" /> : <Text style={styles.generateButtonText}>Rezept generieren</Text>}
+          {isGenerating ? <ActivityIndicator color="#fff" /> : <Text style={styles.generateButtonText}>{t('erfassen.kiGenerieren')}</Text>}
         </Pressable>
       </ScrollView>
     );
@@ -338,7 +340,7 @@ export default function AIGenerateScreen({ navigation }: Props) {
         {isGeneratingImage ? (
           <>
             <ActivityIndicator color={colors.muted} />
-            <Text style={[styles.imagePickerText, { color: colors.muted, marginTop: 8 }]}>Brutzel malt ein Bild…</Text>
+            <Text style={[styles.imagePickerText, { color: colors.muted, marginTop: 8 }]}>{t('erfassen.brutzelMalt')}</Text>
           </>
         ) : localImageUri || aiGeneratedImageUrl ? (
           <Image source={{ uri: localImageUri ?? aiGeneratedImageUrl! }} style={[styles.imagePreview, { borderRadius: radius.md }]} />
@@ -353,7 +355,7 @@ export default function AIGenerateScreen({ navigation }: Props) {
         </View>
       )}
 
-      <Text style={[styles.label, { color: colors.muted }]}>Rezeptname</Text>
+      <Text style={[styles.label, { color: colors.muted }]}>{t('erfassen.rezeptname')}</Text>
       <TextInput
         style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
         value={title}
@@ -362,7 +364,7 @@ export default function AIGenerateScreen({ navigation }: Props) {
 
       {folders.length > 0 && (
         <>
-          <Text style={[styles.label, { color: colors.muted, marginTop: 16 }]}>Ordner (optional)</Text>
+          <Text style={[styles.label, { color: colors.muted, marginTop: 16 }]}>{t('erfassen.ordnerOptional')}</Text>
           <View style={styles.folderChipsRow}>
             {folders.map((folder) => {
               const isSelected = selectedFolderId === folder.id;
@@ -385,19 +387,19 @@ export default function AIGenerateScreen({ navigation }: Props) {
         </>
       )}
 
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>Zutaten</Text>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('erfassen.zutaten')}</Text>
       {ingredients.map((ing, i) => (
         <View key={i} style={styles.ingredientRow}>
           <TextInput
             style={[styles.input, styles.ingredientName, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-            placeholder="Zutat"
+            placeholder={t('erfassen.zutatPlatzhalter')}
             placeholderTextColor={colors.muted}
             value={ing.name}
             onChangeText={(v) => updateIngredient(i, 'name', v)}
           />
           <TextInput
             style={[styles.input, styles.ingredientAmount, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-            placeholder="Menge"
+            placeholder={t('erfassen.mengePlatzhalter')}
             placeholderTextColor={colors.muted}
             keyboardType="numeric"
             value={ing.amount}
@@ -405,7 +407,7 @@ export default function AIGenerateScreen({ navigation }: Props) {
           />
           <TextInput
             style={[styles.input, styles.ingredientUnit, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-            placeholder="Einh."
+            placeholder={t('erfassen.einheitPlatzhalter')}
             placeholderTextColor={colors.muted}
             value={ing.unit}
             onChangeText={(v) => updateIngredient(i, 'unit', v)}
@@ -416,7 +418,7 @@ export default function AIGenerateScreen({ navigation }: Props) {
         <Text style={[styles.addLink, { color: gradient[0] }]}>+ Zutat hinzufügen</Text>
       </Pressable>
 
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>Zubereitung</Text>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('erfassen.zubereitung')}</Text>
       {steps.map((step, i) => (
         <View key={i} style={styles.stepRow}>
           <Text style={[styles.stepNumber, { color: colors.muted }]}>{i + 1}.</Text>
@@ -447,7 +449,7 @@ export default function AIGenerateScreen({ navigation }: Props) {
       )}
 
       <Pressable onPress={() => handleSave(false)} disabled={isSaving} style={[styles.saveButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}>
-        {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveButtonText}>Rezept speichern</Text>}
+        {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveButtonText}>{t('erfassen.rezeptSpeichern')}</Text>}
       </Pressable>
 
       {/* Zweiter Weg: Manches kocht man einmal und will es nicht im

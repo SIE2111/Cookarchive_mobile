@@ -13,6 +13,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { ensureMediaLibraryAccess } from '../utils/mediaPermissions';
 import { useTheme } from '../theme/ThemeContext';
+import { useUebersetzung } from '../i18n';
 import { askWhatNext } from '../utils/afterRecipeSaved';
 import { api, ApiError } from '../api/client';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -42,6 +43,7 @@ interface ScanPhotoResponse {
 
 export default function PhotoCaptureScreen({ navigation }: Props) {
   const { colors, gradient, radius } = useTheme();
+  const { t } = useUebersetzung();
 
   // Mehrere Fotos statt einem: Ein gedrucktes Rezept geht oft ueber zwei
   // Buchseiten, und in einer Zeitschrift steht die Zutatenliste in einer
@@ -102,7 +104,7 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
           ? err.detail
           : err instanceof Error
             ? `${err.name}: ${err.message}`
-            : 'Unbekannter Fehler beim Erfassen des Fotos.';
+            : t('erfassen.fotoFehler');
       setScanError(message);
     } finally {
       setIsScanning(false);
@@ -112,7 +114,7 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
   const handleTakePhoto = async () => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Zugriff verweigert', 'Ohne Kamera-Zugriff kann kein Foto aufgenommen werden.');
+      Alert.alert(t('erfassen.zugriffVerweigert'), t('erfassen.ohneKamera'));
       return;
     }
     // allowsEditing blendet nach der Aufnahme einen Zuschnitt-Rahmen ein.
@@ -138,7 +140,7 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
 
   const handleSave = async (cookOnly = false) => {
     if (!title.trim()) {
-      Alert.alert('Titel fehlt', 'Bitte einen Rezeptnamen eingeben.');
+      Alert.alert(t('erfassen.titelFehlt'), t('erfassen.bitteName'));
       return;
     }
     setIsSaving(true);
@@ -169,14 +171,14 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
             // Drittanbieter-Upload ist fehlgeschlagen, Bild liegt stattdessen
             // in der Cloud - Nutzer soll das sichtbar erfahren, nicht unbemerkt
             // woanders landen als gewaehlt.
-            Alert.alert('Hinweis', uploadResult.storage_warning);
+            Alert.alert(t('erfassen.hinweis'), uploadResult.storage_warning);
           }
         } catch (uploadErr) {
           // Bild-Upload-Fehler soll das Speichern des Rezepts selbst nicht
           // verhindern - Rezept wird dann eben ohne Titelbild angelegt
           Alert.alert(
-            'Bild-Upload fehlgeschlagen',
-            `Das Rezept wird ohne Titelbild gespeichert. Fehler: ${uploadErr instanceof ApiError ? uploadErr.detail : 'Unbekannt'}`,
+            t('erfassen.bildUploadFehlgeschlagen'),
+            `Das Rezept wird ohne Titelbild gespeichert. Fehler: ${uploadErr instanceof ApiError ? uploadErr.detail : t('erfassen.unbekannt')}`,
           );
         }
       }
@@ -184,7 +186,7 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
       const saved = await api.post<{ id: string; title: string }>('/recipes/', { title: title.trim(), servings: servings ? Number(servings) : null, ingredients, steps, cover_image_url: coverImageUrl, folder_id: selectedFolderId, source_type: 'photo_scan' });
       askWhatNext(navigation, { id: saved.id, title: saved.title }, cookOnly);
     } catch (err) {
-      Alert.alert('Speichern fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+      Alert.alert(t('erfassen.speichernFehlgeschlagen'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
     } finally {
       setIsSaving(false);
     }
@@ -195,7 +197,7 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
       <View style={[styles.centered, { backgroundColor: colors.bg }]}>
         <Image source={{ uri: imageUri }} style={styles.scanningPreview} />
         <ActivityIndicator color={colors.text} style={{ marginTop: 20 }} />
-        <Text style={{ color: colors.muted, fontSize: 12, marginTop: 10 }}>Rezept wird erfasst…</Text>
+        <Text style={{ color: colors.muted, fontSize: 12, marginTop: 10 }}>{t('erfassen.wirdErfasst')}</Text>
       </View>
     );
   }
@@ -210,7 +212,7 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
         >
           {/* Die Fotos bleiben erhalten - nach einem Netzwerkfehler noch
             einmal alles abfotografieren waere aergerlich. */}
-        <Text style={styles.primaryButtonText}>Zurück zu den Fotos</Text>
+        <Text style={styles.primaryButtonText}>{t('erfassen.zurueckZuFotos')}</Text>
         </Pressable>
       </View>
     );
@@ -260,7 +262,7 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
           </Text>
         </Pressable>
         <Pressable onPress={handlePickFromLibrary} style={[styles.secondaryButton, { borderColor: gradient[0], borderRadius: radius.md }]}>
-          <Text style={[styles.secondaryButtonText, { color: gradient[0] }]}>Aus Galerie wählen</Text>
+          <Text style={[styles.secondaryButtonText, { color: gradient[0] }]}>{t('erfassen.ausGalerie')}</Text>
         </Pressable>
 
         {imageUris.length > 0 && (
@@ -269,7 +271,7 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
             style={[styles.primaryButton, { backgroundColor: gradient[0], borderRadius: radius.md, marginTop: 18 }]}
           >
             <Text style={styles.primaryButtonText}>
-              {imageUris.length === 1 ? 'Rezept erfassen' : `Aus ${imageUris.length} Fotos erfassen`}
+              {imageUris.length === 1 ? t('erfassen.rezeptErfassen') : `Aus ${imageUris.length} Fotos erfassen`}
             </Text>
           </Pressable>
         )}
@@ -289,14 +291,14 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
         </View>
       )}
 
-      <Text style={[styles.label, { color: colors.muted }]}>Rezeptname</Text>
+      <Text style={[styles.label, { color: colors.muted }]}>{t('erfassen.rezeptname')}</Text>
       <TextInput
         style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
         value={title}
         onChangeText={setTitle}
       />
 
-      <Text style={[styles.label, { color: colors.muted, marginTop: 16 }]}>Portionen</Text>
+      <Text style={[styles.label, { color: colors.muted, marginTop: 16 }]}>{t('erfassen.portionen')}</Text>
       <TextInput
         style={[styles.input, { width: 90, backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
         keyboardType="numeric"
@@ -306,7 +308,7 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
 
       {folders.length > 0 && (
         <>
-          <Text style={[styles.label, { color: colors.muted, marginTop: 16 }]}>Ordner (optional)</Text>
+          <Text style={[styles.label, { color: colors.muted, marginTop: 16 }]}>{t('erfassen.ordnerOptional')}</Text>
           <View style={styles.folderChipsRow}>
             {folders.map((folder) => {
               const isSelected = selectedFolderId === folder.id;
@@ -324,7 +326,7 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
         </>
       )}
 
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>Zutaten (bitte prüfen)</Text>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('erfassen.zutatenPruefen')}</Text>
       {ingredientLines.map((line, i) => (
         <TextInput
           key={i}
@@ -334,7 +336,7 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
         />
       ))}
 
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>Zubereitung (bitte prüfen)</Text>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('erfassen.zubereitungPruefen')}</Text>
       {stepLines.map((line, i) => (
         <TextInput
           key={i}
@@ -346,7 +348,7 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
       ))}
 
       <Pressable onPress={() => handleSave(false)} disabled={isSaving} style={[styles.saveButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}>
-        {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveButtonText}>Rezept speichern</Text>}
+        {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveButtonText}>{t('erfassen.rezeptSpeichern')}</Text>}
       </Pressable>
 
       {/* Zweiter Weg: Manches kocht man einmal und will es nicht im
