@@ -80,6 +80,11 @@ export default function StorageSettingsScreen({ navigation }: Props) {
   const [nasPasswort, setNasPasswort] = useState('');
   const [nasOrdner, setNasOrdner] = useState('');
   const [nasLaeuft, setNasLaeuft] = useState(false);
+  // Das Formular muss sichtbar sein, BEVOR 'nas' gespeichert ist: Der Server
+  // lehnt den Modus ohne hinterlegte Verbindung mit 409 ab. Ohne diesen
+  // Zustand war die Einrichtung unerreichbar - Formular erst nach dem
+  // Speichern, Speichern erst nach dem Formular.
+  const [nasFormularOffen, setNasFormularOffen] = useState(false);
   const [hersteller, setHersteller] = useState<string>('synology');
   const [sucheLaeuft, setSucheLaeuft] = useState(false);
   const [vorschlaege, setVorschlaege] = useState<{ url: string; status: string }[] | null>(null);
@@ -142,7 +147,12 @@ export default function StorageSettingsScreen({ navigation }: Props) {
         // Das Passwort wird nach dem Speichern nicht mehr gebraucht und
         // bleibt nicht im Formular stehen.
         setNasPasswort('');
-        setPrefs((alt) => (alt ? { ...alt, storage_mode: 'nas' } : alt));
+        // Jetzt erst darf der Modus gesetzt werden - ab hier nimmt ihn der
+        // Server an. Vorher stand er nur lokal und war nach dem naechsten
+        // Laden wieder weg.
+        const aktualisiert = await api.patch<Preferences>('/preferences/', { storage_mode: 'nas' });
+        setPrefs(aktualisiert);
+        setNasFormularOffen(false);
       }
     } catch (err) {
       Alert.alert(t('sonstiges.nasFehler'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
@@ -205,6 +215,12 @@ export default function StorageSettingsScreen({ navigation }: Props) {
 
   const handleStorageSelect = async (mode: StorageMode) => {
     if (!prefs || prefs.storage_mode === mode) return;
+    // Noch keine Verbindung hinterlegt: erst einrichten lassen, gar nicht
+    // erst speichern - der Aufruf koennte nur mit 409 zurueckkommen.
+    if (mode === 'nas' && !nas?.eingerichtet) {
+      setNasFormularOffen(true);
+      return;
+    }
     const previous = prefs;
     setPrefs({ ...prefs, storage_mode: mode });
     setSavingKey('storage_mode');
@@ -263,7 +279,7 @@ export default function StorageSettingsScreen({ navigation }: Props) {
         );
       })}
 
-      {prefs.storage_mode === 'nas' && (
+      {(prefs.storage_mode === 'nas' || nasFormularOffen) && (
         <View style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md, flexDirection: 'column', alignItems: 'stretch' }]}>
           {nas?.eingerichtet && (
             <Text style={{ color: colors.muted, fontSize: 12.5, marginBottom: 10 }}>
