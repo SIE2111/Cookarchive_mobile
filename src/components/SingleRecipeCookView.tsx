@@ -4,6 +4,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import * as Speech from 'expo-speech';
 import { SPEECH_LANGUAGE, BRUTZEL_PITCH, BRUTZEL_RATE, loadBrutzelVoice } from '../utils/speech';
 import { useTheme } from '../theme/ThemeContext';
+import { useUebersetzung } from '../i18n';
 import { api, ApiError } from '../api/client';
 import { pickStepsForLevel, HaubenLevel, RecipeStep } from '../utils/stepLevels';
 import { scheduleTimerNotification, cancelTimerNotification, setupNotificationChannel } from '../utils/notifications';
@@ -64,38 +65,29 @@ function getEffectiveTimerSeconds(step: { timer_seconds?: number | null; text: s
   return step.timer_seconds ?? parseDurationSecondsFromText(step.text);
 }
 
-const BRUTZEL_TIPS: Record<string, string> = {
-  mehlieren: 'Erst unmittelbar vorm Braten mehlieren, nie vorher liegen lassen – sonst zieht das Mehl Feuchtigkeit und die Kruste wird matschig statt knusprig.',
-  zwiebel_schneiden: 'Wurzelansatz beim Schneiden dran lassen, hält die Schichten zusammen – gibt gleichmäßigere Stücke und schont die Augen, da weniger Zellsaft austritt.',
-  koecheln_lassen: 'Nur leise Bläschen, nie sprudelnd kochen – zu starke Hitze macht Brühen trüb und lässt Fleisch zäh statt zart werden.',
-  apfel_schaelen: 'Schale möglichst dünn abschälen, direkt darunter sitzen die meisten Aromastoffe.',
-  filetieren: 'Immer gegen die Gräten, nie mit ihnen schneiden – das Messer flach halten und in einem durchgehenden Zug führen statt zu sägen.',
-  germteig_gehen_lassen: 'Zugedeckt an einem warmen, zugfreien Ort gehen lassen – über 40°C stirbt die Hefe ab, das Ergebnis bleibt dann flach.',
-  knoblauch_schaelen: 'Zehe mit der flachen Klinge andrücken, dann löst sich die Schale von selbst – schneller und schont die Finger.',
-  palatschinken_wenden: 'Erst wenden, wenn sich der Rand von der Pfanne löst und die Oberfläche matt wird – zu früh gewendet reißt der Teig.',
-  risotto_ruehren: 'Brühe nur löffelweise zugeben und erst nachschütten, wenn die vorherige Portion aufgesogen ist – so wird die Stärke schonend freigesetzt, das macht die Cremigkeit.',
-  ruehrteig_unterheben: 'Mit dem Schneebesen oder Teigschaber von unten nach oben heben, nicht rühren – sonst geht die eingeschlagene Luft wieder verloren.',
-  schnitzel_klopfen: 'Zwischen zwei Lagen Frischhaltefolie klopfen, gleichmäßig von innen nach außen – schützt die Fasern und verhindert, dass das Fleisch ausfranst.',
-  schwarte_einschneiden: 'Nur die Schwarte einschneiden, nicht bis ins Fleisch – sonst läuft beim Braten der Saft aus statt die Kruste aufzuplatzen.',
-  teig_kneten: 'Mindestens 8–10 Minuten kräftig kneten, bis er sich glatt und elastisch anfühlt – erst dann hat sich genug Gluten gebildet, damit der Teig aufgeht.',
-  eiweiss_schlagen: 'Schüssel und Rührbesen müssen absolut fettfrei sein, sonst schlägt das Eiweiß nicht steif – schon eine Spur Eigelb reicht, um es zu verhindern.',
-  strudelteig_ausziehen: 'Von der Mitte nach außen ziehen, mit dem Handrücken statt den Fingerspitzen – so reißt der Teig seltener und wird gleichmäßig dünn.',
-};
-
-// Generische Tipps fuer Schritte OHNE technique_tag (das betrifft aktuell
-// rund 70% aller Schritte in den Starter-Rezepten) - Brutzel hatte bisher
-// nur bei rund einem Viertel der Schritte ueberhaupt etwas zu sagen.
-// Bewusst als ECHTE Kuechen-Praxis-Tipps formuliert (Mise en Place,
-// Profi-Kueche), nicht als beilaeufige Erinnerungen. Wird deterministisch
-// nach Schrittnummer gewaehlt (kein Zufall -> kein Flackern bei
-// Re-Renders desselben Schritts).
-const GENERIC_BRUTZEL_TIPS: string[] = [
-  'Mise en Place: alle Zutaten für diesen Schritt abgewogen und griffbereit, bevor du anfängst – das ist der Unterschied zwischen Hektik und Ruhe in der Küche.',
-  'Schneidebrett und Messer zwischendurch sauber wischen, besonders nach rohem Fleisch oder Fisch – Profis trennen strikt zwischen den Arbeitsschritten.',
-  'Lies den ganzen Schritt einmal durch, bevor du loslegst – wer erst mittendrin merkt, was als Nächstes kommt, verliert Zeit und Timing.',
-  'Immer erst die Pfanne oder den Topf auf Temperatur bringen, dann erst die Zutaten zugeben – kalt angesetzt ziehen viele Zutaten Flüssigkeit statt zu bräunen.',
-  'Mit der Nase mitkochen: Röstaromen, die zu bitter riechen, kündigen sich meist einige Sekunden vorher an – dann ist Reduzieren der Hitze schon zu spät.',
+// Ersatztipps, wenn die KI keine liefert (abgeschaltet oder nicht
+// erreichbar). Die Texte stehen in den Sprachdateien unter
+// kochen.tipp bzw. kochen.tippAllgemein - hier nur noch die
+// Schluessel, sonst waeren sie fuer immer deutsch.
+const BRUTZEL_TIP_KEYS: string[] = [
+  'mehlieren',
+  'zwiebel_schneiden',
+  'koecheln_lassen',
+  'apfel_schaelen',
+  'filetieren',
+  'germteig_gehen_lassen',
+  'knoblauch_schaelen',
+  'palatschinken_wenden',
+  'risotto_ruehren',
+  'ruehrteig_unterheben',
+  'schnitzel_klopfen',
+  'schwarte_einschneiden',
+  'teig_kneten',
+  'eiweiss_schlagen',
+  'strudelteig_ausziehen',
 ];
+
+const GENERIC_TIP_COUNT = 5;
 
 interface TechniqueVideoInfo {
   keyword: string;
@@ -126,6 +118,7 @@ interface Props {
 
 export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded, onFinished, sessionOverrides }: Props) {
   const { colors, gradient, radius } = useTheme();
+  const { t } = useUebersetzung();
 
   const [recipe, setRecipe] = useState<RecipeForCooking | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -175,18 +168,18 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
     Keyboard.dismiss();
     Alert.alert(
       'Änderung speichern',
-      'Soll das dauerhaft im Rezept gespeichert werden (auch bei künftigen Malen sichtbar) oder gilt es nur für diesen einen Kochvorgang?',
+      t('detail.aenderungFrage'),
       [
-        { text: 'Abbrechen', style: 'cancel' },
+        { text: t('allgemein.abbrechen'), style: 'cancel' },
         {
-          text: 'Nur diesmal',
+          text: t('detail.nurDiesmal'),
           onPress: () => {
             applyLocally();
             onDone();
           },
         },
         {
-          text: 'Dauerhaft im Rezept',
+          text: t('detail.dauerhaftImRezept'),
           onPress: async () => {
             setSaving(true);
             try {
@@ -194,7 +187,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
               applyLocally();
               onDone();
             } catch (err) {
-              Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Konnte nicht gespeichert werden');
+              Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('detail.nichtGespeichert'));
             } finally {
               setSaving(false);
             }
@@ -402,7 +395,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
         setRecipe(merged);
         onTitleLoaded?.(merged.title);
       })
-      .catch((err) => setError(err instanceof ApiError ? err.detail : 'Rezept konnte nicht geladen werden'));
+      .catch((err) => setError(err instanceof ApiError ? err.detail : t('kochen.nichtGeladen')));
     // onTitleLoaded/sessionOverrides bewusst nicht in den Dependencies -
     // waeren bei jedem Render neue Referenzen vom Elternteil, wuerden den
     // Ladevorgang unnoetig wiederholen. recipeId ist der einzige relevante
@@ -455,9 +448,10 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
   const brutzelTip = currentStep
     ? (stepTips[currentStep.order] ??
        (currentStep.technique_tag
-         ? (BRUTZEL_TIPS[currentStep.technique_tag] ??
-            'Bei dieser Technik lohnt sich besondere Aufmerksamkeit – nimm dir kurz Zeit dafür.')
-         : GENERIC_BRUTZEL_TIPS[currentIndex % GENERIC_BRUTZEL_TIPS.length]))
+         ? (BRUTZEL_TIP_KEYS.includes(currentStep.technique_tag)
+             ? t(`kochen.tipp.${currentStep.technique_tag}`)
+             : t('kochen.technikAufmerksamkeit'))
+         : t(`kochen.tippAllgemein.${(currentIndex % GENERIC_TIP_COUNT) + 1}`)))
     : '';
   brutzelTipRef.current = brutzelTip;
 
@@ -543,7 +537,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
   const handleDeleteStep = () => {
     if (!recipe) return;
     if (recipe.steps.length <= 1) {
-      Alert.alert('Nicht möglich', 'Ein Rezept braucht mindestens einen Schritt.');
+      Alert.alert(t('detail.nichtMoeglich'), t('detail.mindestensEinSchritt'));
       return;
     }
     const updatedSteps = recipe.steps.filter((s) => s.order !== currentStep.order);
@@ -614,12 +608,12 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
 
     Keyboard.dismiss();
     Alert.alert(
-      'Notiz speichern',
-      'Soll die Notiz dauerhaft im Rezept gespeichert werden (auch bei künftigen Malen sichtbar) oder gilt sie nur für diesen einen Kochvorgang?',
+      t('kochen.notizSpeichern'),
+      t('kochen.notizFrage'),
       [
-        { text: 'Abbrechen', style: 'cancel' },
+        { text: t('allgemein.abbrechen'), style: 'cancel' },
         {
-          text: 'Nur diesmal',
+          text: t('detail.nurDiesmal'),
           onPress: () => {
             // NICHT ans Backend schicken - nur lokal fuer die aktuelle
             // Kochsession uebernehmen, das gespeicherte Rezept bleibt
@@ -629,7 +623,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
           },
         },
         {
-          text: 'Dauerhaft im Rezept',
+          text: t('detail.dauerhaftImRezept'),
           onPress: async () => {
             setIsSavingNote(true);
             try {
@@ -637,7 +631,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
               setRecipe({ ...recipe, steps: updatedSteps });
               setIsNoteModalOpen(false);
             } catch (err) {
-              Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Notiz konnte nicht gespeichert werden');
+              Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('kochen.notizNichtGespeichert'));
             } finally {
               setIsSavingNote(false);
             }
@@ -655,7 +649,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
   const handleSaveTimerEdit = () => {
     const minutes = Number(timerEditDraft.trim());
     if (!minutes || minutes <= 0) {
-      Alert.alert('Ungültige Zeit', 'Bitte eine Zahl in Minuten größer als 0 eingeben.');
+      Alert.alert(t('kochen.ungueltigeZeit'), t('kochen.zahlGroesserNull'));
       return;
     }
     setRemainingSeconds(Math.round(minutes * 60));
@@ -712,7 +706,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
           // sicher im Vordergrund, unabhaengig davon, ob Benachrichtigungs-
           // Berechtigung erteilt wurde - die geplante Push-Benachrichtigung
           // allein reichte offenbar nicht als verlaessliches Signal).
-          Speech.speak('Timer fertig!', { language: SPEECH_LANGUAGE });
+          Speech.speak(t('kochen.timerFertig'), { language: SPEECH_LANGUAGE });
           return 0;
         }
         return prev - 1;
@@ -873,7 +867,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
           <ActivityIndicator size="small" color={colors.muted} />
           <Text style={{ color: colors.muted, fontSize: 11 }}>
-            Brutzel passt die Schritte für {level === 'anfaenger' ? 'Anfänger' : 'Profis'} an…
+            {level === 'anfaenger' ? t('kochen.umstellungAnfaenger') : t('kochen.umstellungProfi')}
           </Text>
         </View>
       )}
@@ -907,7 +901,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
         <BrutzelAvatar size={88} variant="full" />
         <View style={{ flex: 1 }}>
           <Text style={[styles.brutzelText, { color: colors.muted }]}>
-            <Text style={{ fontWeight: '700', color: gradient[0] }}>Brutzel: </Text>
+            <Text style={{ fontWeight: '700', color: gradient[0] }}>{t('kochen.brutzel')}</Text>
             {brutzelTip}
           </Text>
           <Pressable onPress={() => handleSpeakTip(brutzelTip)} hitSlop={8} style={styles.videoLink}>
@@ -917,7 +911,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
               color={gradient[0]}
             />
             <Text style={[styles.videoLinkText, { color: gradient[0] }]}>
-              {isSpeakingTip ? 'Stopp' : 'Vorlesen'}
+              {isSpeakingTip ? t('kochen.stopp') : t('kochen.vorlesen')}
             </Text>
           </Pressable>
           {techniqueVideo?.available && techniqueVideo.youtube_video_id && (
@@ -930,7 +924,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
               style={styles.videoLink}
             >
               <MaterialCommunityIcons name="youtube" size={15} color="#DC2626" />
-              <Text style={[styles.videoLinkText, { color: gradient[0] }]}>Technik-Video ansehen</Text>
+              <Text style={[styles.videoLinkText, { color: gradient[0] }]}>{t('kochen.technikVideo')}</Text>
             </Pressable>
           )}
         </View>
@@ -948,7 +942,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
       ) : level === 'anfaenger' ? (
         <Pressable onPress={handleOpenNoteModal} style={[styles.addNoteButton, { borderColor: colors.muted, borderRadius: radius.sm }]}>
           <MaterialCommunityIcons name="note-plus-outline" size={14} color={colors.muted} />
-          <Text style={[styles.addNoteText, { color: colors.muted }]}>Notiz zu diesem Schritt hinzufügen</Text>
+          <Text style={[styles.addNoteText, { color: colors.muted }]}>{t('kochen.notizHinzufuegen')}</Text>
         </Pressable>
       ) : null}
 
@@ -976,12 +970,12 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
           </View>
           {!displayedIsTimerRunning && displayedRemainingSeconds > 0 && (
             <Pressable onPress={handleStartTimer} style={[styles.timerButton, { backgroundColor: gradient[0], borderRadius: radius.sm }]}>
-              <Text style={styles.timerButtonText}>Timer starten</Text>
+              <Text style={styles.timerButtonText}>{t('kochen.timerStarten')}</Text>
             </Pressable>
           )}
           {displayedIsTimerRunning && (
             <Pressable onPress={handlePauseTimer} style={[styles.timerButton, { backgroundColor: colors.bg, borderRadius: radius.sm }]}>
-              <Text style={[styles.timerButtonText, { color: colors.text }]}>Pausieren</Text>
+              <Text style={[styles.timerButtonText, { color: colors.text }]}>{t('kochen.pausieren')}</Text>
             </Pressable>
           )}
         </View>
@@ -990,20 +984,20 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
 
       <View style={styles.navRow}>
         <Pressable onPress={goBackStep} style={[styles.navButtonSecondary, { borderColor: colors.muted, borderRadius: radius.md }]}>
-          <Text style={[styles.navButtonSecondaryText, { color: colors.muted }]}>Zurück</Text>
+          <Text style={[styles.navButtonSecondaryText, { color: colors.muted }]}>{t('allgemein.zurueck')}</Text>
         </Pressable>
         <Pressable onPress={goNext} style={[styles.navButtonPrimary, { backgroundColor: gradient[0], borderRadius: radius.md }]}>
-          <Text style={styles.navButtonPrimaryText}>{isLastStep ? 'Fertig' : 'Weiter'}</Text>
+          <Text style={styles.navButtonPrimaryText}>{isLastStep ? t('allgemein.fertig') : t('allgemein.weiter')}</Text>
         </Pressable>
       </View>
 
       <Modal visible={isNoteModalOpen} transparent animationType="fade" onRequestClose={() => setIsNoteModalOpen(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalCard, { backgroundColor: colors.bg, borderRadius: radius.lg }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Notiz zu diesem Schritt</Text>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>{t('kochen.notizZuSchritt')}</Text>
             <TextInput
               style={[styles.modalInput, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-              placeholder="z.B. Beim letzten Mal weniger Salz genommen"
+              placeholder={t('kochen.notizPlatzhalter')}
               placeholderTextColor={colors.muted}
               value={noteDraft}
               onChangeText={setNoteDraft}
@@ -1012,14 +1006,14 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
             />
             <View style={styles.modalButtonRow}>
               <Pressable onPress={() => { Keyboard.dismiss(); setIsNoteModalOpen(false); }} style={styles.modalCancelButton}>
-                <Text style={[styles.modalCancelText, { color: colors.muted }]}>Abbrechen</Text>
+                <Text style={[styles.modalCancelText, { color: colors.muted }]}>{t('allgemein.abbrechen')}</Text>
               </Pressable>
               <Pressable
                 onPress={handleSaveNote}
                 disabled={isSavingNote}
                 style={[styles.modalSaveButton, { backgroundColor: gradient[0], borderRadius: radius.sm, opacity: isSavingNote ? 0.7 : 1 }]}
               >
-                {isSavingNote ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.modalSaveText}>Speichern</Text>}
+                {isSavingNote ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.modalSaveText}>{t('allgemein.speichern')}</Text>}
               </Pressable>
             </View>
           </View>
@@ -1029,7 +1023,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
       <Modal visible={isStepTextModalOpen} transparent animationType="fade" onRequestClose={() => setIsStepTextModalOpen(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalCard, { backgroundColor: colors.bg, borderRadius: radius.lg }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Kochschritt bearbeiten</Text>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>{t('kochen.kochschrittBearbeiten')}</Text>
             <TextInput
               style={[styles.modalInput, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
               value={stepTextDraft}
@@ -1043,14 +1037,14 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
               </Pressable>
               <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
                 <Pressable onPress={() => { Keyboard.dismiss(); setIsStepTextModalOpen(false); }} style={styles.modalCancelButton}>
-                  <Text style={[styles.modalCancelText, { color: colors.muted }]}>Abbrechen</Text>
+                  <Text style={[styles.modalCancelText, { color: colors.muted }]}>{t('allgemein.abbrechen')}</Text>
                 </Pressable>
                 <Pressable
                   onPress={handleSaveStepText}
                   disabled={isSavingStepText}
                   style={[styles.modalSaveButton, { backgroundColor: gradient[0], borderRadius: radius.sm, opacity: isSavingStepText ? 0.7 : 1 }]}
                 >
-                  {isSavingStepText ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.modalSaveText}>Speichern</Text>}
+                  {isSavingStepText ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.modalSaveText}>{t('allgemein.speichern')}</Text>}
                 </Pressable>
               </View>
             </View>
@@ -1061,10 +1055,10 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
       <Modal visible={editingIngredientIndex !== null} transparent animationType="fade" onRequestClose={() => setEditingIngredientIndex(null)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalCard, { backgroundColor: colors.bg, borderRadius: radius.lg }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Zutat bearbeiten</Text>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>{t('kochen.zutatBearbeiten')}</Text>
             <TextInput
               style={[styles.modalInput, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md, marginBottom: 8 }]}
-              placeholder="Name"
+              placeholder={t('kochen.name')}
               placeholderTextColor={colors.muted}
               value={ingredientDraft.name}
               onChangeText={(v) => setIngredientDraft((prev) => ({ ...prev, name: v }))}
@@ -1073,7 +1067,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <TextInput
                 style={[styles.modalInput, { flex: 1, backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-                placeholder="Menge"
+                placeholder={t('kochen.menge')}
                 placeholderTextColor={colors.muted}
                 keyboardType="numeric"
                 value={ingredientDraft.amount}
@@ -1081,7 +1075,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
               />
               <TextInput
                 style={[styles.modalInput, { flex: 1, backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-                placeholder="Einheit"
+                placeholder={t('kochen.einheit')}
                 placeholderTextColor={colors.muted}
                 value={ingredientDraft.unit}
                 onChangeText={(v) => setIngredientDraft((prev) => ({ ...prev, unit: v }))}
@@ -1093,14 +1087,14 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
               </Pressable>
               <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
                 <Pressable onPress={() => { Keyboard.dismiss(); setEditingIngredientIndex(null); }} style={styles.modalCancelButton}>
-                  <Text style={[styles.modalCancelText, { color: colors.muted }]}>Abbrechen</Text>
+                  <Text style={[styles.modalCancelText, { color: colors.muted }]}>{t('allgemein.abbrechen')}</Text>
                 </Pressable>
                 <Pressable
                   onPress={handleSaveIngredient}
                   disabled={isSavingIngredient}
                   style={[styles.modalSaveButton, { backgroundColor: gradient[0], borderRadius: radius.sm, opacity: isSavingIngredient ? 0.7 : 1 }]}
                 >
-                  {isSavingIngredient ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.modalSaveText}>Speichern</Text>}
+                  {isSavingIngredient ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.modalSaveText}>{t('allgemein.speichern')}</Text>}
                 </Pressable>
               </View>
             </View>
@@ -1111,7 +1105,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
       <Modal visible={isEditingTimer} transparent animationType="fade" onRequestClose={() => setIsEditingTimer(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalCard, { backgroundColor: colors.bg, borderRadius: radius.lg }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Timer-Zeit ändern</Text>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>{t('kochen.timerZeitAendern')}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
               <TextInput
                 style={[styles.modalInput, { flex: 1, backgroundColor: colors.card, color: colors.text, borderRadius: radius.md, textAlign: 'center', fontSize: 20 }]}
@@ -1120,11 +1114,11 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
                 onChangeText={setTimerEditDraft}
                 autoFocus
               />
-              <Text style={{ color: colors.muted, fontSize: 13 }}>Minuten</Text>
+              <Text style={{ color: colors.muted, fontSize: 13 }}>{t('kochen.minuten')}</Text>
             </View>
             <View style={styles.modalButtonRow}>
               <Pressable onPress={() => { Keyboard.dismiss(); setIsEditingTimer(false); }} style={styles.modalCancelButton}>
-                <Text style={[styles.modalCancelText, { color: colors.muted }]}>Abbrechen</Text>
+                <Text style={[styles.modalCancelText, { color: colors.muted }]}>{t('allgemein.abbrechen')}</Text>
               </Pressable>
               <Pressable
                 onPress={() => { Keyboard.dismiss(); handleSaveTimerEdit(); }}
@@ -1143,13 +1137,13 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
             <ActivityIndicator color={gradient[0]} />
             <Text style={[styles.umstellungText, { color: colors.text }]}>
               {level === 'anfaenger'
-                ? 'Brutzel schreibt die Schritte für Anfänger um…'
+                ? t('kochen.umstellungAnfaenger')
                 : level === 'profi'
-                  ? 'Brutzel kürzt die Schritte für Profis…'
-                  : 'Brutzel stellt das Rezept um…'}
+                  ? t('kochen.umstellungProfi')
+                  : t('kochen.umstellungAllgemein')}
             </Text>
             <Text style={[styles.umstellungHinweis, { color: colors.muted }]}>
-              Schritte und Tipps werden zusammen umgestellt.
+              {t('kochen.umstellungHinweis')}
             </Text>
           </View>
         </View>

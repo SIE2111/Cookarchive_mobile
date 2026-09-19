@@ -3,6 +3,7 @@ import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Pressable, Image
 import * as Sharing from 'expo-sharing';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
+import { useUebersetzung } from '../i18n';
 import PublishToPoolButton from '../components/PublishToPoolButton';
 import ShareRecipeButton from '../components/ShareRecipeButton';
 import { api, ApiError } from '../api/client';
@@ -62,6 +63,7 @@ const MAX_SELECTABLE_SIDES = 2;
 
 export default function RecipeDetailScreen({ route, navigation }: Props) {
   const { colors, gradient, radius } = useTheme();
+  const { t } = useUebersetzung();
   const { recipeId } = route.params;
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -78,7 +80,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
       api
         .get<RecipeDetail>(`/recipes/${recipeId}`)
         .then(setRecipe)
-        .catch((err) => setError(err instanceof ApiError ? err.detail : 'Rezept konnte nicht geladen werden'));
+        .catch((err) => setError(err instanceof ApiError ? err.detail : t('detail.nichtGeladen')));
     };
     load();
     const unsubscribe = navigation.addListener('focus', load);
@@ -121,7 +123,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
     api
       .post<{ suggestions: SideSuggestion[] }>(`/ai/suggest-sides-for-recipe/${recipeId}`)
       .then((res) => setSideSuggestions(res.suggestions))
-      .catch((err) => setSidesError(err instanceof ApiError ? err.detail : 'Vorschläge konnten nicht geladen werden'))
+      .catch((err) => setSidesError(err instanceof ApiError ? err.detail : t('detail.vorschlaegeNichtGeladen')))
       .finally(() => setIsSidesLoading(false));
   }, [recipeId]);
 
@@ -148,7 +150,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
       // die Liste leer - ohne Ladeanzeige, ohne Meldung. Der Bildschirm
       // sah dann exakt so aus wie 'nichts gefunden', obwohl gar nicht
       // gesucht werden konnte.
-      setPickerError(err instanceof ApiError ? err.detail : 'Rezepte konnten nicht geladen werden');
+      setPickerError(err instanceof ApiError ? err.detail : t('rezepte.nichtGeladen'));
     } finally {
       setPickerLoading(false);
     }
@@ -167,7 +169,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
   const addManualSide = (r: RecipeSummary) => {
     if (r.id === recipeId) return;
     if (!manualSides.some((m) => m.id === r.id) && !sideSuggestions.some((s) => s.id === r.id)) {
-      setManualSides((prev) => [...prev, { id: r.id, title: r.title, reason: 'Selbst ausgewählt' }]);
+      setManualSides((prev) => [...prev, { id: r.id, title: r.title, reason: t('detail.selbstAusgewaehlt') }]);
     }
     toggleSideSelect(r.id);
     setIsPickerOpen(false);
@@ -196,7 +198,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
       setReviewSuggestions(result.suggestions);
       setReviewWebVerified(result.web_verified);
     } catch (err) {
-      Alert.alert('Prüfung fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+      Alert.alert(t('detail.pruefungFehlgeschlagen'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
     } finally {
       setIsReviewing(false);
     }
@@ -221,9 +223,9 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
       setReviewSuggestions(null);
       setSelectedSuggestionIndices([]);
       setSessionOnlyNote(null); // dauerhaft uebernommen -> ersetzt eine evtl. vorher gewaehlte Nur-diesmal-Notiz
-      Alert.alert('Übernommen', 'Die ausgewählten Vorschläge wurden als Notiz ins Rezept übernommen.');
+      Alert.alert(t('detail.uebernommen'), t('detail.uebernommenText'));
     } catch (err) {
-      Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Konnte nicht übernommen werden.');
+      Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('detail.nichtUebernommen'));
     } finally {
       setIsApplyingSuggestions(false);
     }
@@ -242,7 +244,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
     setSessionOnlyNote(chosenText);
     setReviewSuggestions(null);
     setSelectedSuggestionIndices([]);
-    Alert.alert('Vorgemerkt', 'Wird beim Start der Zubereitung einmalig angezeigt, aber nicht dauerhaft im Rezept gespeichert.');
+    Alert.alert(t('detail.vorgemerkt'), t('detail.vorgemerktText'));
   };
 
   // Zutaten/Schritte VOR dem Kochstart bearbeiten - gleiche Abfrage wie im
@@ -271,13 +273,13 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
   ) => {
     Keyboard.dismiss();
     Alert.alert(
-      'Änderung speichern',
-      'Soll das dauerhaft im Rezept gespeichert werden (auch bei künftigen Malen sichtbar) oder gilt es nur für diesen einen Kochvorgang?',
+      t('detail.aenderungSpeichern'),
+      t('detail.aenderungFrage'),
       [
-        { text: 'Abbrechen', style: 'cancel' },
-        { text: 'Nur diesmal', onPress: () => { applySessionOnly(); onDone(); } },
+        { text: t('allgemein.abbrechen'), style: 'cancel' },
+        { text: t('detail.nurDiesmal'), onPress: () => { applySessionOnly(); onDone(); } },
         {
-          text: 'Dauerhaft im Rezept',
+          text: t('detail.dauerhaftImRezept'),
           onPress: async () => {
             setSaving(true);
             try {
@@ -286,7 +288,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
               applyLocally();
               onDone();
             } catch (err) {
-              Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Konnte nicht gespeichert werden');
+              Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('detail.nichtGespeichert'));
             } finally {
               setSaving(false);
             }
@@ -316,7 +318,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
   const handleDeleteStep = () => {
     if (isEditingStepIndex === null) return;
     if (currentSteps.length <= 1) {
-      Alert.alert('Nicht möglich', 'Ein Rezept braucht mindestens einen Schritt.');
+      Alert.alert(t('detail.nichtMoeglich'), t('detail.mindestensEinSchritt'));
       return;
     }
     const updated = currentSteps.filter((_, i) => i !== isEditingStepIndex);
@@ -377,9 +379,9 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
     setIsAddingToList(true);
     try {
       await api.post('/shopping-list/add-recipes', { recipe_ids: [recipeId, ...selectedSideIds] });
-      Alert.alert('Erledigt', 'Zutaten wurden zur Einkaufsliste hinzugefügt.');
+      Alert.alert(t('detail.erledigt'), t('detail.zutatenHinzugefuegt'));
     } catch (err) {
-      Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Zutaten konnten nicht hinzugefügt werden.');
+      Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('detail.zutatenNichtHinzugefuegt'));
     } finally {
       setIsAddingToList(false);
     }
@@ -392,12 +394,12 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
       const localUri = await api.downloadFile(`/recipes/${recipeId}/pdf`, `rezept-${recipeId}.pdf`);
       const isAvailable = await Sharing.isAvailableAsync();
       if (!isAvailable) {
-        Alert.alert('Nicht verfügbar', 'Teilen/Drucken wird auf diesem Gerät nicht unterstützt.');
+        Alert.alert(t('einkauf.nichtVerfuegbar'), t('detail.teilenNichtUnterstuetzt'));
         return;
       }
       await Sharing.shareAsync(localUri, { mimeType: 'application/pdf', dialogTitle: recipe?.title ?? 'Rezept' });
     } catch (err) {
-      Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Das Rezept-PDF konnte nicht erstellt werden.');
+      Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('detail.pdfFehlgeschlagen'));
     } finally {
       setIsExportingPdf(false);
     }
@@ -422,7 +424,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
         try {
           await api.patch(`/recipes/${recipeId}`, { servings: newValue });
         } catch (err) {
-          Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Portionenzahl konnte nicht gespeichert werden.');
+          Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('detail.portionenNichtGespeichert'));
         } finally {
           setIsSavingServings(false);
         }
@@ -443,7 +445,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
       await api.patch(`/recipes/${recipeId}`, { is_favorite: newValue });
     } catch (err) {
       setRecipe(previous);
-      Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Konnte nicht gespeichert werden.');
+      Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('detail.nichtGespeichert'));
     } finally {
       setIsSavingFavorite(false);
     }
@@ -452,19 +454,19 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
   const handleDelete = () => {
     if (!recipe) return;
     Alert.alert(
-      'Rezept löschen?',
+      t('detail.rezeptLoeschen'),
       `"${recipe.title}" wird dauerhaft gelöscht. Das kann nicht rückgängig gemacht werden.`,
       [
-        { text: 'Abbrechen', style: 'cancel' },
+        { text: t('allgemein.abbrechen'), style: 'cancel' },
         {
-          text: 'Löschen',
+          text: t('allgemein.loeschen'),
           style: 'destructive',
           onPress: async () => {
             try {
               await api.delete(`/recipes/${recipeId}`);
               navigation.goBack();
             } catch (err) {
-              Alert.alert('Löschen fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+              Alert.alert(t('profil.loeschenFehlgeschlagen'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
             }
           },
         },
@@ -529,7 +531,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
       </Text>
 
       <View style={[styles.servingsCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
-        <Text style={[styles.servingsLabel, { color: colors.muted }]}>Portionen</Text>
+        <Text style={[styles.servingsLabel, { color: colors.muted }]}>{t('detail.portionen')}</Text>
         <View style={styles.servingsControlRow}>
           <Pressable
             onPress={() => handleChangeServings(-1)}
@@ -554,7 +556,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
         <View style={[styles.equipmentCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
           <MaterialCommunityIcons name="pot-steam-outline" size={18} color={colors.muted} style={{ marginRight: 8 }} />
           <Text style={[styles.equipmentText, { color: colors.text }]}>
-            <Text style={{ fontWeight: '700' }}>Du benötigst: </Text>
+            <Text style={{ fontWeight: '700' }}>{t('detail.duBenoetigst')}</Text>
             {recipe.equipment.join(', ')}
           </Text>
         </View>
@@ -581,7 +583,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
         }}
         style={[styles.cookButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}
       >
-        <Text style={styles.cookButtonText}>Zubereitung starten</Text>
+        <Text style={styles.cookButtonText}>{t('detail.zubereitungStarten')}</Text>
       </Pressable>
 
       <Pressable
@@ -594,7 +596,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
         ) : (
           <>
             <MaterialCommunityIcons name="cart-plus" size={16} color={colors.text} />
-            <Text style={[styles.shoppingListButtonText, { color: colors.text }]}>Zutaten zur Einkaufsliste</Text>
+            <Text style={[styles.shoppingListButtonText, { color: colors.text }]}>{t('detail.zutatenZurListe')}</Text>
           </>
         )}
       </Pressable>
@@ -609,7 +611,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
         ) : (
           <>
             <MaterialCommunityIcons name="printer-outline" size={16} color={colors.text} />
-            <Text style={[styles.shoppingListButtonText, { color: colors.text }]}>Rezept drucken / als PDF</Text>
+            <Text style={[styles.shoppingListButtonText, { color: colors.text }]}>{t('detail.drucken')}</Text>
           </>
         )}
       </Pressable>
@@ -617,24 +619,24 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
       <View style={[styles.sidesCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
         <View style={styles.sidesHeader}>
           <BrutzelAvatar size={52} />
-          <Text style={[styles.sidesTitle, { color: colors.text }]}>Passt eine Beilage dazu?</Text>
+          <Text style={[styles.sidesTitle, { color: colors.text }]}>{t('detail.beilageFrage')}</Text>
         </View>
 
         {isSidesLoading ? (
           <View style={{ paddingVertical: 10, alignItems: 'center' }}>
             <ActivityIndicator color={colors.muted} size="small" />
-            <Text style={{ color: colors.muted, fontSize: 11.5, marginTop: 6 }}>Brutzel überlegt, was dazu passt…</Text>
+            <Text style={{ color: colors.muted, fontSize: 11.5, marginTop: 6 }}>{t('detail.brutzelUeberlegt')}</Text>
           </View>
         ) : (
           <>
             {sidesError && (
               <Text style={{ color: colors.muted, fontSize: 11.5, marginBottom: 8 }}>
-                Keine KI-Vorschläge verfügbar ({sidesError}) - du kannst trotzdem selbst eines dazuwählen.
+                {t('detail.keineKiVorschlaege', { fehler: sidesError })}
               </Text>
             )}
             {!sidesError && allSideCandidates.length === 0 && (
               <Text style={{ color: colors.muted, fontSize: 11.5, marginBottom: 8 }}>
-                Gerade keine passende Beilage im Kochbuch gefunden.
+                {t('detail.keineBeilageGefunden')}
               </Text>
             )}
             {allSideCandidates.map((s) => {
@@ -662,7 +664,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
             })}
             <Pressable onPress={openSidePicker} style={styles.searchLink}>
               <MaterialCommunityIcons name="magnify" size={14} color={gradient[0]} />
-              <Text style={[styles.searchLinkText, { color: gradient[0] }]}>Anderes Rezept suchen</Text>
+              <Text style={[styles.searchLinkText, { color: gradient[0] }]}>{t('detail.anderesRezeptSuchen')}</Text>
             </Pressable>
           </>
         )}
@@ -671,32 +673,32 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
       <View style={[styles.sidesCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
         <View style={styles.sidesHeader}>
           <BrutzelAvatar size={52} />
-          <Text style={[styles.sidesTitle, { color: colors.text }]}>Rezept auf Verbesserungen prüfen?</Text>
+          <Text style={[styles.sidesTitle, { color: colors.text }]}>{t('detail.verbesserungenFrage')}</Text>
         </View>
 
         {!reviewSuggestions && !isReviewing && (
           <Pressable onPress={handleReviewRecipe} style={[styles.reviewButton, { backgroundColor: gradient[0], borderRadius: radius.sm }]}>
-            <Text style={styles.reviewButtonText}>Brutzel prüft das Rezept</Text>
+            <Text style={styles.reviewButtonText}>{t('detail.brutzelPrueft')}</Text>
           </Pressable>
         )}
 
         {isReviewing && (
           <View style={{ paddingVertical: 10, alignItems: 'center' }}>
             <ActivityIndicator color={colors.muted} size="small" />
-            <Text style={{ color: colors.muted, fontSize: 11.5, marginTop: 6 }}>Brutzel prüft das Rezept…</Text>
+            <Text style={{ color: colors.muted, fontSize: 11.5, marginTop: 6 }}>{t('detail.brutzelPrueftLaeuft')}</Text>
           </View>
         )}
 
         {reviewSuggestions && reviewSuggestions.length === 0 && (
           <Text style={{ color: colors.muted, fontSize: 11.5 }}>
-            Sieht schon gut aus – Brutzel hat nichts Wesentliches zu ergänzen.
+            {t('detail.nichtsZuErgaenzen')}
           </Text>
         )}
 
         {reviewSuggestions && reviewSuggestions.length > 0 && (
           <>
             <Text style={{ color: colors.muted, fontSize: 10.5, marginBottom: 8 }}>
-              {reviewWebVerified ? '🌐 Gegen aktuelle Quellen im Internet geprüft' : '⚠️ Ohne Websuche geprüft (nur KI-Wissen)'}
+              {reviewWebVerified ? t('detail.mitWebsuche') : t('detail.ohneWebsuche')}
             </Text>
             {reviewSuggestions.map((s, i) => {
               const isSelected = selectedSuggestionIndices.includes(i);
@@ -733,7 +735,9 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
                 <Text style={styles.reviewButtonText}>
-                  {selectedSuggestionIndices.length > 0 ? `${selectedSuggestionIndices.length} ins Kochbuch übernehmen` : 'Auswählen zum Übernehmen'}
+                  {selectedSuggestionIndices.length > 0
+                    ? t('detail.anzahlUebernehmen', { anzahl: selectedSuggestionIndices.length })
+                    : t('detail.auswaehlenZumUebernehmen')}
                 </Text>
               )}
             </Pressable>
@@ -742,13 +746,13 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
               disabled={selectedSuggestionIndices.length === 0}
               style={[styles.secondaryReviewButton, { borderColor: gradient[0], borderRadius: radius.sm, opacity: selectedSuggestionIndices.length === 0 ? 0.5 : 1 }]}
             >
-              <Text style={[styles.secondaryReviewButtonText, { color: gradient[0] }]}>Nur für diesen Kochvorgang</Text>
+              <Text style={[styles.secondaryReviewButtonText, { color: gradient[0] }]}>{t('detail.nurDiesenKochvorgang')}</Text>
             </Pressable>
           </>
         )}
       </View>
 
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>Zutaten</Text>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('detail.zutaten')}</Text>
       {currentIngredients.map((ing, i) => (
         <Pressable key={i} onPress={() => handleOpenIngredientEdit(i)} style={styles.ingredientRow}>
           <Text style={[styles.ingredient, { color: colors.text, fontSize: largeText ? 16.5 : 13.5, flex: 1 }]}>
@@ -759,11 +763,11 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
         </Pressable>
       ))}
 
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>Zubereitung</Text>
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('detail.zubereitung')}</Text>
       {currentSteps.map((step, i) => (
         <View key={step.order} style={[styles.stepCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={[styles.stepNumber, { color: colors.muted }]}>Schritt {step.order}</Text>
+            <Text style={[styles.stepNumber, { color: colors.muted }]}>{t('detail.schritt', { nummer: step.order })}</Text>
             <Pressable onPress={() => handleOpenStepEdit(i)} hitSlop={8}>
               <MaterialCommunityIcons name="pencil-outline" size={15} color={colors.muted} />
             </Pressable>
@@ -774,7 +778,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
 
       {recipe.personal_note && (
         <View style={[styles.noteCard, { borderRadius: radius.md }]}>
-          <Text style={styles.noteLabel}>📌 Deine Notiz</Text>
+          <Text style={styles.noteLabel}>{t('detail.deineNotiz')}</Text>
           <Text style={[styles.noteText, { color: colors.text }]}>{recipe.personal_note}</Text>
         </View>
       )}
@@ -783,7 +787,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
     <Modal visible={isPickerOpen} animationType="slide" onRequestClose={() => setIsPickerOpen(false)}>
       <View style={[styles.pickerContainer, { backgroundColor: colors.bg }]}>
         <View style={styles.pickerHeader}>
-          <Text style={[styles.pickerTitle, { color: colors.text }]}>Rezept als Beilage wählen</Text>
+          <Text style={[styles.pickerTitle, { color: colors.text }]}>{t('detail.alsBeilageWaehlen')}</Text>
           <Pressable onPress={() => setIsPickerOpen(false)} hitSlop={10}>
             <MaterialCommunityIcons name="close" size={24} color={colors.text} />
           </Pressable>
@@ -806,7 +810,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
               onPress={loadPickerRecipes}
               style={[styles.pickerRow, { backgroundColor: colors.card, borderRadius: radius.sm }]}
             >
-              <Text style={{ color: gradient[0], fontSize: 13.5, fontWeight: '600' }}>Erneut versuchen</Text>
+              <Text style={{ color: gradient[0], fontSize: 13.5, fontWeight: '600' }}>{t('allgemein.erneutVersuchen')}</Text>
             </Pressable>
           </View>
         ) : (
@@ -815,7 +819,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
               <Text style={{ color: colors.muted, fontSize: 13, textAlign: 'center', marginTop: 30, lineHeight: 19 }}>
                 {recipeSearch.trim()
                   ? `Kein Rezept mit „${recipeSearch.trim()}" im Titel.`
-                  : 'Noch keine weiteren Rezepte im Kochbuch.'}
+                  : t('detail.keineWeiterenRezepte')}
               </Text>
             ) : (
               filteredPickerRecipes.map((r) => (
@@ -836,7 +840,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
     <Modal visible={isEditingStepIndex !== null} transparent animationType="fade" onRequestClose={() => setIsEditingStepIndex(null)}>
       <View style={styles.modalOverlay}>
         <View style={[styles.modalCard, { backgroundColor: colors.bg, borderRadius: radius.lg }]}>
-          <Text style={[styles.modalTitle, { color: colors.text }]}>Kochschritt bearbeiten</Text>
+          <Text style={[styles.modalTitle, { color: colors.text }]}>{t('detail.kochschrittBearbeiten')}</Text>
           <TextInput
             style={[styles.modalInput, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
             value={stepTextDraft}
@@ -850,14 +854,14 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
             </Pressable>
             <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
               <Pressable onPress={() => { Keyboard.dismiss(); setIsEditingStepIndex(null); }} style={styles.modalCancelButton}>
-                <Text style={[styles.modalCancelText, { color: colors.muted }]}>Abbrechen</Text>
+                <Text style={[styles.modalCancelText, { color: colors.muted }]}>{t('allgemein.abbrechen')}</Text>
               </Pressable>
               <Pressable
                 onPress={handleSaveStepEdit}
                 disabled={isSavingStepText}
                 style={[styles.modalSaveButton, { backgroundColor: gradient[0], borderRadius: radius.sm, opacity: isSavingStepText ? 0.7 : 1 }]}
               >
-                {isSavingStepText ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.modalSaveText}>Speichern</Text>}
+                {isSavingStepText ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.modalSaveText}>{t('allgemein.speichern')}</Text>}
               </Pressable>
             </View>
           </View>
@@ -868,7 +872,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
     <Modal visible={editingIngredientIndex !== null} transparent animationType="fade" onRequestClose={() => setEditingIngredientIndex(null)}>
       <View style={styles.modalOverlay}>
         <View style={[styles.modalCard, { backgroundColor: colors.bg, borderRadius: radius.lg }]}>
-          <Text style={[styles.modalTitle, { color: colors.text }]}>Zutat bearbeiten</Text>
+          <Text style={[styles.modalTitle, { color: colors.text }]}>{t('detail.zutatBearbeiten')}</Text>
           <TextInput
             style={[styles.modalInput, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md, marginBottom: 8 }]}
             placeholder="Name"
@@ -900,14 +904,14 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
             </Pressable>
             <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
               <Pressable onPress={() => { Keyboard.dismiss(); setEditingIngredientIndex(null); }} style={styles.modalCancelButton}>
-                <Text style={[styles.modalCancelText, { color: colors.muted }]}>Abbrechen</Text>
+                <Text style={[styles.modalCancelText, { color: colors.muted }]}>{t('allgemein.abbrechen')}</Text>
               </Pressable>
               <Pressable
                 onPress={handleSaveIngredientEdit}
                 disabled={isSavingIngredient}
                 style={[styles.modalSaveButton, { backgroundColor: gradient[0], borderRadius: radius.sm, opacity: isSavingIngredient ? 0.7 : 1 }]}
               >
-                {isSavingIngredient ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.modalSaveText}>Speichern</Text>}
+                {isSavingIngredient ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.modalSaveText}>{t('allgemein.speichern')}</Text>}
               </Pressable>
             </View>
           </View>
