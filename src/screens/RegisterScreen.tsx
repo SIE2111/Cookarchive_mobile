@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, Alert, Linking } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../theme/ThemeContext';
+import { useUebersetzung } from '../i18n';
 import DismissKeyboardView from '../components/DismissKeyboardView';
 import { useAuth } from '../context/AuthContext';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -14,6 +15,7 @@ const DATENSCHUTZ_URL = 'https://www.homearchive.at/meinkochbuch/datenschutz';
 
 export default function RegisterScreen({ navigation }: Props) {
   const { colors, gradient, radius } = useTheme();
+  const { t } = useUebersetzung();
   const { registerWithCode } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -23,11 +25,11 @@ export default function RegisterScreen({ navigation }: Props) {
 
   const handleRegister = async () => {
     if (!email || !password) {
-      Alert.alert('Fehlt noch was', 'Bitte E-Mail und Passwort eingeben.');
+      Alert.alert(t('auth.fehltNochWas'), t('auth.bitteEmailPasswort'));
       return;
     }
     if (!termsAccepted) {
-      Alert.alert('Zustimmung erforderlich', 'Bitte bestätige AGB und Datenschutzerklärung, um fortzufahren.');
+      Alert.alert(t('auth.zustimmungTitel'), t('auth.zustimmungText'));
       return;
     }
     setIsSubmitting(true);
@@ -39,8 +41,8 @@ export default function RegisterScreen({ navigation }: Props) {
       await registerWithCode(email, password);
       navigation.navigate('ConfirmEmail', { email: email.trim().toLowerCase() });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Registrierung fehlgeschlagen';
-      Alert.alert('Registrierung fehlgeschlagen', message);
+      const message = err instanceof Error ? err.message : t('auth.registrierungFehlgeschlagen');
+      Alert.alert(t('auth.registrierungFehlgeschlagen'), message);
     } finally {
       setIsSubmitting(false);
     }
@@ -49,13 +51,13 @@ export default function RegisterScreen({ navigation }: Props) {
   return (
     <DismissKeyboardView style={[styles.container, { backgroundColor: colors.bg }]}>
       <View style={[styles.card, { backgroundColor: colors.bg, borderRadius: radius.lg }]}>
-        <Text style={[styles.title, { color: colors.text }]}>Konto erstellen</Text>
-        <Text style={[styles.subtitle, { color: colors.muted }]}>Dauert nur eine Minute</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{t('auth.kontoErstellen')}</Text>
+        <Text style={[styles.subtitle, { color: colors.muted }]}>{t('auth.dauertEineMinute')}</Text>
 
-        <Text style={[styles.label, { color: colors.muted }]}>Name</Text>
+        <Text style={[styles.label, { color: colors.muted }]}>{t('auth.name')}</Text>
         <TextInput
           style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-          placeholder="Markus"
+          placeholder={t('auth.namePlatzhalter')}
           placeholderTextColor={colors.muted}
           value={name}
           onChangeText={setName}
@@ -64,7 +66,7 @@ export default function RegisterScreen({ navigation }: Props) {
         <Text style={[styles.label, { color: colors.muted }]}>E-Mail</Text>
         <TextInput
           style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-          placeholder="deine@email.at"
+          placeholder={t('auth.emailPlatzhalter')}
           placeholderTextColor={colors.muted}
           autoCapitalize="none"
           keyboardType="email-address"
@@ -72,7 +74,7 @@ export default function RegisterScreen({ navigation }: Props) {
           onChangeText={setEmail}
         />
 
-        <Text style={[styles.label, { color: colors.muted }]}>Passwort</Text>
+        <Text style={[styles.label, { color: colors.muted }]}>{t('auth.passwort')}</Text>
         <TextInput
           style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
           placeholder="••••••••••"
@@ -97,17 +99,17 @@ export default function RegisterScreen({ navigation }: Props) {
             {termsAccepted && <Text style={styles.checkboxMark}>✓</Text>}
           </View>
           <Text style={[styles.checkboxLabel, { color: colors.muted }]}>
-            Ich akzeptiere die AGB und die Datenschutzerklärung.
+            {t('auth.akzeptiere')}
           </Text>
         </Pressable>
 
         <View style={styles.legalLinksRow}>
           <Text style={{ color: gradient[0], fontSize: 12, fontWeight: '600' }} onPress={() => Linking.openURL(AGB_URL).catch(() => {})}>
-            AGB lesen
+            {t('auth.agbLesen')}
           </Text>
           <Text style={{ color: colors.muted, fontSize: 12 }}>·</Text>
           <Text style={{ color: gradient[0], fontSize: 12, fontWeight: '600' }} onPress={() => Linking.openURL(DATENSCHUTZ_URL).catch(() => {})}>
-            Datenschutzerklärung lesen
+            {t('auth.datenschutzLesen')}
           </Text>
         </View>
 
@@ -121,14 +123,15 @@ export default function RegisterScreen({ navigation }: Props) {
             {isSubmitting ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Konto erstellen</Text>
+              <Text style={styles.buttonText}>{t('auth.kontoErstellen')}</Text>
             )}
           </LinearGradient>
         </Pressable>
 
         <Pressable onPress={() => navigation.navigate('Login')} style={{ marginTop: 18 }}>
           <Text style={[styles.link, { color: colors.muted }]}>
-            Schon ein Konto? <Text style={{ color: gradient[0], fontWeight: '600' }}>Anmelden</Text>
+            {t('auth.schonKonto')}{' '}
+            <Text style={{ color: gradient[0], fontWeight: '600' }}>{t('auth.anmelden')}</Text>
           </Text>
         </Pressable>
       </View>

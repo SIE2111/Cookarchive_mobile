@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../theme/ThemeContext';
+import { useUebersetzung } from '../i18n';
 import DismissKeyboardView from '../components/DismissKeyboardView';
 import { useAuth } from '../context/AuthContext';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -24,6 +25,7 @@ const CODE_LENGTH = 4;
 export default function ConfirmEmailScreen({ navigation, route }: Props) {
   const { email } = route.params;
   const { colors, gradient, radius } = useTheme();
+  const { t } = useUebersetzung();
   const { verifyCode, resendCode } = useAuth();
   const [code, setCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -38,15 +40,15 @@ export default function ConfirmEmailScreen({ navigation, route }: Props) {
       // Ab hier uebernimmt der AppNavigator: sobald die Session steht,
       // wird auf den Haupt-Stack (Onboarding) umgeschaltet.
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Bestätigung fehlgeschlagen';
+      const message = err instanceof Error ? err.message : t('auth.bestaetigungFehlgeschlagen');
       if (message === 'BESTAETIGT_BITTE_ANMELDEN') {
         Alert.alert(
-          'Konto bestätigt',
-          'Dein Konto ist freigeschaltet. Bitte melde dich jetzt mit deinem Passwort an.',
-          [{ text: 'Zur Anmeldung', onPress: () => navigation.navigate('Login') }],
+          t('auth.kontoBestaetigt'),
+          t('auth.kontoBestaetigtText'),
+          [{ text: t('auth.zurAnmeldung'), onPress: () => navigation.navigate('Login') }],
         );
       } else {
-        Alert.alert('Bestätigung fehlgeschlagen', message);
+        Alert.alert(t('auth.bestaetigungFehlgeschlagen'), message);
         setCode('');
       }
     } finally {
@@ -69,10 +71,10 @@ export default function ConfirmEmailScreen({ navigation, route }: Props) {
     try {
       await resendCode(email);
       setCode('');
-      Alert.alert('Gesendet', 'Ein neuer Code ist unterwegs. Der alte gilt nicht mehr.');
+      Alert.alert(t('auth.gesendet'), t('auth.neuerCode'));
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erneutes Senden fehlgeschlagen';
-      Alert.alert('Erneutes Senden fehlgeschlagen', message);
+      Alert.alert(t('auth.erneutSendenFehlgeschlagen'), message);
     } finally {
       setIsResending(false);
     }
@@ -82,11 +84,11 @@ export default function ConfirmEmailScreen({ navigation, route }: Props) {
     <DismissKeyboardView style={[styles.container, { backgroundColor: colors.bg }]}>
       <View style={[styles.card, { backgroundColor: colors.bg, borderRadius: radius.lg }]}>
         <Text style={styles.emoji}>📬</Text>
-        <Text style={[styles.title, { color: colors.text }]}>Fast geschafft</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{t('auth.fastGeschafft')}</Text>
         <Text style={[styles.subtitle, { color: colors.muted }]}>
-          Wir haben einen 4-stelligen Code an{'\n'}
+          {t('auth.codeGeschicktA')}{'\n'}
           <Text style={{ color: colors.text, fontWeight: '600' }}>{email}</Text>{'\n'}
-          geschickt. Bitte hier eintragen.
+          {t('auth.codeGeschicktB')}
         </Text>
 
         <Pressable onPress={() => inputRef.current?.focus()} style={styles.codeRow}>
@@ -131,7 +133,7 @@ export default function ConfirmEmailScreen({ navigation, route }: Props) {
             {isSubmitting ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Bestätigen</Text>
+              <Text style={styles.buttonText}>{t('auth.bestaetigen')}</Text>
             )}
           </LinearGradient>
         </Pressable>
@@ -147,7 +149,8 @@ export default function ConfirmEmailScreen({ navigation, route }: Props) {
 
         <Pressable onPress={() => navigation.navigate('Login')} style={{ marginTop: 12 }}>
           <Text style={[styles.link, { color: colors.muted }]}>
-            Schon bestätigt? <Text style={{ color: gradient[0], fontWeight: '600' }}>Jetzt anmelden</Text>
+            {t('auth.schonBestaetigt')}{' '}
+            <Text style={{ color: gradient[0], fontWeight: '600' }}>{t('auth.jetztAnmelden')}</Text>
           </Text>
         </Pressable>
       </View>

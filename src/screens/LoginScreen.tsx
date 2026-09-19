@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../theme/ThemeContext';
+import { useUebersetzung } from '../i18n';
 import DismissKeyboardView from '../components/DismissKeyboardView';
 import { useAuth } from '../context/AuthContext';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -19,6 +20,7 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
 export default function LoginScreen({ navigation }: Props) {
   const { colors, gradient, radius } = useTheme();
+  const { t } = useUebersetzung();
   const { signInWithPassword } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -26,7 +28,7 @@ export default function LoginScreen({ navigation }: Props) {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Fehlt noch was', 'Bitte E-Mail und Passwort eingeben.');
+      Alert.alert(t('auth.fehltNochWas'), t('auth.bitteEmailPasswort'));
       return;
     }
     setIsSubmitting(true);
@@ -35,8 +37,8 @@ export default function LoginScreen({ navigation }: Props) {
       // Navigation zur App uebernimmt der Root-Navigator automatisch,
       // sobald AuthContext eine gueltige Session meldet.
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Login fehlgeschlagen';
-      Alert.alert('Anmeldung fehlgeschlagen', message);
+      const message = err instanceof Error ? err.message : t('auth.loginFehlgeschlagen');
+      Alert.alert(t('auth.anmeldungFehlgeschlagen'), message);
     } finally {
       setIsSubmitting(false);
     }
@@ -45,12 +47,12 @@ export default function LoginScreen({ navigation }: Props) {
   return (
     <DismissKeyboardView style={[styles.container, { backgroundColor: colors.bg }]}>
       <View style={[styles.card, { backgroundColor: colors.bg, borderRadius: radius.lg }]}>
-        <Text style={[styles.title, { color: colors.text }]}>Mein Kochbuch</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{t('auth.appName')}</Text>
 
-        <Text style={[styles.label, { color: colors.muted }]}>E-Mail</Text>
+        <Text style={[styles.label, { color: colors.muted }]}>{t('auth.email')}</Text>
         <TextInput
           style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-          placeholder="deine@email.at"
+          placeholder={t('auth.emailPlatzhalter')}
           placeholderTextColor={colors.muted}
           autoCapitalize="none"
           keyboardType="email-address"
@@ -58,7 +60,7 @@ export default function LoginScreen({ navigation }: Props) {
           onChangeText={setEmail}
         />
 
-        <Text style={[styles.label, { color: colors.muted }]}>Passwort</Text>
+        <Text style={[styles.label, { color: colors.muted }]}>{t('auth.passwort')}</Text>
         <TextInput
           style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
           placeholder="••••••••••"
@@ -78,14 +80,15 @@ export default function LoginScreen({ navigation }: Props) {
             {isSubmitting ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Anmelden</Text>
+              <Text style={styles.buttonText}>{t('auth.anmelden')}</Text>
             )}
           </LinearGradient>
         </Pressable>
 
         <Pressable onPress={() => navigation.navigate('Register')} style={{ marginTop: 20 }}>
           <Text style={[styles.link, { color: colors.muted }]}>
-            Noch kein Konto? <Text style={{ color: gradient[0], fontWeight: '600' }}>Registrieren</Text>
+            {t('auth.keinKonto')}{' '}
+            <Text style={{ color: gradient[0], fontWeight: '600' }}>{t('auth.registrieren')}</Text>
           </Text>
         </Pressable>
       </View>
