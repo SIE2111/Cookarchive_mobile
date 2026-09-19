@@ -223,8 +223,14 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
   // niemand zu sehen bekommt.
   useEffect(() => {
     if (!showBrutzel || !recipe) return;
+    // Die Stufe gehoert in die Anfrage: Die Schrittliste ist je Stufe eine
+    // andere, und damit auch die Tipps. Ohne sie stand nach dem Umschalten
+    // der Tipp zu Schritt 5 der einen Fassung neben Schritt 5 der anderen.
+    setStepTips({});
     api
-      .post<{ tips: { order: number; tip: string }[] }>(`/ai/step-tips/${recipeId}`)
+      .post<{ tips: { order: number; tip: string }[] }>(
+        `/ai/step-tips/${recipeId}?level=${level}`,
+      )
       .then((res) => {
         const byOrder: Record<number, string> = {};
         res.tips.forEach((t) => {
@@ -237,7 +243,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
         // Texte weiter unten.
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showBrutzel, recipeId, !!recipe]);
+  }, [showBrutzel, recipeId, !!recipe, level]);
 
   // Eigene Stimme fuer Brutzel: eine ANDERE deutsche Stimme als die, die
   // die Schritte vorliest. So ist ohne Hinsehen klar, ob gerade das Rezept
