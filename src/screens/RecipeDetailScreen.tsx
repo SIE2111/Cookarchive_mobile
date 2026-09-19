@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Pressable, Image, Alert, Modal, TextInput, Keyboard } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Pressable, Image, Alert, Modal, TextInput, Keyboard, Share } from 'react-native';
 import * as Sharing from 'expo-sharing';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
@@ -441,6 +441,47 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
   };
 
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+  /**
+   * Rezept als lesbare Nachricht ins Teilen-Blatt des Geraets geben -
+   * WhatsApp, Messenger, Signal, Mail, was installiert ist.
+   *
+   * Der Weg per E-Mail (ShareRecipeButton) verschickt einen DATENSATZ,
+   * den der Empfaenger mit einem Tipp uebernimmt. Das geht nur ueber die
+   * Adresse, weil sie das Einzige ist, woran sich ein spaeteres Konto
+   * erkennen laesst. Ueber Messenger ist beides nicht moeglich - dort
+   * geht nur Text. Der dafuer sofort und ohne Konto beim Empfaenger.
+   *
+   * Geteilt wird, was gerade angezeigt wird: Liegt eine Uebersetzung vor
+   * und ist sie sichtbar, geht sie hinaus, nicht das Original.
+   */
+  const handleShareAsText = async () => {
+    if (!recipe) return;
+    const zeilen: string[] = [];
+    zeilen.push(zeigtUebersetzung ? uebersetzung!.title : recipe.title);
+    if (recipe.servings) zeilen.push(t('detail.fuerPortionen', { anzahl: recipe.servings }));
+    zeilen.push('');
+    zeilen.push(`${t('detail.zutaten')}:`);
+    currentIngredients.forEach((ing) => {
+      const menge = [ing.amount, ing.unit].filter(Boolean).join(' ');
+      zeilen.push(`- ${menge ? menge + ' ' : ''}${ing.name}`);
+    });
+    zeilen.push('');
+    zeilen.push(`${t('detail.zubereitung')}:`);
+    currentSteps.forEach((st, i) => zeilen.push(`${i + 1}. ${st.text}`));
+    if (recipe.personal_note?.trim()) {
+      zeilen.push('');
+      zeilen.push(recipe.personal_note.trim());
+    }
+    zeilen.push('');
+    zeilen.push(t('detail.geteiltMit'));
+
+    try {
+      await Share.share({ message: zeilen.join('\n') });
+    } catch {
+      // Teilen abgebrochen - kein Hinweis noetig.
+    }
+  };
+
   const handlePrintRecipe = async () => {
     setIsExportingPdf(true);
     try {
@@ -669,6 +710,14 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
             <Text style={[styles.shoppingListButtonText, { color: colors.text }]}>{t('detail.drucken')}</Text>
           </>
         )}
+      </Pressable>
+
+      <Pressable
+        onPress={handleShareAsText}
+        style={[styles.shoppingListButton, { backgroundColor: colors.card, borderRadius: radius.md }]}
+      >
+        <MaterialCommunityIcons name="share-variant-outline" size={16} color={colors.text} />
+        <Text style={[styles.shoppingListButtonText, { color: colors.text }]}>{t('detail.alsNachricht')}</Text>
       </Pressable>
 
       <View style={[styles.sidesCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>

@@ -278,7 +278,10 @@
     "zutatBearbeiten": "Zutat bearbeiten",
     "anzahlUebernehmen": "{anzahl} ins Kochbuch übernehmen",
     "auswaehlenZumUebernehmen": "Auswählen zum Übernehmen",
-    "nurDiesenKochvorgang": "Nur für diesen Kochvorgang"
+    "nurDiesenKochvorgang": "Nur für diesen Kochvorgang",
+    "alsNachricht": "Als Nachricht teilen",
+    "geteiltMit": "Erstellt mit Mein Kochbuch",
+    "fuerPortionen": "für {anzahl} Portionen"
   },
   "kochen": {
     "tipp": {

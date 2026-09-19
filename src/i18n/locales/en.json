@@ -278,7 +278,10 @@
     "zutatBearbeiten": "Edit ingredient",
     "anzahlUebernehmen": "Add {anzahl} to the cookbook",
     "auswaehlenZumUebernehmen": "Select what to add",
-    "nurDiesenKochvorgang": "Only for this cooking session"
+    "nurDiesenKochvorgang": "Only for this cooking session",
+    "alsNachricht": "Share as a message",
+    "geteiltMit": "Created with Mein Kochbuch",
+    "fuerPortionen": "for {anzahl} servings"
   },
   "kochen": {
     "tipp": {
