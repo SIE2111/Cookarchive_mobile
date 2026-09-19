@@ -31,7 +31,8 @@ interface Preferences {
 // das Rezept-PDF diesen Weg geht - vorher waere es ein halbes
 // Versprechen.
 const STORAGE_OPTIONS: { key: StorageMode; title: string; subtitle: string; icon: keyof typeof MaterialCommunityIcons.glyphMap }[] = [
-  { key: 'eigene_cloud', title: 'Eigene Cloud', subtitle: 'sonstiges.speicherEigeneCloudText', icon: 'cloud-outline' },
+  { key: 'eigene_cloud', title: 'sonstiges.speicherEigeneCloud', subtitle: 'sonstiges.speicherEigeneCloudText', icon: 'cloud-outline' },
+  { key: 'nas', title: 'sonstiges.nasTitel', subtitle: 'sonstiges.speicherNasText', icon: 'nas' },
 ];
 
 const CLOUD_PROVIDER_ICONS: Record<string, keyof typeof MaterialCommunityIcons.glyphMap> = {

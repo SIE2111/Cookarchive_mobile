@@ -601,7 +601,9 @@
     "nasVerbunden": "Connected to {adresse}",
     "nasPasswortBleibt": "Leave the password empty to keep the stored one.",
     "nasGeprueft": "Connection works",
-    "nasFehler": "Connection failed"
+    "nasFehler": "Connection failed",
+    "speicherEigeneCloud": "Our cloud",
+    "speicherNasText": "On your own NAS via WebDAV – the device must be reachable from the internet."
   },
   "uebersetzung": {
     "angebotTitel": "This recipe is written in {sprache}.",

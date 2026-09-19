@@ -601,7 +601,9 @@
     "nasVerbunden": "Verbunden mit {adresse}",
     "nasPasswortBleibt": "Passwort leer lassen, um das gespeicherte zu behalten.",
     "nasGeprueft": "Verbindung steht",
-    "nasFehler": "Verbindung fehlgeschlagen"
+    "nasFehler": "Verbindung fehlgeschlagen",
+    "speicherEigeneCloud": "Eigene Cloud",
+    "speicherNasText": "Auf deinem eigenen NAS über WebDAV – das Gerät muss aus dem Internet erreichbar sein."
   },
   "uebersetzung": {
     "angebotTitel": "Dieses Rezept ist auf {sprache} verfasst.",
