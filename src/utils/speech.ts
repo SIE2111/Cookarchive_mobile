@@ -86,4 +86,34 @@ export const BRUTZEL_PITCH = 1.15;
 export const BRUTZEL_RATE = 0.95;
 
 /** Beispielsatz zum Anhoeren in der Stimmenauswahl. */
+/**
+ * Brutzels Stimme, wenn der Nutzer keine ausgewaehlt hat.
+ *
+ * Vorher suchte die Begruessung selbst nach Namen wie 'markus' oder
+ * 'martin' - das sind Vorlese-Stimmen, sachlich und erwachsen. Apples
+ * Charakterstimmen passen zu einer Figur deutlich besser. Gesucht wird in
+ * dieser Reihenfolge; ist keine davon auf dem Geraet, entscheidet wie
+ * bisher die Reihenfolge aus getGermanVoices().
+ */
+const BRUTZEL_STANDARD_STIMMEN = ['rocko', 'eddy', 'reed', 'flo'];
+
+/**
+ * Die Stimme, mit der Brutzel ueberall spricht: die gewaehlte, sonst die
+ * beste der Standardstimmen. Eine Stelle statt drei, damit die Begruessung
+ * nicht anders klingt als der Koch-Modus.
+ */
+export async function brutzelStimme(): Promise<string | undefined> {
+  const gewaehlt = await loadBrutzelVoice();
+  if (gewaehlt) return gewaehlt;
+
+  const stimmen = await getGermanVoices();
+  for (const name of BRUTZEL_STANDARD_STIMMEN) {
+    const treffer = stimmen.find(
+      (v) => v.name.toLowerCase().includes(name) || v.identifier.toLowerCase().includes(name),
+    );
+    if (treffer) return treffer.identifier;
+  }
+  return stimmen[0]?.identifier;
+}
+
 export const VOICE_SAMPLE = 'Servus, ich bin Brutzel. Lass die Zwiebel goldgelb werden, nicht braun.';
