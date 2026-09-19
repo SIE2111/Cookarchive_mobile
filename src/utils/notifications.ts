@@ -1,5 +1,23 @@
 import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
+import { Platform, NativeModules } from 'react-native';
+
+/**
+ * Laeuft die App gerade in Expo Go auf Android?
+ *
+ * Dort hat Expo seit SDK 53 den Push-Teil von expo-notifications
+ * entfernt. Die Bibliothek wirft deshalb schon beim Registrieren des
+ * Handlers - noch bevor ein Bildschirm erscheint, und obwohl diese App
+ * gar keine Push-Nachrichten verschickt, sondern nur lokale
+ * Timer-Meldungen.
+ *
+ * In einem richtigen Build (Entwicklungs- oder Store-Build) gibt es die
+ * Einschraenkung nicht. Deshalb wird hier nicht die Funktion
+ * abgeschaltet, sondern nur der eine Fall umgangen - sonst waere die App
+ * auf Android in Expo Go ueberhaupt nicht zu testen.
+ */
+const IST_EXPO_GO_ANDROID =
+  Platform.OS === 'android' &&
+  (NativeModules?.ExponentConstants?.appOwnership ?? 'expo') === 'expo';
 
 /**
  * Timer-Push-Benachrichtigungen: wenn die App im Hintergrund ist und ein
@@ -8,17 +26,20 @@ import { Platform } from 'react-native';
  * auch wenn man gerade nicht in der App ist).
  */
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+if (!IST_EXPO_GO_ANDROID) {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
+}
 
 export async function ensureNotificationPermission(): Promise<boolean> {
+  if (IST_EXPO_GO_ANDROID) return false;
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   if (existingStatus === 'granted') return true;
 
@@ -51,14 +72,14 @@ export async function scheduleTimerNotification(recipeTitle: string, stepText: s
 }
 
 export async function cancelTimerNotification(notificationId: string | null): Promise<void> {
-  if (!notificationId) return;
+  if (!notificationId || IST_EXPO_GO_ANDROID) return;
   await Notifications.cancelScheduledNotificationAsync(notificationId);
 }
 
 /** Android braucht einen expliziten Notification-Channel, sonst werden
  * Sound/Priority-Einstellungen ignoriert. iOS braucht das nicht. */
 export async function setupNotificationChannel(): Promise<void> {
-  if (Platform.OS !== 'android') return;
+  if (Platform.OS !== 'android' || IST_EXPO_GO_ANDROID) return;
   await Notifications.setNotificationChannelAsync('timer', {
     name: 'Kochtimer',
     importance: Notifications.AndroidImportance.HIGH,
