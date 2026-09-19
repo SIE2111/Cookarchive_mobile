@@ -10,6 +10,8 @@ type Pack = {
   label: string;
   description: string;
   count: number;
+  /** Wie viele Rezepte dieses Pakets schon im eigenen Kochbuch liegen. */
+  imported?: number;
 };
 
 type CleanupResult = {
@@ -34,9 +36,19 @@ export default function StarterPacksScreen({ navigation }: any) {
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(() => {
-    api
-      .get<{ packs?: Pack[] }>('/onboarding/starter-pack-options')
-      .then((res) => setPacks(res.packs ?? []))
+    // Zwei Abfragen: Die Paketliste kommt ohne Login aus, der Importstand
+    // nicht. Faellt der Stand aus, zeigt die Seite trotzdem die Pakete -
+    // dann eben ohne den Hinweis, was schon da ist.
+    Promise.all([
+      api.get<{ packs?: Pack[] }>('/onboarding/starter-pack-options'),
+      api
+        .get<{ packs?: { key: string; imported: number }[] }>('/onboarding/starter-pack-status')
+        .catch(() => ({ packs: [] as { key: string; imported: number }[] })),
+    ])
+      .then(([optionen, stand]) => {
+        const importiert = new Map((stand.packs ?? []).map((p) => [p.key, p.imported]));
+        setPacks((optionen.packs ?? []).map((p) => ({ ...p, imported: importiert.get(p.key) })));
+      })
       .catch((err) => setError(err instanceof ApiError ? err.detail : 'Pakete konnten nicht geladen werden'));
   }, []);
 
@@ -63,6 +75,7 @@ export default function StarterPacksScreen({ navigation }: any) {
       setError(err instanceof ApiError ? err.detail : 'Import fehlgeschlagen');
     } finally {
       setBusy(null);
+      load();
     }
   };
 
@@ -97,6 +110,7 @@ export default function StarterPacksScreen({ navigation }: any) {
               setError(err instanceof ApiError ? err.detail : 'Entfernen fehlgeschlagen');
             } finally {
               setBusy(null);
+              load();
             }
           },
         },
@@ -138,28 +152,65 @@ export default function StarterPacksScreen({ navigation }: any) {
                   {pack.label} ({pack.count})
                 </Text>
                 <Text style={[styles.cardText, { color: colors.muted }]}>{pack.description}</Text>
+                {pack.imported !== undefined && (
+                  <View style={styles.statusRow}>
+                    <MaterialCommunityIcons
+                      name={pack.imported === 0 ? 'circle-outline' : pack.imported >= pack.count ? 'check-circle' : 'circle-slice-4'}
+                      size={14}
+                      color={pack.imported === 0 ? colors.muted : gradient[0]}
+                      style={{ marginRight: 5 }}
+                    />
+                    <Text
+                      style={[
+                        styles.status,
+                        { color: pack.imported === 0 ? colors.muted : gradient[0] },
+                      ]}
+                    >
+                      {pack.imported === 0
+                        ? 'Noch nicht importiert'
+                        : pack.imported >= pack.count
+                        ? 'Vollständig in deinem Kochbuch'
+                        : `${pack.imported} von ${pack.count} in deinem Kochbuch`}
+                    </Text>
+                  </View>
+                )}
               </View>
             </View>
 
             <View style={styles.actions}>
               <Pressable
                 onPress={() => handleImport(pack)}
-                disabled={busy !== null}
-                style={[styles.importButton, { backgroundColor: gradient[0], borderRadius: radius.sm }]}
+                disabled={busy !== null || (pack.imported !== undefined && pack.imported >= pack.count)}
+                style={[
+                  styles.importButton,
+                  {
+                    backgroundColor: gradient[0],
+                    borderRadius: radius.sm,
+                    opacity: pack.imported !== undefined && pack.imported >= pack.count ? 0.45 : 1,
+                  },
+                ]}
               >
                 {busy === pack.key ? (
                   <ActivityIndicator color="#fff" size="small" />
                 ) : (
-                  <Text style={styles.importText}>Importieren</Text>
+                  <Text style={styles.importText}>
+                    {pack.imported !== undefined && pack.imported >= pack.count
+                      ? 'Alles da'
+                      : pack.imported
+                      ? 'Rest holen'
+                      : 'Importieren'}
+                  </Text>
                 )}
               </Pressable>
-              <Pressable
-                onPress={() => handleRemove(pack)}
-                disabled={busy !== null}
-                style={styles.removeButton}
-              >
-                <Text style={{ color: '#DC2626', fontSize: 13, fontWeight: '600' }}>Entfernen</Text>
-              </Pressable>
+              {pack.imported !== 0 && (
+                <Pressable
+                  onPress={() => handleRemove(pack)}
+                  disabled={busy !== null}
+                  style={styles.removeButton}
+                >
+                  <Text style={{ color: '#DC2626', fontSize: 13, fontWeight: '600' }}>Entfernen</Text>
+                </Pressable>
+              )}
             </View>
           </View>
         ))}
@@ -184,6 +235,8 @@ const styles = StyleSheet.create({
   cardHead: { flexDirection: 'row', alignItems: 'flex-start' },
   cardTitle: { fontSize: 15.5, fontWeight: '600', marginBottom: 2 },
   cardText: { fontSize: 12.5, lineHeight: 17 },
+  statusRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
+  status: { fontSize: 12.5, fontWeight: '600' },
   actions: { flexDirection: 'row', alignItems: 'center', marginTop: 12 },
   importButton: { minHeight: 44, paddingHorizontal: 20, alignItems: 'center', justifyContent: 'center' },
   importText: { color: '#fff', fontSize: 14, fontWeight: '700' },
