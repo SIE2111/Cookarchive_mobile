@@ -145,6 +145,13 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
   const [brutzelVoice, setBrutzelVoice] = useState<string | undefined>(undefined);
   const [largeText, setLargeText] = useState(false);
   const [techniqueVideo, setTechniqueVideo] = useState<TechniqueVideoInfo | null>(null);
+  // Welche Technik in diesem Kochvorgang schon gezeigt wurde. Wer beim
+  // Zwiebelschneiden zugesehen hat, braucht das Video drei Schritte
+  // spaeter nicht noch einmal angeboten - es steht sonst als Angebot da,
+  // das man schon abgelehnt oder erledigt hat. Ein useRef und kein
+  // useState: Die Anzeige haengt nicht daran, und ein erneutes Zeichnen
+  // beim Merken waere unnoetig.
+  const gezeigteTechniken = useRef<Set<string>>(new Set());
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
   const [noteDraft, setNoteDraft] = useState('');
   const [isStepTextModalOpen, setIsStepTextModalOpen] = useState(false);
@@ -526,11 +533,20 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
       setTechniqueVideo(null);
       return;
     }
+    if (gezeigteTechniken.current.has(tag)) {
+      // Schon einmal in diesem Kochvorgang angeboten - kein zweites Mal.
+      setTechniqueVideo(null);
+      return;
+    }
     let cancelled = false;
     api
       .get<TechniqueVideoInfo>(`/technique-videos/${tag}`)
       .then((video) => {
-        if (!cancelled) setTechniqueVideo(video);
+        if (cancelled) return;
+        setTechniqueVideo(video);
+        if (video?.available && video.youtube_video_id) {
+          gezeigteTechniken.current.add(tag);
+        }
       })
       .catch(() => {
         if (!cancelled) setTechniqueVideo(null);
