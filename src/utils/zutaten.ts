@@ -69,6 +69,13 @@ export function zutatZerlegen(zeile: string): ZerlegteZutat {
   }
 
   const rest = zahl.rest.trim();
+
+  // Spannen bleiben ungeteilt: "2 bis 3 Bananen", "2 -3 Ei", "2-3 Eier".
+  // Eine Spanne hat keine eine Menge - "2" herauszuziehen und "bis 3
+  // Bananen" als Namen stehen zu lassen, waere schlechter als gar nichts.
+  if (/^(bis|-|–|bis zu)\b/i.test(rest) || /^\d/.test(rest)) {
+    return { name: text, amount: null, unit: null };
+  }
   const woerter = rest.split(/\s+/);
   const erstes = (woerter[0] || '').toLowerCase().replace(/\.$/, '');
 
