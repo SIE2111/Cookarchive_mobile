@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Animated } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Animated, Image } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import * as Speech from 'expo-speech';
 import { SPEECH_LANGUAGE } from '../utils/speech';
@@ -37,6 +38,7 @@ const GERMAN_MALE_VOICE_HINTS = [
  */
 export default function BrutzelGreetingOverlay({ name, onDismiss }: Props) {
   const { colors, gradient, radius } = useTheme();
+  const insets = useSafeAreaInsets();
   const { t } = useUebersetzung();
   const [showText, setShowText] = useState(false);
   const textOpacity = React.useRef(new Animated.Value(0)).current;
@@ -85,6 +87,22 @@ export default function BrutzelGreetingOverlay({ name, onDismiss }: Props) {
 
   return (
     <View style={[styles.overlay, { backgroundColor: colors.bg }]}>
+      {/* Markenzeile ganz oben: Die Begruessung ist der erste Bildschirm nach
+          dem Start und damit die einzige Stelle, an der Herkunft und Name der
+          App ohne Umweg sichtbar sind. Absolut positioniert, damit sie die
+          mittige Ausrichtung von Video und Text nicht verschiebt. */}
+      <View style={[styles.brandRow, { top: insets.top + 12 }]}>
+        <Image source={require('../../assets/icon.png')} style={styles.brandLogo} resizeMode="contain" />
+        <View style={styles.brandTextBlock}>
+          <Text style={[styles.brandTitle, { color: colors.text }]} numberOfLines={1}>
+            Mein Kochbuch
+          </Text>
+          <Text style={[styles.brandClaim, { color: colors.muted }]} numberOfLines={1}>
+            powered by HomeArchive AI
+          </Text>
+        </View>
+      </View>
+
       <VideoView player={player} style={styles.video} contentFit="contain" nativeControls={false} />
 
       {showText && (
@@ -102,6 +120,12 @@ export default function BrutzelGreetingOverlay({ name, onDismiss }: Props) {
 
 const styles = StyleSheet.create({
   overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', padding: 24, zIndex: 50 },
+  brandRow: { position: 'absolute', left: 24, right: 24, flexDirection: 'row', alignItems: 'center' },
+  brandLogo: { width: 34, height: 34, borderRadius: 8, marginRight: 10 },
+  // schrumpft statt ueberzulaufen, wenn der Platz eng wird
+  brandTextBlock: { flexShrink: 1 },
+  brandTitle: { fontSize: 17, fontWeight: '700' },
+  brandClaim: { fontSize: 11, marginTop: 1 },
   video: { width: '100%', height: 260, marginBottom: 20 },
   title: { fontSize: 22, fontWeight: '700', marginBottom: 6 },
   subtitle: { fontSize: 13, marginBottom: 22, textAlign: 'center' },
