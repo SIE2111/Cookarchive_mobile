@@ -51,6 +51,7 @@ export default function DashboardScreen({ navigation }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [profileDisplayName, setProfileDisplayName] = useState<string | null>(null);
   const [showGreeting, setShowGreeting] = useState(false);
+  const [greetingMitVideo, setGreetingMitVideo] = useState(true);
 
   // Derselbe Name wie im Profil editierbar (tbl_users.display_name ueber
   // /preferences/) - vorher las die Begruessung stattdessen aus den
@@ -64,8 +65,12 @@ export default function DashboardScreen({ navigation }: Props) {
         // Auch show_brutzel pruefen: Wer Brutzel ganz abgeschaltet hat,
         // soll ihn nicht ausgerechnet beim Oeffnen der App ueber den
         // Bildschirm laufen sehen.
-        if (prefs.show_brutzel && prefs.show_greeting_animation && !hasShownGreetingThisSession) {
+        // Nur noch show_brutzel entscheidet, OB die Begruessung kommt.
+        // show_greeting_animation entscheidet, ob sie sich bewegt und
+        // spricht - vorher schaltete er den ganzen Bildschirm ab.
+        if (prefs.show_brutzel && !hasShownGreetingThisSession) {
           hasShownGreetingThisSession = true;
+          setGreetingMitVideo(prefs.show_greeting_animation);
           setShowGreeting(true);
         }
       })
@@ -353,7 +358,7 @@ export default function DashboardScreen({ navigation }: Props) {
       )}
     </ScrollView>
     <ScanFab />
-    {showGreeting && <BrutzelGreetingOverlay name={displayName} onDismiss={() => setShowGreeting(false)} />}
+    {showGreeting && <BrutzelGreetingOverlay name={displayName} mitVideo={greetingMitVideo} onDismiss={() => setShowGreeting(false)} />}
     </>
   );
 }
