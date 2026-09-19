@@ -39,10 +39,16 @@ let aktiveSprache: Sprache = 'de';
 const hoerer = new Set<() => void>();
 
 function geraetesprache(): Sprache {
-  const codes = Localization.getLocales?.() ?? [];
-  for (const eintrag of codes) {
-    const kurz = (eintrag.languageCode || '').toLowerCase() as Sprache;
-    if (TEXTE[kurz]) return kurz;
+  // Defensiv: Faellt expo-localization aus (kein natives Modul im Build,
+  // unerwartete Antwort), darf das nicht den Start der App verhindern.
+  try {
+    const codes = Localization.getLocales?.() ?? [];
+    for (const eintrag of codes) {
+      const kurz = (eintrag.languageCode || '').toLowerCase() as Sprache;
+      if (TEXTE[kurz]) return kurz;
+    }
+  } catch {
+    // Geraetesprache nicht ermittelbar - Deutsch ist die Vorgabe.
   }
   return 'de';
 }

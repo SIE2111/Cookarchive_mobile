@@ -8,11 +8,25 @@ import AppNavigator from './src/navigation/AppNavigator';
 import { spracheLaden } from './src/i18n';
 
 export default function App() {
-  // Die Sprache steht vor dem ersten Bild fest. Sonst erscheint die App
-  // kurz auf Deutsch und springt dann um - das sieht nach Fehler aus.
+  // Die Sprache soll vor dem ersten Bild feststehen - sonst erscheint die
+  // App kurz auf Deutsch und springt dann um, was nach Fehler aussieht.
+  //
+  // ABER: Warten darf nie endlos sein. Bleibt das Laden haengen (Speicher
+  // nicht erreichbar, Geraetesprache nicht ermittelbar), sah man nur den
+  // Startbildschirm und kam nie zur Anmeldung. Ein weisser Bildschirm
+  // ohne Ausweg ist schlimmer als ein kurzes Umspringen der Sprache.
   const [spracheBereit, setSpracheBereit] = useState(false);
   useEffect(() => {
-    spracheLaden().finally(() => setSpracheBereit(true));
+    let erledigt = false;
+    const fertig = () => {
+      if (!erledigt) {
+        erledigt = true;
+        setSpracheBereit(true);
+      }
+    };
+    spracheLaden().finally(fertig);
+    const notbremse = setTimeout(fertig, 2000);
+    return () => clearTimeout(notbremse);
   }, []);
 
   if (!spracheBereit) return null;
