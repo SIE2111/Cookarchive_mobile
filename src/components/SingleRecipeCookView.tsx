@@ -5,6 +5,7 @@ import * as Speech from 'expo-speech';
 import { SPEECH_LANGUAGE, BRUTZEL_PITCH, BRUTZEL_RATE, loadBrutzelVoice } from '../utils/speech';
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
+import TranslationBanner from './TranslationBanner';
 import { api, ApiError } from '../api/client';
 import { pickStepsForLevel, HaubenLevel, RecipeStep } from '../utils/stepLevels';
 import { scheduleTimerNotification, cancelTimerNotification, setupNotificationChannel } from '../utils/notifications';
@@ -24,6 +25,8 @@ interface RecipeForCooking {
   steps: RecipeStep[];
   steps_anfaenger?: RecipeStep[] | null;
   steps_profi?: RecipeStep[] | null;
+  locale?: string | null;
+  available_translations?: string[];
 }
 
 const LEVEL_TO_HAT_COUNT: Record<HaubenLevel, number> = { anfaenger: 1, fortgeschritten: 2, profi: 3 };
@@ -118,7 +121,7 @@ interface Props {
 
 export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded, onFinished, sessionOverrides }: Props) {
   const { colors, gradient, radius } = useTheme();
-  const { t } = useUebersetzung();
+  const { t, sprache } = useUebersetzung();
 
   const [recipe, setRecipe] = useState<RecipeForCooking | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -438,7 +441,61 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
   }, [recipe?.id, level]);
 
 
-  const derivedSteps = recipe ? pickStepsForLevel(recipe, level) : [];
+  // --- Uebersetzung ---------------------------------------------------
+  // Dieselbe Schicht wie im Rezeptdetail: Das Original bleibt, die
+  // Uebersetzung liegt darueber. Im Koch-Modus zaehlt sie doppelt - hier
+  // steht man am Herd und hat keine Zeit, einen fremden Satz zu deuten.
+  const quellsprache = (recipe?.locale || 'de').slice(0, 2);
+  const brauchtUebersetzung = !!recipe && quellsprache !== sprache;
+  const [uebersetzung, setUebersetzung] = useState<{
+    title: string;
+    steps: RecipeStep[];
+    steps_anfaenger?: RecipeStep[] | null;
+    steps_profi?: RecipeStep[] | null;
+  } | null>(null);
+  const [zeigeUebersetzung, setZeigeUebersetzung] = useState(true);
+  const [uebersetztGerade, setUebersetztGerade] = useState(false);
+  const [uebersetzungsfehler, setUebersetzungsfehler] = useState<string | null>(null);
+
+  const holeUebersetzung = async () => {
+    if (!recipe) return;
+    setUebersetztGerade(true);
+    setUebersetzungsfehler(null);
+    try {
+      const res = await api.post<{
+        title: string; steps: RecipeStep[];
+        steps_anfaenger?: RecipeStep[] | null; steps_profi?: RecipeStep[] | null;
+      }>(`/ai/translate/${recipe.id}?locale=${sprache}`, {});
+      setUebersetzung(res);
+      setZeigeUebersetzung(true);
+    } catch (err) {
+      setUebersetzungsfehler(err instanceof ApiError ? err.detail : t('uebersetzung.fehlgeschlagen'));
+    } finally {
+      setUebersetztGerade(false);
+    }
+  };
+
+  // Liegt sie schon vor, kostet das Holen keinen KI-Aufruf.
+  useEffect(() => {
+    if (brauchtUebersetzung && recipe?.available_translations?.includes(sprache) && !uebersetzung) {
+      holeUebersetzung();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brauchtUebersetzung, recipe?.id, sprache]);
+
+  const zeigtUebersetzung = !!uebersetzung && zeigeUebersetzung;
+
+  // Die Stufenfassung der Uebersetzung, sofern es sie gibt - sonst faellt
+  // es auf deren Basisfassung zurueck, nicht auf das Original: lieber die
+  // richtige Sprache in der falschen Ausfuehrlichkeit als umgekehrt.
+  const uebersetzteSchritte = (): RecipeStep[] | null => {
+    if (!zeigtUebersetzung || !uebersetzung) return null;
+    if (level === 'anfaenger' && uebersetzung.steps_anfaenger?.length) return uebersetzung.steps_anfaenger;
+    if (level === 'profi' && uebersetzung.steps_profi?.length) return uebersetzung.steps_profi;
+    return uebersetzung.steps;
+  };
+
+  const derivedSteps = uebersetzteSchritte() ?? (recipe ? pickStepsForLevel(recipe, level) : []);
   const currentStep = derivedSteps[currentIndex];
 
   // KI-Tipp zu genau diesem Schritt, sonst der eingebaute Technik-Tipp,
@@ -782,6 +839,18 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
       <ScrollView
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag" style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 16 }}>
+      {brauchtUebersetzung && (
+        <TranslationBanner
+          quellsprache={quellsprache}
+          zeigtUebersetzung={zeigtUebersetzung}
+          vorhanden={!!uebersetzung}
+          laeuft={uebersetztGerade}
+          fehler={uebersetzungsfehler}
+          onUebersetzen={holeUebersetzung}
+          onUmschalten={() => setZeigeUebersetzung((v) => !v)}
+        />
+      )}
+
       <View style={styles.levelRow}>
         {[1, 2, 3].map((hatCount) => {
           const isFilled = hatCount <= LEVEL_TO_HAT_COUNT[level];
@@ -875,7 +944,10 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
         <Text style={[styles.stepText, { color: colors.text, fontSize: largeText ? 19 : 17, lineHeight: largeText ? 26 : 24 }]}>
           {currentStep.text}
         </Text>
-        {level === 'anfaenger' && (
+        {/* Bearbeiten gilt der Originalfassung. Waehrend die Uebersetzung
+            angezeigt wird, waere der Stift eine Falle - man aenderte einen
+            Text, der so gar nicht dasteht. */}
+        {level === 'anfaenger' && !zeigtUebersetzung && (
           <Pressable onPress={handleOpenStepTextModal} style={[styles.speakButton, { backgroundColor: colors.card }]}>
             <MaterialCommunityIcons name="pencil-outline" size={15} color={colors.text} />
           </Pressable>
