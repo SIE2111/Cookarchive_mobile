@@ -623,7 +623,7 @@ export default function ProfileScreen({ navigation }: Props) {
               )}
             </Pressable>
             <Pressable onPress={() => setShowDeleteDialog(false)} disabled={isDeleting} style={{ marginTop: 14 }}>
-              <Text style={[styles.modalCancel, { color: colors.muted }]}>Abbrechen</Text>
+              <Text style={[styles.modalCancel, { color: colors.muted }]}>{t('allgemein.abbrechen')}</Text>
             </Pressable>
           </View>
         </View>
