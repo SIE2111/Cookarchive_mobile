@@ -462,6 +462,20 @@ export default function ProfileScreen({ navigation }: Props) {
       </Pressable>
 
       <Pressable
+        onPress={() => navigation.getParent()?.navigate('LanguageSettings')}
+        style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md, marginTop: 8 }]}
+      >
+        <MaterialCommunityIcons name="translate" size={20} color={colors.muted} style={styles.rowIcon} />
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.rowTitle, { color: colors.text }]}>Sprache</Text>
+          <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
+            Deutsch, English – oder wie am Gerät eingestellt
+          </Text>
+        </View>
+        <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>
+      </Pressable>
+
+      <Pressable
         onPress={() => navigation.getParent()?.navigate('StarterPacks')}
         style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md, marginTop: 8 }]}
       >

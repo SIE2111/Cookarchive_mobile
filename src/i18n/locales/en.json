@@ -1,0 +1,73 @@
+{
+  "allgemein": {
+    "abbrechen": "Cancel",
+    "fertig": "Done",
+    "speichern": "Save",
+    "loeschen": "Delete",
+    "entfernen": "Remove",
+    "zurueck": "Back",
+    "weiter": "Continue",
+    "schliessen": "Close",
+    "fehler": "Error",
+    "erneutVersuchen": "Try again",
+    "laedt": "Loading …",
+    "ja": "Yes",
+    "nein": "No"
+  },
+  "sprache": {
+    "titel": "Language",
+    "untertitel": "App language",
+    "system": "Same as device",
+    "hinweis": "Recipes you added yourself are not translated – they stay exactly as you wrote them."
+  },
+  "tabs": {
+    "home": "Home",
+    "rezepte": "Recipes",
+    "pool": "Pool",
+    "einkauf": "Shopping",
+    "profil": "Profile"
+  },
+  "einkauf": {
+    "titel": "Shopping list",
+    "leer": "Nothing on the list yet",
+    "zutatHinzufuegen": "Add an ingredient",
+    "menge": "Amount",
+    "einheit": "Unit",
+    "drucken": "Print / PDF",
+    "perMail": "By email",
+    "listeLeeren": "Clear list",
+    "posten": {
+      "one": "{anzahl} item",
+      "other": "{anzahl} items"
+    }
+  },
+  "rezepte": {
+    "suchen": "Search recipes or ingredients …",
+    "nurFavoriten": "Favourites only",
+    "neuesteZuerst": "Newest first",
+    "aeltesteZuerst": "Oldest first",
+    "alphabetisch": "A–Z",
+    "alle": "All",
+    "anzahl": {
+      "one": "{anzahl} recipe",
+      "other": "{anzahl} recipes"
+    }
+  },
+  "starter": {
+    "titel": "Starter recipes",
+    "einleitung": "Three packs, each one added or removed on its own. Anything already in your cookbook is skipped – no duplicates.",
+    "importieren": "Add",
+    "entfernen": "Remove",
+    "entferntFrage": "Remove {paket}?",
+    "entferntHinweis": "Only recipes from this pack that you have not changed, never cooked and not published will be removed. Everything else stays.",
+    "importiert": {
+      "one": "{anzahl} recipe added.",
+      "other": "{anzahl} recipes added."
+    },
+    "uebersprungen": {
+      "one": "{anzahl} was already there and was skipped.",
+      "other": "{anzahl} were already there and were skipped."
+    },
+    "fussnote": "Imported recipes are marked with their source icon in the recipe list. Only untouched, never cooked and unpublished recipes are removed – your own work is never lost."
+  }
+}

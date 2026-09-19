@@ -1,0 +1,73 @@
+{
+  "allgemein": {
+    "abbrechen": "Abbrechen",
+    "fertig": "Fertig",
+    "speichern": "Speichern",
+    "loeschen": "Löschen",
+    "entfernen": "Entfernen",
+    "zurueck": "Zurück",
+    "weiter": "Weiter",
+    "schliessen": "Schließen",
+    "fehler": "Fehler",
+    "erneutVersuchen": "Erneut versuchen",
+    "laedt": "Lädt …",
+    "ja": "Ja",
+    "nein": "Nein"
+  },
+  "sprache": {
+    "titel": "Sprache",
+    "untertitel": "Sprache der App",
+    "system": "Wie am Gerät eingestellt",
+    "hinweis": "Rezepte, die du selbst erfasst hast, werden nicht übersetzt – sie bleiben, wie du sie geschrieben hast."
+  },
+  "tabs": {
+    "home": "Home",
+    "rezepte": "Rezepte",
+    "pool": "Pool",
+    "einkauf": "Einkauf",
+    "profil": "Profil"
+  },
+  "einkauf": {
+    "titel": "Einkaufsliste",
+    "leer": "Noch nichts auf der Liste",
+    "zutatHinzufuegen": "Zutat manuell hinzufügen",
+    "menge": "Menge",
+    "einheit": "Einheit",
+    "drucken": "Drucken / PDF",
+    "perMail": "Per Mail",
+    "listeLeeren": "Liste leeren",
+    "posten": {
+      "one": "{anzahl} Posten",
+      "other": "{anzahl} Posten"
+    }
+  },
+  "rezepte": {
+    "suchen": "Rezept oder Zutat suchen …",
+    "nurFavoriten": "Nur Favoriten",
+    "neuesteZuerst": "Neueste zuerst",
+    "aeltesteZuerst": "Älteste zuerst",
+    "alphabetisch": "A–Z",
+    "alle": "Alle",
+    "anzahl": {
+      "one": "{anzahl} Rezept",
+      "other": "{anzahl} Rezepte"
+    }
+  },
+  "starter": {
+    "titel": "Starter-Rezepte",
+    "einleitung": "Drei Pakete, einzeln zum Holen und wieder Loswerden. Was schon in deinem Kochbuch liegt, wird beim Import übersprungen – es entstehen keine Doppelten.",
+    "importieren": "Importieren",
+    "entfernen": "Entfernen",
+    "entferntFrage": "{paket} entfernen?",
+    "entferntHinweis": "Entfernt werden nur Rezepte aus diesem Paket, die du nicht verändert, nie gekocht und nicht veröffentlicht hast. Alles andere bleibt.",
+    "importiert": {
+      "one": "{anzahl} Rezept importiert.",
+      "other": "{anzahl} Rezepte importiert."
+    },
+    "uebersprungen": {
+      "one": "{anzahl} war schon da und wurde übersprungen.",
+      "other": "{anzahl} waren schon da und wurden übersprungen."
+    },
+    "fussnote": "Importierte Rezepte sind in der Rezeptliste an ihrem Herkunftszeichen erkennbar. Entfernt wird immer nur, was unverändert, nie gekocht und nicht veröffentlicht ist – eigene Arbeit geht dabei nicht verloren."
+  }
+}

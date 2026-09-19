@@ -29,6 +29,7 @@ import SupportScreen from '../screens/SupportScreen';
 import HouseholdScreen from '../screens/HouseholdScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import StarterPacksScreen from '../screens/StarterPacksScreen';
+import LanguageSettingsScreen from '../screens/LanguageSettingsScreen';
 import StorageSettingsScreen from '../screens/StorageSettingsScreen';
 import PhotoCaptureScreen from '../screens/PhotoCaptureScreen';
 
@@ -83,6 +84,7 @@ export type MainStackParamList = {
   Household: undefined;
   Onboarding: undefined;
   StarterPacks: undefined;
+  LanguageSettings: undefined;
   StorageSettings: undefined;
   PhotoCapture: undefined;
 };
@@ -212,6 +214,7 @@ function MainNavigator() {
       <MainStack.Screen name="Household" component={HouseholdScreen} options={{ title: 'Haushalt' }} />
       <MainStack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false, gestureEnabled: false }} />
       <MainStack.Screen name="StarterPacks" component={StarterPacksScreen} options={{ headerShown: false }} />
+      <MainStack.Screen name="LanguageSettings" component={LanguageSettingsScreen} options={{ headerShown: false }} />
       <MainStack.Screen name="StorageSettings" component={StorageSettingsScreen} options={{ title: 'Speicherort' }} />
       <MainStack.Screen name="PhotoCapture" component={PhotoCaptureScreen} options={{ title: 'Foto erfassen' }} />
     </MainStack.Navigator>
