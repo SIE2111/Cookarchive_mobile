@@ -1,13 +1,5 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  StyleSheet,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, Alert, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
@@ -49,6 +41,14 @@ export default function LoginScreen({ navigation }: Props) {
   return (
     <DismissKeyboardView style={[styles.container, { backgroundColor: colors.bg }]}>
       <View style={[styles.card, { backgroundColor: colors.bg, borderRadius: radius.lg }]}>
+        {/* Logo ueber dem Namen: Der Anmeldeschirm war das einzige Bild
+            der App ohne jedes Erkennungszeichen - man sah ein Formular
+            und musste dem Titel glauben, in der richtigen App zu sein. */}
+        <Image
+          source={require('../../assets/icon.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
         <Text style={[styles.title, { color: colors.text }]}>{t('auth.appName')}</Text>
 
         <Text style={[styles.label, { color: colors.muted }]}>{t('auth.email')}</Text>
@@ -110,6 +110,7 @@ export default function LoginScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
+  logo: { width: 84, height: 84, alignSelf: 'center', marginBottom: 10, borderRadius: 18 },
   container: { flex: 1, justifyContent: 'center' },
   card: { marginHorizontal: 20, padding: 24 },
   title: { fontSize: 20, fontWeight: '700', textAlign: 'center', marginBottom: 28 },

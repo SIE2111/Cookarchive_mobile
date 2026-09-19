@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, Alert, Linking } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, Alert, Linking, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
@@ -53,6 +53,11 @@ export default function RegisterScreen({ navigation }: Props) {
   return (
     <DismissKeyboardView style={[styles.container, { backgroundColor: colors.bg }]}>
       <View style={[styles.card, { backgroundColor: colors.bg, borderRadius: radius.lg }]}>
+        <Image
+          source={require('../../assets/icon.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
         <Text style={[styles.title, { color: colors.text }]}>{t('auth.kontoErstellen')}</Text>
         <Text style={[styles.subtitle, { color: colors.muted }]}>{t('auth.dauertEineMinute')}</Text>
 
@@ -141,6 +146,7 @@ export default function RegisterScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
+  logo: { width: 84, height: 84, alignSelf: 'center', marginBottom: 10, borderRadius: 18 },
   container: { flex: 1, justifyContent: 'center' },
   card: { marginHorizontal: 20, padding: 24 },
   title: { fontSize: 20, fontWeight: '700', textAlign: 'center' },
