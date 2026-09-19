@@ -247,9 +247,25 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
     }
   };
 
+  // Der Zuschnitt liegt VOR allen Rueckgabezweigen. Vorher stand er im
+  // Ergebniszweig - der wird erst gezeichnet, wenn ein Rezept ausgewertet
+  // ist. Beim ersten Foto war er also gar nicht vorhanden, das Bild
+  // verschwand still.
+  const zuschnittFenster = (
+    <ImageCropper
+      uri={zuschnittUri}
+      onAbbruch={() => setZuschnittUri(null)}
+      onFertig={(uri) => {
+        setImageUris((prev) => [...prev, uri]);
+        setZuschnittUri(null);
+      }}
+    />
+  );
+
   if (isScanning) {
     return (
       <View style={[styles.centered, { backgroundColor: colors.bg }]}>
+        {zuschnittFenster}
         <Image source={{ uri: imageUri }} style={styles.scanningPreview} />
         <ActivityIndicator color={colors.text} style={{ marginTop: 20 }} />
         <Text style={{ color: colors.muted, fontSize: 12, marginTop: 10 }}>{t('erfassen.wirdErfasst')}</Text>
@@ -260,6 +276,7 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
   if (scanError) {
     return (
       <View style={[styles.centered, { backgroundColor: colors.bg, padding: 24 }]}>
+        {zuschnittFenster}
         <Text style={{ color: '#DC2626', fontSize: 13, textAlign: 'center', marginBottom: 16 }}>{scanError}</Text>
         <Pressable
           onPress={() => setScanError(null)}
@@ -283,6 +300,7 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
         style={{ backgroundColor: colors.bg }}
         contentContainerStyle={{ padding: 24, alignItems: 'center' }}
       >
+        {zuschnittFenster}
         <Text style={[styles.introText, { color: colors.text }]}>
           Fotografiere eine Kochbuchseite, einen handschriftlichen Zettel oder ein Zutaten-Etikett.
         </Text>
@@ -338,6 +356,7 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
     <ScrollView
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag" style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
+      {zuschnittFenster}
       <Image source={{ uri: imageUri }} style={[styles.reviewThumbnail, { borderRadius: radius.md }]} />
 
       {result?.low_confidence_note && (
@@ -345,15 +364,6 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
           <Text style={styles.warningText}>⚠️ {result.low_confidence_note}</Text>
         </View>
       )}
-
-      <ImageCropper
-        uri={zuschnittUri}
-        onAbbruch={() => setZuschnittUri(null)}
-        onFertig={(uri) => {
-          setImageUris((prev) => [...prev, uri]);
-          setZuschnittUri(null);
-        }}
-      />
 
       <Text style={[styles.label, { color: colors.muted }]}>{t('erfassen.rezeptname')}</Text>
       <TextInput
