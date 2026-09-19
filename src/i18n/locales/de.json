@@ -336,5 +336,22 @@
     "umstellungAllgemein": "Brutzel stellt das Rezept um…",
     "umstellungHinweis": "Schritte und Tipps werden zusammen umgestellt.",
     "technikAufmerksamkeit": "Bei dieser Technik lohnt sich besondere Aufmerksamkeit – nimm dir kurz Zeit dafür."
+  },
+  "naehrwerte": {
+    "titel": "Nährwerte pro Portion",
+    "schaetzen": "Nährwerte schätzen",
+    "laeuft": "Wird geschätzt…",
+    "energie": "Energie",
+    "eiweiss": "Eiweiß",
+    "fett": "Fett",
+    "kohlenhydrate": "Kohlenhydrate",
+    "hinweis": "Geschätzte Werte, von der KI aus den Zutaten abgeleitet – keine Messung. Abweichungen von 10 bis 20 Prozent sind normal, bei Zutaten ohne Gewichtsangabe mehr. Nicht als Grundlage für Diät- oder Medizinentscheidungen geeignet.",
+    "unsicher": {
+      "one": "Bei {anzahl} Zutat war die Menge unklar.",
+      "other": "Bei {anzahl} Zutaten war die Menge unklar."
+    },
+    "neuBerechnen": "Neu schätzen",
+    "fehlgeschlagen": "Die Schätzung ist fehlgeschlagen",
+    "groessterAnteil": "Größte Anteile"
   }
 }

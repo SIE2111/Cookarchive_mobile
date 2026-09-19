@@ -4,6 +4,7 @@ import * as Sharing from 'expo-sharing';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
+import NutritionCard from '../components/NutritionCard';
 import PublishToPoolButton from '../components/PublishToPoolButton';
 import ShareRecipeButton from '../components/ShareRecipeButton';
 import { api, ApiError } from '../api/client';
@@ -37,6 +38,10 @@ interface RecipeDetail {
   source_type: string;
   is_favorite: boolean;
   equipment: string[] | null;
+  calories_kcal: number | null;
+  protein_g: number | null;
+  fat_g: number | null;
+  carbs_g: number | null;
 }
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -751,6 +756,16 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
           </>
         )}
       </View>
+
+      <NutritionCard
+        recipeId={recipeId}
+        gespeichert={{
+          calories_kcal: recipe.calories_kcal,
+          protein_g: recipe.protein_g,
+          fat_g: recipe.fat_g,
+          carbs_g: recipe.carbs_g,
+        }}
+      />
 
       <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('detail.zutaten')}</Text>
       {currentIngredients.map((ing, i) => (

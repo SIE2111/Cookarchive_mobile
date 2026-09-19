@@ -336,5 +336,22 @@
     "umstellungAllgemein": "Brutzel is switching the recipe over…",
     "umstellungHinweis": "Steps and tips are switched over together.",
     "technikAufmerksamkeit": "This technique deserves a little extra attention – take your time with it."
+  },
+  "naehrwerte": {
+    "titel": "Nutrition per serving",
+    "schaetzen": "Estimate nutrition",
+    "laeuft": "Estimating…",
+    "energie": "Energy",
+    "eiweiss": "Protein",
+    "fett": "Fat",
+    "kohlenhydrate": "Carbs",
+    "hinweis": "Estimated values, derived by AI from the ingredients – not a measurement. Deviations of 10 to 20 percent are normal, more for ingredients without a stated weight. Not suitable as a basis for dietary or medical decisions.",
+    "unsicher": {
+      "one": "The amount was unclear for {anzahl} ingredient.",
+      "other": "The amount was unclear for {anzahl} ingredients."
+    },
+    "neuBerechnen": "Estimate again",
+    "fehlgeschlagen": "The estimate failed",
+    "groessterAnteil": "Largest contributors"
   }
 }
