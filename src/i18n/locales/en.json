@@ -623,7 +623,9 @@
     "nasAnleitungNextcloud": "WebDAV is always on. The address is in the settings at the bottom left under \"WebDAV\" and ends with /remote.php/dav/files/YOURUSER.",
     "nasAnleitungTruenas": "Services → switch on WebDAV, set the protocol to HTTPS and assign a share.",
     "nasAnleitungAndere": "Look for \"WebDAV\" in your NAS settings and switch it on with HTTPS. Note the port and path.",
-    "nasWichtig": "Your NAS must be reachable from the internet – our server is not in your home network and cannot reach an address like 192.168.1.50."
+    "nasWichtig": "Your NAS must be reachable from the internet – our server is not in your home network and cannot reach an address like 192.168.1.50.",
+    "istFertig": "{titel} is ready.",
+    "erzaehlWeiter": "Then tell others – that helps the app more than anything else."
   },
   "uebersetzung": {
     "angebotTitel": "This recipe is written in {sprache}.",

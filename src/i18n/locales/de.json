@@ -623,7 +623,9 @@
     "nasAnleitungNextcloud": "WebDAV ist immer eingeschaltet. Die Adresse steht in den Einstellungen unten links unter „WebDAV\" und endet auf /remote.php/dav/files/DEINBENUTZER.",
     "nasAnleitungTruenas": "Dienste → WebDAV einschalten, Protokoll auf HTTPS stellen und eine Freigabe zuweisen.",
     "nasAnleitungAndere": "Such in den Einstellungen deines NAS nach „WebDAV\" und schalte es mit HTTPS ein. Notier dir Port und Pfad.",
-    "nasWichtig": "Dein NAS muss aus dem Internet erreichbar sein – unser Server steht nicht in deinem Heimnetz und kann eine Adresse wie 192.168.1.50 nicht erreichen."
+    "nasWichtig": "Dein NAS muss aus dem Internet erreichbar sein – unser Server steht nicht in deinem Heimnetz und kann eine Adresse wie 192.168.1.50 nicht erreichen.",
+    "istFertig": "{titel} ist fertig.",
+    "erzaehlWeiter": "Dann erzähl es weiter – das hilft der App mehr als alles andere."
   },
   "uebersetzung": {
     "angebotTitel": "Dieses Rezept ist auf {sprache} verfasst.",

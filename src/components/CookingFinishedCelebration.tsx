@@ -92,6 +92,25 @@ export default function CookingFinishedCelebration({ recipeTitle, onDone }: Prop
     p.loop = false;
   });
 
+  /**
+   * Der Text erscheint IMMER, spaetestens nach 3,5 Sekunden.
+   *
+   * Vorher hing er am Laden der Einstellungen: Antwortete /preferences/
+   * nicht, lief der Zeitgeber nie an. Und weil der Knopf "Fertig" im
+   * selben Block steckt, kam man aus dem Bildschirm nicht mehr heraus -
+   * am Ende eines Kochvorgangs, mit dem Essen auf dem Tisch.
+   *
+   * Deshalb laeuft dieser Zeitgeber ohne jede Bedingung.
+   */
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowText(true);
+      Animated.timing(textOpacity, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+    }, 3500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     if (!prefsLoaded) return;
 
@@ -102,16 +121,10 @@ export default function CookingFinishedCelebration({ recipeTitle, onDone }: Prop
       textOpacity.setValue(1);
       return;
     }
-
+    // Text erscheint kurz vor Video-Ende, statt erst nach komplettem
+    // Abspielen - fuehlt sich zuegiger an, ohne den Lauf-Moment zu
+    // stoeren. Den Zeitgeber dafuer setzt der Effekt oben.
     player.play();
-    // Text erscheint kurz vor Video-Ende eingeblendet (Video ist 10s lang),
-    // statt erst nach komplettem Abspielen zu warten - fuehlt sich
-    // zuegiger an, ohne den Lauf-Moment selbst zu stoeren.
-    const timer = setTimeout(() => {
-      setShowText(true);
-      Animated.timing(textOpacity, { toValue: 1, duration: 500, useNativeDriver: true }).start();
-    }, 3500);
-    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefsLoaded, showBrutzel, animated]);
 
@@ -127,7 +140,7 @@ export default function CookingFinishedCelebration({ recipeTitle, onDone }: Prop
         <View style={[styles.promoCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
           <Text style={[styles.promoTitle, { color: colors.text }]}>{t('sonstiges.schmecktsFrage')}</Text>
           <Text style={[styles.promoText, { color: colors.muted }]}>
-            Dann erzähl es weiter – das hilft der App mehr als alles andere.
+            {t('sonstiges.erzaehlWeiter')}
           </Text>
           <View style={styles.promoRow}>
             <Pressable onPress={handleShare} style={[styles.promoButton, { borderColor: gradient[0], borderRadius: radius.sm }]}>
@@ -163,7 +176,7 @@ export default function CookingFinishedCelebration({ recipeTitle, onDone }: Prop
         <Animated.View style={{ opacity: textOpacity, alignItems: 'center' }}>
           <Text style={[styles.title, { color: colors.text }]}>{t('sonstiges.gutenAppetit')}</Text>
           {recipeTitle && (
-            <Text style={[styles.subtitle, { color: colors.muted }]}>{recipeTitle} ist fertig.</Text>
+            <Text style={[styles.subtitle, { color: colors.muted }]}>{t('sonstiges.istFertig', { titel: recipeTitle })}</Text>
           )}
           <Pressable onPress={onDone} style={[styles.doneButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}>
             <Text style={styles.doneButtonText}>{t('allgemein.fertig')}</Text>
