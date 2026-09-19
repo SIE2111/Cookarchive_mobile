@@ -3,6 +3,7 @@ import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, Alert,
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
+import LanguageSwitchRow from '../components/LanguageSwitchRow';
 import DismissKeyboardView from '../components/DismissKeyboardView';
 import { useAuth } from '../context/AuthContext';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -134,6 +135,8 @@ export default function RegisterScreen({ navigation }: Props) {
             <Text style={{ color: gradient[0], fontWeight: '600' }}>{t('auth.anmelden')}</Text>
           </Text>
         </Pressable>
+
+        <LanguageSwitchRow />
       </View>
     </DismissKeyboardView>
   );
