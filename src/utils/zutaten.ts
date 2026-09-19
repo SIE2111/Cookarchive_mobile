@@ -27,6 +27,8 @@ export interface ZerlegteZutat {
 // (nach Kleinschreibung und ohne Punkt am Ende).
 const EINHEITEN = [
   'g', 'kg', 'mg', 'ml', 'l', 'dl', 'cl',
+  // dag = Dekagramm, in oesterreichischen Rezepten gebraeuchlich
+  'dag', 'deka',
   'el', 'tl', 'kl', 'msp', 'prise', 'prisen',
   'stk', 'stück', 'stueck', 'st',
   'pck', 'pkg', 'packung', 'päckchen', 'paeckchen', 'pkt',
