@@ -199,15 +199,20 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
     );
   };
   const [isSavingNote, setIsSavingNote] = useState(false);
+  // Portionen NUR fuer diesen Kochvorgang. Das Rezept behaelt seinen Wert -
+  // ein Schweinsbraten ist fuer sechs gedacht, auch wenn heute fuer vier
+  // gekocht wird. Deshalb wird hier nichts gespeichert.
+  const [kochPortionen, setKochPortionen] = useState<number | null>(null);
 
   useEffect(() => {
     api
-      .get<{ auto_read_steps: boolean; default_hauben_level: HaubenLevel; large_text: boolean; show_brutzel: boolean }>('/preferences/')
+      .get<{ auto_read_steps: boolean; default_hauben_level: HaubenLevel; large_text: boolean; show_brutzel: boolean; default_servings: number }>('/preferences/')
       .then((prefs) => {
         setAutoReadSteps(prefs.auto_read_steps);
         setLevel(prefs.default_hauben_level);
         setLargeText(prefs.large_text);
         setShowBrutzel(prefs.show_brutzel);
+        setKochPortionen(prefs.default_servings);
       })
       .catch(() => {
         // Praeferenz konnte nicht geladen werden - Auto-Vorlesen bleibt aus,
@@ -537,6 +542,19 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
 
   // Beim Stufenwechsel auf Schritt 1 zurueckspringen - die Indizes bedeuten
   // je Stufe etwas anderes (unterschiedliche Gruppierung).
+  // Fuer diesen Kochvorgang gilt die Portionenzahl aus dem Profil, sofern
+  // das Rezept ueberhaupt eine eigene hat (sonst gibt es nichts umzurechnen).
+  const angezeigtePortionen = recipe?.servings ? (kochPortionen ?? recipe.servings) : null;
+  const portionsFaktor =
+    recipe?.servings && angezeigtePortionen ? angezeigtePortionen / recipe.servings : 1;
+
+  // Auf eine Nachkommastelle, und ganze Zahlen ohne Komma: "2.5 EL" ist
+  // brauchbar, "2.4999999999999996 EL" nicht.
+  const mengeUmgerechnet = (menge: number) => {
+    const wert = menge * portionsFaktor;
+    return Number.isInteger(wert) ? String(wert) : String(Math.round(wert * 10) / 10);
+  };
+
   const handleLevelChange = (newLevel: HaubenLevel) => {
     if (newLevel === level) return;
     setUmstellung(true);
@@ -886,7 +904,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
       >
         <Text style={[styles.ingredientsToggleText, { color: colors.text }]}>
           Zutaten ({recipe.ingredients.length})
-          {recipe.servings ? `  ·  für ${recipe.servings} Portionen` : ''}
+          {angezeigtePortionen ? `  ·  für ${angezeigtePortionen} Portionen` : ''}
         </Text>
         <Text style={{ color: colors.muted, fontSize: 12 }}>{isIngredientsOpen ? '▲' : '▼'}</Text>
       </Pressable>
@@ -900,7 +918,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
               style={styles.ingredientRow}
             >
               <Text style={[styles.ingredientLine, { color: colors.text, fontSize: largeText ? 16 : 13.5, flex: 1 }]}>
-                {ing.amount ? `${ing.amount} ${ing.unit ?? ''} ` : ''}
+                {ing.amount ? `${mengeUmgerechnet(ing.amount)} ${ing.unit ?? ''} ` : ''}
                 {ing.name}
               </Text>
               {level === 'anfaenger' && <MaterialCommunityIcons name="pencil-outline" size={14} color={colors.muted} />}
