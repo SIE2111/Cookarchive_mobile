@@ -133,9 +133,32 @@ export default function CookingFinishedCelebration({ recipeTitle, onDone }: Prop
       style={{ backgroundColor: colors.bg }}
       contentContainerStyle={styles.overlay}
     >
-      {/* Steht als erstes im Bildschirm - der Blick landet nach dem
-          Kochen zuerst oben. Nur gelegentlich (siehe PROMO_EVERY) und
-          erst, wenn jemand die App wirklich benutzt hat. */}
+      {showBrutzel && animated && (
+        <VideoView player={player} style={styles.video} contentFit="contain" nativeControls={false} />
+      )}
+      {showBrutzel && !animated && (
+        <View style={{ marginBottom: 20 }}>
+          <BrutzelAvatar size={150} variant="full" />
+        </View>
+      )}
+
+      {showText && (
+        <Animated.View style={{ opacity: textOpacity, alignItems: 'center' }}>
+          <Text style={[styles.title, { color: colors.text }]}>{t('sonstiges.gutenAppetit')}</Text>
+          {recipeTitle && (
+            <Text style={[styles.subtitle, { color: colors.muted }]}>{t('sonstiges.istFertig', { titel: recipeTitle })}</Text>
+          )}
+          <Pressable onPress={onDone} style={[styles.doneButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}>
+            <Text style={styles.doneButtonText}>{t('allgemein.fertig')}</Text>
+          </Pressable>
+        </Animated.View>
+      )}
+
+      {/* Steht UNTER dem Abschluss, nicht darueber.
+          Vorher lag die Karte oben und schob Video und "Guten Appetit"
+          aus dem Bild - wer gerade fertig gekocht hat, bekam als Erstes
+          eine Bitte zu lesen. Die Reihenfolge sagt, was hier wichtig
+          ist: erst der Abschluss, dann die Frage. */}
       {showPromo && (
         <View style={[styles.promoCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
           <Text style={[styles.promoTitle, { color: colors.text }]}>{t('sonstiges.schmecktsFrage')}</Text>
@@ -161,27 +184,6 @@ export default function CookingFinishedCelebration({ recipeTitle, onDone }: Prop
             )}
           </View>
         </View>
-      )}
-
-      {showBrutzel && animated && (
-        <VideoView player={player} style={styles.video} contentFit="contain" nativeControls={false} />
-      )}
-      {showBrutzel && !animated && (
-        <View style={{ marginBottom: 20 }}>
-          <BrutzelAvatar size={150} variant="full" />
-        </View>
-      )}
-
-      {showText && (
-        <Animated.View style={{ opacity: textOpacity, alignItems: 'center' }}>
-          <Text style={[styles.title, { color: colors.text }]}>{t('sonstiges.gutenAppetit')}</Text>
-          {recipeTitle && (
-            <Text style={[styles.subtitle, { color: colors.muted }]}>{t('sonstiges.istFertig', { titel: recipeTitle })}</Text>
-          )}
-          <Pressable onPress={onDone} style={[styles.doneButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}>
-            <Text style={styles.doneButtonText}>{t('allgemein.fertig')}</Text>
-          </Pressable>
-        </Animated.View>
       )}
     </ScrollView>
   );
