@@ -19,6 +19,10 @@ interface PublicRecipeSummary {
   download_count: number;
   avg_rating: number | null;
   cover_image_url: string | null;
+  // Vom Aufrufer selbst veroeffentlicht bzw. schon uebernommen. Der
+  // Uebernehmen-Knopf entfaellt dann - eine Kopie waere ein Duplikat.
+  is_own?: boolean;
+  already_forked?: boolean;
 }
 
 /**
@@ -152,17 +156,28 @@ export default function CommunityPoolScreen() {
                   .join(' · ')}
               </Text>
             </View>
-            <Pressable
-              onPress={() => handleFork(item)}
-              disabled={forkingId === item.id}
-              style={[styles.forkButton, { backgroundColor: gradient[0], borderRadius: radius.sm }]}
-            >
-              {forkingId === item.id ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <Text style={styles.forkButtonText}>Übernehmen</Text>
-              )}
-            </Pressable>
+            {item.is_own || item.already_forked ? (
+              // Statt des Knopfes ein Hinweis: Eine leere Stelle wuerde wie
+              // ein Fehler wirken, und der Nutzer soll sehen, WARUM hier
+              // nichts zu tun ist.
+              <View style={styles.forkButton}>
+                <Text style={[styles.besitzText, { color: colors.muted }]}>
+                  {item.is_own ? 'Von dir' : 'Bereits übernommen'}
+                </Text>
+              </View>
+            ) : (
+              <Pressable
+                onPress={() => handleFork(item)}
+                disabled={forkingId === item.id}
+                style={[styles.forkButton, { backgroundColor: gradient[0], borderRadius: radius.sm }]}
+              >
+                {forkingId === item.id ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.forkButtonText}>Übernehmen</Text>
+                )}
+              </Pressable>
+            )}
           </Pressable>
         )}
       />
@@ -182,4 +197,5 @@ const styles = StyleSheet.create({
   meta: { fontSize: 10.5, marginTop: 3 },
   forkButton: { paddingHorizontal: 14, paddingVertical: 9 },
   forkButtonText: { color: '#fff', fontWeight: '700', fontSize: 11.5 },
+  besitzText: { fontSize: 11, fontWeight: '600' },
 });
