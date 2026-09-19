@@ -29,7 +29,6 @@ interface RecipeForCooking {
   available_translations?: string[];
 }
 
-const LEVEL_TO_HAT_COUNT: Record<HaubenLevel, number> = { anfaenger: 1, fortgeschritten: 2, profi: 3 };
 const HAT_COUNT_TO_LEVEL: Record<number, HaubenLevel> = { 1: 'anfaenger', 2: 'fortgeschritten', 3: 'profi' };
 
 function formatTime(totalSeconds: number): string {
@@ -843,17 +842,35 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
         />
       )}
 
+      {/* Stufenwahl als beschriftete Knoepfe.
+          Vorher standen hier drei gleiche Hauben nebeneinander, von denen
+          je nach Stufe eine bis drei eingefaerbt waren. Das verlangt vom
+          Nutzer, Symbole zu ZAEHLEN und die Zahl zu deuten - und zeigt
+          nirgends, was die Stufen bedeuten. Am Herd, mit fettigen
+          Fingern, ist das der falsche Moment fuer ein Raetsel. */}
       <View style={styles.levelRow}>
-        {[1, 2, 3].map((hatCount) => {
-          const isFilled = hatCount <= LEVEL_TO_HAT_COUNT[level];
+        {([1, 2, 3] as const).map((hatCount) => {
+          const stufe = HAT_COUNT_TO_LEVEL[hatCount];
+          const aktiv = stufe === level;
           return (
-            <Pressable key={hatCount} onPress={() => handleLevelChange(HAT_COUNT_TO_LEVEL[hatCount])} hitSlop={8}>
+            <Pressable
+              key={hatCount}
+              onPress={() => handleLevelChange(stufe)}
+              style={[styles.levelButton, {
+                backgroundColor: aktiv ? gradient[0] : colors.card,
+                borderRadius: radius.sm,
+              }]}
+            >
               <MaterialCommunityIcons
                 name="chef-hat"
-                size={20}
-                color={isFilled ? gradient[0] : colors.card === '#1F1F1F' ? '#3A3A3A' : '#E7E1D4'}
-                style={{ marginRight: 4 }}
+                size={15}
+                color={aktiv ? '#fff' : colors.muted}
               />
+              <Text style={[styles.levelButtonText, { color: aktiv ? '#fff' : colors.text }]}>
+                {t(stufe === 'anfaenger' ? 'profil.haubenAnfaenger'
+                   : stufe === 'profi' ? 'profil.haubenProfi'
+                   : 'profil.haubenFortgeschritten')}
+              </Text>
             </Pressable>
           );
         })}
@@ -1230,7 +1247,12 @@ const styles = StyleSheet.create({
   umstellungHinweis: { fontSize: 12, textAlign: 'center', marginTop: 6 },
   container: { flex: 1, padding: 20 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  levelRow: { flexDirection: 'row', marginBottom: 12 },
+  levelRow: { flexDirection: 'row', marginBottom: 12, gap: 6 },
+  levelButton: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 5, minHeight: 40, paddingHorizontal: 6,
+  },
+  levelButtonText: { fontSize: 12.5, fontWeight: '600' },
   ingredientsToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12, marginBottom: 4 },
   ingredientsToggleText: { fontSize: 12.5, fontWeight: '600' },
   ingredientsList: { padding: 12, marginBottom: 16 },
