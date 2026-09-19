@@ -128,7 +128,7 @@ export default function BrutzelGreetingOverlay({ name, onDismiss, mitVideo = tru
           Kochvorgangs vorkam -, steht hier Brutzel statt einer Luecke.
           Spielt das Video, verdeckt es das Bild vollstaendig. */}
       <View style={styles.videoBox}>
-        <Image source={require('../../assets/brutzel-full.png')} style={styles.videoFallback} resizeMode="cover" />
+        <Image source={require('../../assets/brutzel-full.png')} style={styles.videoFallback} resizeMode="contain" />
         {mitVideo && <VideoView player={player} style={styles.video} contentFit="cover" nativeControls={false} />}
       </View>
 
