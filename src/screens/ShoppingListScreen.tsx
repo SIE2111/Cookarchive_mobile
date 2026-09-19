@@ -3,6 +3,7 @@ import { View, Text, SectionList, Pressable, StyleSheet, ActivityIndicator, Text
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
+import { useUebersetzung } from '../i18n';
 import * as Sharing from 'expo-sharing';
 import ScanFab from '../components/ScanFab';
 import { api, ApiError } from '../api/client';
@@ -28,6 +29,7 @@ interface ShoppingItem {
 
 export default function ShoppingListScreen({}: Props) {
   const { colors, gradient, radius } = useTheme();
+  const { t } = useUebersetzung();
   const [sections, setSections] = useState<{ title: string; data: ShoppingItem[] }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +59,7 @@ export default function ShoppingListScreen({}: Props) {
       setSections(list);
       setError(null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : 'Einkaufszettel konnte nicht geladen werden');
+      setError(err instanceof ApiError ? err.detail : t('einkauf.nichtGeladen'));
     }
   }, []);
 
@@ -90,12 +92,12 @@ export default function ShoppingListScreen({}: Props) {
     try {
       const localUri = await api.downloadFile('/shopping-list/pdf', 'einkaufsliste.pdf');
       if (!(await Sharing.isAvailableAsync())) {
-        Alert.alert('Nicht verfügbar', 'Teilen und Drucken wird auf diesem Gerät nicht unterstützt.');
+        Alert.alert(t('einkauf.nichtVerfuegbar'), t('einkauf.teilenNichtUnterstuetzt'));
         return;
       }
-      await Sharing.shareAsync(localUri, { mimeType: 'application/pdf', dialogTitle: 'Einkaufsliste' });
+      await Sharing.shareAsync(localUri, { mimeType: 'application/pdf', dialogTitle: t('einkauf.titel') });
     } catch (err) {
-      Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Das PDF konnte nicht erstellt werden.');
+      Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('einkauf.pdfFehlgeschlagen'));
     } finally {
       setIsExporting(false);
     }
@@ -103,19 +105,19 @@ export default function ShoppingListScreen({}: Props) {
 
   const handleMail = () => {
     Alert.alert(
-      'Einkaufsliste verschicken',
-      'An deine eigene E-Mail-Adresse senden? Erledigte Posten bleiben weg.',
+      t('einkauf.verschickenTitel'),
+      t('einkauf.verschickenFrage'),
       [
-        { text: 'Abbrechen', style: 'cancel' },
+        { text: t('allgemein.abbrechen'), style: 'cancel' },
         {
-          text: 'Senden',
+          text: t('einkauf.senden'),
           onPress: async () => {
             setIsMailing(true);
             try {
               await api.post('/shopping-list/email', {});
-              Alert.alert('Verschickt', 'Die Einkaufsliste ist unterwegs.');
+              Alert.alert(t('einkauf.verschickt'), t('einkauf.unterwegs'));
             } catch (err) {
-              Alert.alert('Nicht verschickt', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+              Alert.alert(t('einkauf.nichtVerschickt'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
             } finally {
               setIsMailing(false);
             }
@@ -140,7 +142,7 @@ export default function ShoppingListScreen({}: Props) {
         load();
         return;
       }
-      Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Konnte nicht aktualisiert werden');
+      Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('einkauf.nichtAktualisiert'));
       load();
     }
   };
@@ -154,7 +156,7 @@ export default function ShoppingListScreen({}: Props) {
         load();
         return;
       }
-      Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Konnte nicht gelöscht werden');
+      Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('einkauf.nichtGeloescht'));
       load();
     }
   };
@@ -164,22 +166,22 @@ export default function ShoppingListScreen({}: Props) {
       await api.delete('/shopping-list/checked');
       load();
     } catch (err) {
-      Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Konnte nicht geleert werden');
+      Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('einkauf.nichtGeleert'));
     }
   };
 
   const handleClearAll = () => {
-    Alert.alert('Ganze Liste löschen?', 'Alle Einträge werden entfernt, auch nicht abgehakte.', [
-      { text: 'Abbrechen', style: 'cancel' },
+    Alert.alert(t('einkauf.ganzeListeLoeschen'), t('einkauf.ganzeListeHinweis'), [
+      { text: t('allgemein.abbrechen'), style: 'cancel' },
       {
-        text: 'Löschen',
+        text: t('allgemein.loeschen'),
         style: 'destructive',
         onPress: async () => {
           try {
             await api.delete('/shopping-list/all');
             load();
           } catch (err) {
-            Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Konnte nicht gelöscht werden');
+            Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('einkauf.nichtGeloescht'));
           }
         },
       },
@@ -202,7 +204,7 @@ export default function ShoppingListScreen({}: Props) {
       setNewItemUnit('');
       await load();
     } catch (err) {
-      Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Konnte nicht hinzugefügt werden');
+      Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('einkauf.nichtHinzugefuegt'));
     } finally {
       setIsAdding(false);
     }
@@ -227,7 +229,7 @@ export default function ShoppingListScreen({}: Props) {
         <TextInput
           value={newItemName}
           onChangeText={setNewItemName}
-          placeholder="Zutat manuell hinzufügen…"
+          placeholder={t('einkauf.zutatPlatzhalter')}
           placeholderTextColor={colors.muted}
           onSubmitEditing={handleAddManual}
           style={[styles.addInput, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
@@ -235,7 +237,7 @@ export default function ShoppingListScreen({}: Props) {
         <TextInput
           value={newItemAmount}
           onChangeText={setNewItemAmount}
-          placeholder="Menge"
+          placeholder={t('einkauf.mengePlatzhalter')}
           placeholderTextColor={colors.muted}
           keyboardType="numeric"
           onSubmitEditing={handleAddManual}
@@ -244,7 +246,7 @@ export default function ShoppingListScreen({}: Props) {
         <TextInput
           value={newItemUnit}
           onChangeText={setNewItemUnit}
-          placeholder="Einh."
+          placeholder={t('einkauf.einheitPlatzhalter')}
           placeholderTextColor={colors.muted}
           onSubmitEditing={handleAddManual}
           style={[styles.addUnitInput, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
@@ -309,7 +311,7 @@ export default function ShoppingListScreen({}: Props) {
             ) : (
               <MaterialCommunityIcons name="printer-outline" size={15} color={gradient[0]} />
             )}
-            <Text style={[styles.clearButtonText, { color: gradient[0] }]}>Drucken / PDF</Text>
+            <Text style={[styles.clearButtonText, { color: gradient[0] }]}>{t('einkauf.druckenPdf')}</Text>
           </Pressable>
           <Pressable
             onPress={handleMail}
@@ -321,7 +323,7 @@ export default function ShoppingListScreen({}: Props) {
             ) : (
               <MaterialCommunityIcons name="email-outline" size={15} color={gradient[0]} />
             )}
-            <Text style={[styles.clearButtonText, { color: gradient[0] }]}>Per Mail</Text>
+            <Text style={[styles.clearButtonText, { color: gradient[0] }]}>{t('einkauf.perMail')}</Text>
           </Pressable>
         </View>
       )}
@@ -330,12 +332,12 @@ export default function ShoppingListScreen({}: Props) {
         <View style={{ flexDirection: 'row', gap: 10 }}>
           {hasCheckedItems && (
             <Pressable onPress={handleClearChecked} style={[styles.clearButton, { flex: 1 }]}>
-              <Text style={[styles.clearButtonText, { color: colors.muted }]}>Abgehakte entfernen</Text>
+              <Text style={[styles.clearButtonText, { color: colors.muted }]}>{t('einkauf.abgehakteEntfernen')}</Text>
             </Pressable>
           )}
           {hasAnyItems && (
             <Pressable onPress={handleClearAll} style={[styles.clearButton, { flex: 1 }]}>
-              <Text style={[styles.clearButtonText, { color: '#DC2626' }]}>Liste leeren</Text>
+              <Text style={[styles.clearButtonText, { color: '#DC2626' }]}>{t('einkauf.listeLeeren')}</Text>
             </Pressable>
           )}
         </View>

@@ -39,10 +39,31 @@
     "posten": {
       "one": "{anzahl} Posten",
       "other": "{anzahl} Posten"
-    }
+    },
+    "nichtGeladen": "Einkaufszettel konnte nicht geladen werden",
+    "nichtVerfuegbar": "Nicht verfügbar",
+    "teilenNichtUnterstuetzt": "Teilen und Drucken wird auf diesem Gerät nicht unterstützt.",
+    "pdfFehlgeschlagen": "Das PDF konnte nicht erstellt werden.",
+    "verschickenTitel": "Einkaufsliste verschicken",
+    "verschickenFrage": "An deine eigene E-Mail-Adresse senden? Erledigte Posten bleiben weg.",
+    "senden": "Senden",
+    "verschickt": "Verschickt",
+    "unterwegs": "Die Einkaufsliste ist unterwegs.",
+    "nichtVerschickt": "Nicht verschickt",
+    "nichtAktualisiert": "Konnte nicht aktualisiert werden",
+    "nichtGeloescht": "Konnte nicht gelöscht werden",
+    "nichtGeleert": "Konnte nicht geleert werden",
+    "nichtHinzugefuegt": "Konnte nicht hinzugefügt werden",
+    "ganzeListeLoeschen": "Ganze Liste löschen?",
+    "ganzeListeHinweis": "Alle Einträge werden entfernt, auch nicht abgehakte.",
+    "zutatPlatzhalter": "Zutat manuell hinzufügen…",
+    "mengePlatzhalter": "Menge",
+    "einheitPlatzhalter": "Einh.",
+    "druckenPdf": "Drucken / PDF",
+    "abgehakteEntfernen": "Abgehakte entfernen"
   },
   "rezepte": {
-    "suchen": "Rezept oder Zutat suchen …",
+    "suchen": "Rezept oder Zutat suchen…",
     "nurFavoriten": "Nur Favoriten",
     "neuesteZuerst": "Neueste zuerst",
     "aeltesteZuerst": "Älteste zuerst",
@@ -51,7 +72,18 @@
     "anzahl": {
       "one": "{anzahl} Rezept",
       "other": "{anzahl} Rezepte"
-    }
+    },
+    "nichtGeladen": "Rezepte konnten nicht geladen werden",
+    "az": "A–Z",
+    "neuerOrdner": "Neuer Ordner",
+    "ordnerPlatzhalter": "z.B. Grillrezepte",
+    "ordnerNichtAngelegt": "Ordner konnte nicht angelegt werden",
+    "ordnerNichtGeloescht": "Ordner konnte nicht gelöscht werden",
+    "keineTreffer": "Keine Treffer für \"{suche}\".",
+    "keineFavoriten": "Noch keine Favoriten markiert.",
+    "keineMitTag": "Keine Rezepte mit \"{tag}\" gefunden.",
+    "ordnerLeer": "Dieser Ordner ist noch leer.",
+    "nochKeine": "Noch keine Rezepte – leg dein erstes über den Button unten an."
   },
   "starter": {
     "titel": "Starter-Rezepte",

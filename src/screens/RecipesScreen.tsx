@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
+import { useUebersetzung } from '../i18n';
 import ScanFab from '../components/ScanFab';
 import PublishToPoolButton from '../components/PublishToPoolButton';
 import { api, ApiError } from '../api/client';
@@ -59,6 +60,7 @@ interface FolderSummary {
 
 export default function RecipesScreen({ navigation, route }: Props) {
   const { colors, gradient, radius } = useTheme();
+  const { t } = useUebersetzung();
   const [recipes, setRecipes] = useState<RecipeSummary[]>([]);
   const [folders, setFolders] = useState<FolderSummary[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
@@ -99,7 +101,7 @@ export default function RecipesScreen({ navigation, route }: Props) {
       setFolders(folderData);
       setError(null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : 'Rezepte konnten nicht geladen werden');
+      setError(err instanceof ApiError ? err.detail : t('rezepte.nichtGeladen'));
     }
   }, [searchText]);
 
@@ -139,7 +141,7 @@ export default function RecipesScreen({ navigation, route }: Props) {
       setIsCreatingFolder(false);
       await loadAll();
     } catch (err) {
-      Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Ordner konnte nicht angelegt werden');
+      Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('rezepte.ordnerNichtAngelegt'));
     } finally {
       setIsSavingFolder(false);
     }
@@ -187,7 +189,7 @@ export default function RecipesScreen({ navigation, route }: Props) {
         <MaterialCommunityIcons name="magnify" size={17} color={colors.muted} />
         <TextInput
           style={[styles.searchInput, { color: colors.text }]}
-          placeholder="Rezept oder Zutat suchen…"
+          placeholder={t('rezepte.suchen')}
           placeholderTextColor={colors.muted}
           value={searchText}
           onChangeText={setSearchText}
@@ -221,7 +223,7 @@ export default function RecipesScreen({ navigation, route }: Props) {
         >
           <MaterialCommunityIcons name={favoritesOnly ? 'heart' : 'heart-outline'} size={14} color={favoritesOnly ? '#fff' : colors.text} />
           <Text style={{ color: favoritesOnly ? '#fff' : colors.text, fontSize: 12, fontWeight: '600', marginLeft: 5 }}>
-            Nur Favoriten
+            {t('rezepte.nurFavoriten')}
           </Text>
         </Pressable>
 
@@ -237,7 +239,7 @@ export default function RecipesScreen({ navigation, route }: Props) {
             color={colors.text}
           />
           <Text style={{ color: colors.text, fontSize: 12, fontWeight: '600', marginLeft: 5 }}>
-            {sortOption === 'az' ? 'A–Z' : sortOption === 'newest' ? 'Neueste zuerst' : 'Älteste zuerst'}
+            {sortOption === 'az' ? t('rezepte.az') : sortOption === 'newest' ? t('rezepte.neuesteZuerst') : t('rezepte.aeltesteZuerst')}
           </Text>
         </Pressable>
       </View>
@@ -265,9 +267,9 @@ export default function RecipesScreen({ navigation, route }: Props) {
                   'Ordner löschen?',
                   `"${folder.name}" wird entfernt. Die ${folder.recipe_count} Rezepte darin bleiben erhalten, landen aber ohne Ordner.`,
                   [
-                    { text: 'Abbrechen', style: 'cancel' },
+                    { text: t('allgemein.abbrechen'), style: 'cancel' },
                     {
-                      text: 'Löschen',
+                      text: t('allgemein.loeschen'),
                       style: 'destructive',
                       onPress: async () => {
                         try {
@@ -275,7 +277,7 @@ export default function RecipesScreen({ navigation, route }: Props) {
                           if (selectedFolderId === folder.id) setSelectedFolderId(null);
                           loadAll();
                         } catch (err) {
-                          Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Ordner konnte nicht gelöscht werden');
+                          Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('rezepte.ordnerNichtGeloescht'));
                         }
                       },
                     },
@@ -334,14 +336,14 @@ export default function RecipesScreen({ navigation, route }: Props) {
           !error ? (
             <Text style={[styles.emptyText, { color: colors.muted }]}>
               {searchText.trim()
-                ? `Keine Treffer für "${searchText.trim()}".`
+                ? t('rezepte.keineTreffer', { suche: searchText.trim() })
                 : favoritesOnly
-                  ? 'Noch keine Favoriten markiert.'
+                  ? t('rezepte.keineFavoriten')
                   : filterTag
-                    ? `Keine Rezepte mit "${filterTag}" gefunden.`
+                    ? t('rezepte.keineMitTag', { tag: filterTag })
                     : selectedFolderId
-                      ? 'Dieser Ordner ist noch leer.'
-                      : 'Noch keine Rezepte – leg dein erstes über den Button unten an.'}
+                      ? t('rezepte.ordnerLeer')
+                      : t('rezepte.nochKeine')}
             </Text>
           ) : null
         }
@@ -379,10 +381,10 @@ export default function RecipesScreen({ navigation, route }: Props) {
       <Modal visible={isCreatingFolder} transparent animationType="fade" onRequestClose={() => setIsCreatingFolder(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalCard, { backgroundColor: colors.bg, borderRadius: radius.lg }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Neuer Ordner</Text>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>{t('rezepte.neuerOrdner')}</Text>
             <TextInput
               style={[styles.modalInput, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-              placeholder="z.B. Grillrezepte"
+              placeholder={t('rezepte.ordnerPlatzhalter')}
               placeholderTextColor={colors.muted}
               value={newFolderName}
               onChangeText={setNewFolderName}
@@ -391,7 +393,7 @@ export default function RecipesScreen({ navigation, route }: Props) {
             />
             <View style={styles.modalButtonRow}>
               <Pressable onPress={() => { setIsCreatingFolder(false); setNewFolderName(''); }} style={styles.modalCancelButton}>
-                <Text style={[styles.modalCancelText, { color: colors.muted }]}>Abbrechen</Text>
+                <Text style={[styles.modalCancelText, { color: colors.muted }]}>{t('allgemein.abbrechen')}</Text>
               </Pressable>
               <Pressable
                 onPress={handleCreateFolder}

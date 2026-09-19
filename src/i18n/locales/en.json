@@ -39,10 +39,31 @@
     "posten": {
       "one": "{anzahl} item",
       "other": "{anzahl} items"
-    }
+    },
+    "nichtGeladen": "The shopping list could not be loaded",
+    "nichtVerfuegbar": "Not available",
+    "teilenNichtUnterstuetzt": "Sharing and printing are not supported on this device.",
+    "pdfFehlgeschlagen": "The PDF could not be created.",
+    "verschickenTitel": "Send shopping list",
+    "verschickenFrage": "Send it to your own email address? Completed items are left out.",
+    "senden": "Send",
+    "verschickt": "Sent",
+    "unterwegs": "The shopping list is on its way.",
+    "nichtVerschickt": "Not sent",
+    "nichtAktualisiert": "Could not be updated",
+    "nichtGeloescht": "Could not be deleted",
+    "nichtGeleert": "Could not be cleared",
+    "nichtHinzugefuegt": "Could not be added",
+    "ganzeListeLoeschen": "Clear the whole list?",
+    "ganzeListeHinweis": "Every entry is removed, including the ones not ticked off.",
+    "zutatPlatzhalter": "Add an ingredient…",
+    "mengePlatzhalter": "Amount",
+    "einheitPlatzhalter": "Unit",
+    "druckenPdf": "Print / PDF",
+    "abgehakteEntfernen": "Remove ticked items"
   },
   "rezepte": {
-    "suchen": "Search recipes or ingredients …",
+    "suchen": "Search recipes or ingredients…",
     "nurFavoriten": "Favourites only",
     "neuesteZuerst": "Newest first",
     "aeltesteZuerst": "Oldest first",
@@ -51,7 +72,18 @@
     "anzahl": {
       "one": "{anzahl} recipe",
       "other": "{anzahl} recipes"
-    }
+    },
+    "nichtGeladen": "Recipes could not be loaded",
+    "az": "A–Z",
+    "neuerOrdner": "New folder",
+    "ordnerPlatzhalter": "e.g. Barbecue",
+    "ordnerNichtAngelegt": "The folder could not be created",
+    "ordnerNichtGeloescht": "The folder could not be deleted",
+    "keineTreffer": "No matches for \"{suche}\".",
+    "keineFavoriten": "No favourites marked yet.",
+    "keineMitTag": "No recipes found with \"{tag}\".",
+    "ordnerLeer": "This folder is still empty.",
+    "nochKeine": "No recipes yet – add your first one with the button below."
   },
   "starter": {
     "titel": "Starter recipes",
