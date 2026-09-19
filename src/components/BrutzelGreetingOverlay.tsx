@@ -103,7 +103,14 @@ export default function BrutzelGreetingOverlay({ name, onDismiss }: Props) {
         </View>
       </View>
 
-      <VideoView player={player} style={styles.video} contentFit="contain" nativeControls={false} />
+      {/* Standbild LIEGT HINTER dem Player, nicht als Ersatz daneben: Bleibt
+          der Player stumm - was bei genau diesem Video schon am Ende des
+          Kochvorgangs vorkam -, steht hier Brutzel statt einer Luecke.
+          Spielt das Video, verdeckt es das Bild vollstaendig. */}
+      <View style={styles.videoBox}>
+        <Image source={require('../../assets/brutzel-full.png')} style={styles.videoFallback} resizeMode="contain" />
+        <VideoView player={player} style={styles.video} contentFit="contain" nativeControls={false} />
+      </View>
 
       {showText && (
         <Animated.View style={{ opacity: textOpacity, alignItems: 'center' }}>
@@ -126,7 +133,9 @@ const styles = StyleSheet.create({
   brandTextBlock: { flexShrink: 1 },
   brandTitle: { fontSize: 17, fontWeight: '700' },
   brandClaim: { fontSize: 11, marginTop: 1 },
-  video: { width: '100%', height: 260, marginBottom: 20 },
+  videoBox: { width: '100%', height: 260, marginBottom: 20 },
+  videoFallback: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' },
+  video: { width: '100%', height: '100%' },
   title: { fontSize: 22, fontWeight: '700', marginBottom: 6 },
   subtitle: { fontSize: 13, marginBottom: 22, textAlign: 'center' },
   doneButton: { paddingHorizontal: 40, paddingVertical: 13 },
