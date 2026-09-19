@@ -652,50 +652,42 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
     setIsNoteModalOpen(true);
   };
 
-  const handleSaveNote = () => {
+  const handleSaveNote = async () => {
     if (!recipe) return;
-    // Notizen werden IMMER auf die Original-Schrittliste geschrieben, nicht
-    // auf die fuer Fortgeschritten/Profi zusammengefasste Ansicht - dort
-    // wuerde "order" mehrere Original-Schritte gleichzeitig meinen, das
-    // Bearbeiten ist deshalb bewusst auf die Anfaenger-Stufe beschraenkt
-    // (siehe Button-Disabled-Zustand unten).
-    const updatedSteps = recipe.steps.map((s) =>
-      s.order === currentStep.order ? { ...s, user_note: noteDraft.trim() || null } : s,
+
+    // Die Notiz gehoert an den Schritt, den der Nutzer VOR SICH sieht -
+    // also in die Liste der aktuellen Hauben-Stufe. Vorher wurde sie immer
+    // in die Basisfassung geschrieben: Auf Anfaenger- oder Profi-Stufe
+    // meint dieselbe Schrittnummer dort etwas anderes, die Notiz landete
+    // am falschen Schritt oder nirgends.
+    const feld =
+      level === 'anfaenger' && recipe.steps_anfaenger?.length
+        ? 'steps_anfaenger'
+        : level === 'profi' && recipe.steps_profi?.length
+          ? 'steps_profi'
+          : 'steps';
+    const liste = (feld === 'steps' ? recipe.steps : recipe[feld]) ?? [];
+    const updatedSteps = liste.map((st) =>
+      st.order === currentStep.order ? { ...st, user_note: noteDraft.trim() || null } : st,
     );
 
     Keyboard.dismiss();
-    Alert.alert(
-      t('kochen.notizSpeichern'),
-      t('kochen.notizFrage'),
-      [
-        { text: t('allgemein.abbrechen'), style: 'cancel' },
-        {
-          text: t('detail.nurDiesmal'),
-          onPress: () => {
-            // NICHT ans Backend schicken - nur lokal fuer die aktuelle
-            // Kochsession uebernehmen, das gespeicherte Rezept bleibt
-            // unveraendert.
-            setRecipe({ ...recipe, steps: updatedSteps });
-            setIsNoteModalOpen(false);
-          },
-        },
-        {
-          text: t('detail.dauerhaftImRezept'),
-          onPress: async () => {
-            setIsSavingNote(true);
-            try {
-              await api.patch(`/recipes/${recipeId}`, { steps: updatedSteps });
-              setRecipe({ ...recipe, steps: updatedSteps });
-              setIsNoteModalOpen(false);
-            } catch (err) {
-              Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('kochen.notizNichtGespeichert'));
-            } finally {
-              setIsSavingNote(false);
-            }
-          },
-        },
-      ],
-    );
+    // Keine Rueckfrage mehr, ob dauerhaft oder nur diesmal. Eine Notiz ist
+    // genau das, was man beim naechsten Mal wiederlesen will - "nur
+    // diesmal" waere eine Notiz, die sich selbst wegwirft.
+    setIsSavingNote(true);
+    try {
+      await api.patch(`/recipes/${recipeId}`, { [feld]: updatedSteps });
+      setRecipe({ ...recipe, [feld]: updatedSteps });
+      setIsNoteModalOpen(false);
+    } catch (err) {
+      Alert.alert(
+        t('allgemein.fehler'),
+        err instanceof ApiError ? err.detail : t('kochen.notizNichtGespeichert'),
+      );
+    } finally {
+      setIsSavingNote(false);
+    }
   };
 
   const handleOpenTimerEdit = () => {
