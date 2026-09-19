@@ -130,6 +130,9 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
   const [recipe, setRecipe] = useState<RecipeForCooking | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [level, setLevel] = useState<HaubenLevel>('fortgeschritten');
+  const [tippsLaden, setTippsLaden] = useState(false);
+  // Waehrend einer Umstellung wird der Schirm gesperrt (siehe unten).
+  const [umstellung, setUmstellung] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isIngredientsOpen, setIsIngredientsOpen] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -227,6 +230,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
     // andere, und damit auch die Tipps. Ohne sie stand nach dem Umschalten
     // der Tipp zu Schritt 5 der einen Fassung neben Schritt 5 der anderen.
     setStepTips({});
+    setTippsLaden(true);
     api
       .post<{ tips: { order: number; tip: string }[] }>(
         `/ai/step-tips/${recipeId}?level=${level}`,
@@ -241,7 +245,8 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
       .catch(() => {
         // Kein Grund, das Kochen zu stoeren - es greifen die eingebauten
         // Texte weiter unten.
-      });
+      })
+      .finally(() => setTippsLaden(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showBrutzel, recipeId, !!recipe, level]);
 
@@ -483,9 +488,37 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
   // Beim Stufenwechsel auf Schritt 1 zurueckspringen - die Indizes bedeuten
   // je Stufe etwas anderes (unterschiedliche Gruppierung).
   const handleLevelChange = (newLevel: HaubenLevel) => {
+    if (newLevel === level) return;
+    setUmstellung(true);
     setLevel(newLevel);
     setCurrentIndex(0);
   };
+
+  // Die Sperre endet, wenn beide Nachladevorgaenge durch sind. Der Ref
+  // merkt sich, dass ueberhaupt einer begonnen hat - sonst wuerde die
+  // Sperre schon im selben Durchlauf wieder aufgehoben, bevor die
+  // Anfragen ueberhaupt losgelaufen sind.
+  const ladenBegonnen = useRef(false);
+  useEffect(() => {
+    if (!umstellung) return;
+    if (isAdaptingSteps || tippsLaden) {
+      ladenBegonnen.current = true;
+      return;
+    }
+    if (ladenBegonnen.current) {
+      ladenBegonnen.current = false;
+      setUmstellung(false);
+    }
+  }, [umstellung, isAdaptingSteps, tippsLaden]);
+
+  // Sicherheitsnetz: Antwortet weder Schritt- noch Tippabruf (kein
+  // Schluessel, kein Netz), darf der Schirm nicht dauerhaft gesperrt
+  // bleiben. Nach acht Sekunden geht es ohne die Umstellung weiter.
+  useEffect(() => {
+    if (!umstellung) return;
+    const timer = setTimeout(() => setUmstellung(false), 8000);
+    return () => clearTimeout(timer);
+  }, [umstellung]);
 
   const handleOpenStepTextModal = () => {
     setStepTextDraft(currentStep.text);
@@ -1103,11 +1136,40 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
           </View>
         </View>
       </Modal>
+
+      {umstellung && (
+        <View style={styles.umstellungOverlay}>
+          <View style={[styles.umstellungKarte, { backgroundColor: colors.card, borderRadius: radius.md }]}>
+            <ActivityIndicator color={gradient[0]} />
+            <Text style={[styles.umstellungText, { color: colors.text }]}>
+              {level === 'anfaenger'
+                ? 'Brutzel schreibt die Schritte für Anfänger um…'
+                : level === 'profi'
+                  ? 'Brutzel kürzt die Schritte für Profis…'
+                  : 'Brutzel stellt das Rezept um…'}
+            </Text>
+            <Text style={[styles.umstellungHinweis, { color: colors.muted }]}>
+              Schritte und Tipps werden zusammen umgestellt.
+            </Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  // Deckt den ganzen Schirm ab und schluckt Beruehrungen: Waehrend der
+  // Umstellung stehen Schritte und Tipps noch aus verschiedenen Fassungen
+  // nebeneinander. Weiterblaettern waere da nicht nur verwirrend, sondern
+  // am Herd auch gefaehrlich.
+  umstellungOverlay: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center', padding: 24,
+  },
+  umstellungKarte: { padding: 22, alignItems: 'center', maxWidth: 320 },
+  umstellungText: { fontSize: 14.5, fontWeight: '600', textAlign: 'center', marginTop: 12 },
+  umstellungHinweis: { fontSize: 12, textAlign: 'center', marginTop: 6 },
   container: { flex: 1, padding: 20 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   levelRow: { flexDirection: 'row', marginBottom: 12 },
