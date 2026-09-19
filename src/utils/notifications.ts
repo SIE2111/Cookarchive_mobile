@@ -1,4 +1,3 @@
-import * as Notifications from 'expo-notifications';
 import { Platform, NativeModules } from 'react-native';
 
 /**
@@ -20,14 +19,33 @@ const IST_EXPO_GO_ANDROID =
   (NativeModules?.ExponentConstants?.appOwnership ?? 'expo') === 'expo';
 
 /**
+ * Das Modul wird ERST BEIM AUFRUF geladen, nicht oben per import.
+ *
+ * Der erste Anlauf hat den Handler abgesichert und trotzdem nicht
+ * gereicht: expo-notifications wirft bereits beim LADEN des Moduls, also
+ * in dem Moment, in dem die Zeile `import ... from 'expo-notifications'`
+ * ausgewertet wird. Eine Pruefung weiter unten im Code kommt dafuer zu
+ * spaet - sie laeuft nie.
+ *
+ * Mit require() im Funktionsrumpf wird das Modul in Expo Go auf Android
+ * gar nicht erst angefasst. In jedem echten Build laedt es wie zuvor.
+ */
+function nachrichten(): any | null {
+  if (IST_EXPO_GO_ANDROID) return null;
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return require('expo-notifications');
+}
+
+/**
  * Timer-Push-Benachrichtigungen: wenn die App im Hintergrund ist und ein
  * Kochtimer ablaeuft, soll der Nutzer trotzdem benachrichtigt werden (siehe
  * Umsetzungskonzept, Abschnitt "paralleles Kochen" - Timer laeuft weiter,
  * auch wenn man gerade nicht in der App ist).
  */
 
-if (!IST_EXPO_GO_ANDROID) {
-  Notifications.setNotificationHandler({
+const N = nachrichten();
+if (N) {
+  N.setNotificationHandler({
     handleNotification: async () => ({
       shouldShowAlert: true,
       shouldPlaySound: true,
@@ -39,11 +57,12 @@ if (!IST_EXPO_GO_ANDROID) {
 }
 
 export async function ensureNotificationPermission(): Promise<boolean> {
-  if (IST_EXPO_GO_ANDROID) return false;
-  const { status: existingStatus } = await Notifications.getPermissionsAsync();
+  const N = nachrichten();
+  if (!N) return false;
+  const { status: existingStatus } = await N.getPermissionsAsync();
   if (existingStatus === 'granted') return true;
 
-  const { status } = await Notifications.requestPermissionsAsync();
+  const { status } = await N.requestPermissionsAsync();
   return status === 'granted';
 }
 
@@ -56,15 +75,17 @@ export async function ensureNotificationPermission(): Promise<boolean> {
 export async function scheduleTimerNotification(recipeTitle: string, stepText: string, secondsFromNow: number): Promise<string | null> {
   const hasPermission = await ensureNotificationPermission();
   if (!hasPermission || secondsFromNow <= 0) return null;
+  const N = nachrichten();
+  if (!N) return null;
 
-  return Notifications.scheduleNotificationAsync({
+  return N.scheduleNotificationAsync({
     content: {
       title: `Timer fertig: ${recipeTitle}`,
       body: stepText.length > 80 ? `${stepText.slice(0, 80)}…` : stepText,
       sound: true,
     },
     trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+      type: N.SchedulableTriggerInputTypes.TIME_INTERVAL,
       seconds: secondsFromNow,
       ...(Platform.OS === 'android' ? { channelId: 'timer' } : {}),
     },
@@ -72,17 +93,19 @@ export async function scheduleTimerNotification(recipeTitle: string, stepText: s
 }
 
 export async function cancelTimerNotification(notificationId: string | null): Promise<void> {
-  if (!notificationId || IST_EXPO_GO_ANDROID) return;
-  await Notifications.cancelScheduledNotificationAsync(notificationId);
+  const N = nachrichten();
+  if (!notificationId || !N) return;
+  await N.cancelScheduledNotificationAsync(notificationId);
 }
 
 /** Android braucht einen expliziten Notification-Channel, sonst werden
  * Sound/Priority-Einstellungen ignoriert. iOS braucht das nicht. */
 export async function setupNotificationChannel(): Promise<void> {
-  if (Platform.OS !== 'android' || IST_EXPO_GO_ANDROID) return;
-  await Notifications.setNotificationChannelAsync('timer', {
+  const N = nachrichten();
+  if (Platform.OS !== 'android' || !N) return;
+  await N.setNotificationChannelAsync('timer', {
     name: 'Kochtimer',
-    importance: Notifications.AndroidImportance.HIGH,
+    importance: N.AndroidImportance.HIGH,
     sound: 'default',
   });
 }
