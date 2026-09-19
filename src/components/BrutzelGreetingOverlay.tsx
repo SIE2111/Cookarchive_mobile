@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, Animated, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VideoView, useVideoPlayer } from 'expo-video';
@@ -40,7 +40,6 @@ export default function BrutzelGreetingOverlay({ name, onDismiss }: Props) {
   const { colors, gradient, radius } = useTheme();
   const insets = useSafeAreaInsets();
   const { t } = useUebersetzung();
-  const [showText, setShowText] = useState(false);
   const textOpacity = React.useRef(new Animated.Value(0)).current;
 
   const greetingText = `Hallo ${name}! Was möchtest du heute kochen?`;
@@ -51,10 +50,11 @@ export default function BrutzelGreetingOverlay({ name, onDismiss }: Props) {
   });
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowText(true);
-      Animated.timing(textOpacity, { toValue: 1, duration: 500, useNativeDriver: true }).start();
-    }, 3500);
+    // Frueher lief hier ein Zeitgeber von 3,5 Sekunden, damit der Text erst
+    // nach dem Video kam. Die Markenzeile oben steht aber sofort - der
+    // Versatz liess den Bildschirm dazwischen halb leer wirken. Beide
+    // Textbloecke erscheinen jetzt gemeinsam.
+    Animated.timing(textOpacity, { toValue: 1, duration: 500, useNativeDriver: true }).start();
 
     Speech.getAvailableVoicesAsync()
       .then((voices) => {
@@ -74,7 +74,6 @@ export default function BrutzelGreetingOverlay({ name, onDismiss }: Props) {
       });
 
     return () => {
-      clearTimeout(timer);
       Speech.stop();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -112,15 +111,13 @@ export default function BrutzelGreetingOverlay({ name, onDismiss }: Props) {
         <VideoView player={player} style={styles.video} contentFit="cover" nativeControls={false} />
       </View>
 
-      {showText && (
-        <Animated.View style={{ opacity: textOpacity, alignItems: 'center' }}>
-          <Text style={[styles.title, { color: colors.text }]}>{t('sonstiges.hallo', { name })}</Text>
-          <Text style={[styles.subtitle, { color: colors.muted }]}>{t('sonstiges.wasKochen')}</Text>
-          <Pressable onPress={handleDismiss} style={[styles.doneButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}>
-            <Text style={styles.doneButtonText}>{t('sonstiges.losGehts')}</Text>
-          </Pressable>
-        </Animated.View>
-      )}
+      <Animated.View style={{ opacity: textOpacity, alignItems: 'center' }}>
+        <Text style={[styles.title, { color: colors.text }]}>{t('sonstiges.hallo', { name })}</Text>
+        <Text style={[styles.subtitle, { color: colors.muted }]}>{t('sonstiges.wasKochen')}</Text>
+        <Pressable onPress={handleDismiss} style={[styles.doneButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}>
+          <Text style={styles.doneButtonText}>{t('sonstiges.losGehts')}</Text>
+        </Pressable>
+      </Animated.View>
     </View>
   );
 }
