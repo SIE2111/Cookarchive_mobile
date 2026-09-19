@@ -80,6 +80,38 @@ export default function StorageSettingsScreen({ navigation }: Props) {
   const [nasPasswort, setNasPasswort] = useState('');
   const [nasOrdner, setNasOrdner] = useState('');
   const [nasLaeuft, setNasLaeuft] = useState(false);
+  const [hersteller, setHersteller] = useState<string>('synology');
+  const [sucheLaeuft, setSucheLaeuft] = useState(false);
+  const [vorschlaege, setVorschlaege] = useState<{ url: string; status: string }[] | null>(null);
+
+  /**
+   * Adresse vorschlagen statt raten lassen.
+   *
+   * Der Nutzer kennt den Namen seines NAS, aber selten den Port und den
+   * Pfad, unter dem WebDAV dort liegt. Die sind je Hersteller immer
+   * dieselben - also probiert der Server sie durch.
+   */
+  const adresseSuchen = async () => {
+    if (!nasUrl.trim() || !nasUser.trim() || !nasPasswort) {
+      Alert.alert(t('sonstiges.nasFehler'), t('sonstiges.nasWichtig'));
+      return;
+    }
+    setSucheLaeuft(true);
+    setVorschlaege(null);
+    try {
+      const res = await api.post<{ vorschlaege: { url: string; status: string }[] }>('/nas/suchen', {
+        host: nasUrl.trim(),
+        user: nasUser.trim(),
+        password: nasPasswort,
+        hersteller,
+      });
+      setVorschlaege(res.vorschlaege);
+    } catch (err) {
+      Alert.alert(t('sonstiges.nasFehler'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
+    } finally {
+      setSucheLaeuft(false);
+    }
+  };
 
   useEffect(() => {
     api.get<{ eingerichtet: boolean; url?: string | null; user?: string | null; folder?: string | null }>('/nas/')
@@ -238,6 +270,32 @@ export default function StorageSettingsScreen({ navigation }: Props) {
               {t('sonstiges.nasVerbunden', { adresse: nas.url ?? '' })}
             </Text>
           )}
+          <Text style={{ color: colors.muted, fontSize: 12.5, marginBottom: 6 }}>{t('sonstiges.nasHersteller')}</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+            {(['synology', 'qnap', 'nextcloud', 'truenas', 'andere'] as const).map((h) => (
+              <Pressable
+                key={h}
+                onPress={() => { setHersteller(h); setVorschlaege(null); }}
+                style={{
+                  paddingHorizontal: 12, minHeight: 36, justifyContent: 'center',
+                  borderRadius: radius.sm,
+                  backgroundColor: hersteller === h ? gradient[0] : colors.bg,
+                }}
+              >
+                <Text style={{ color: hersteller === h ? '#fff' : colors.text, fontSize: 13 }}>
+                  {t(`sonstiges.nas${h.charAt(0).toUpperCase()}${h.slice(1)}`)}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          <Text style={{ color: colors.text, fontSize: 12.5, fontWeight: '700', marginBottom: 3 }}>
+            {t('sonstiges.nasAnleitungTitel')}
+          </Text>
+          <Text style={{ color: colors.muted, fontSize: 12, lineHeight: 17, marginBottom: 12 }}>
+            {t(`sonstiges.nasAnleitung${hersteller.charAt(0).toUpperCase()}${hersteller.slice(1)}`)}
+          </Text>
+
           <TextInput
             style={[styles.eingabe, { backgroundColor: colors.bg, color: colors.text, borderRadius: radius.sm }]}
             placeholder={t('sonstiges.nasAdresse')} placeholderTextColor={colors.muted}
@@ -266,6 +324,53 @@ export default function StorageSettingsScreen({ navigation }: Props) {
             autoCapitalize="none" autoCorrect={false}
             value={nasOrdner} onChangeText={setNasOrdner}
           />
+          <Pressable
+            onPress={adresseSuchen}
+            disabled={sucheLaeuft}
+            style={{ minHeight: 44, justifyContent: 'center', marginBottom: 4 }}
+          >
+            {sucheLaeuft ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <ActivityIndicator size="small" color={colors.muted} />
+                <Text style={{ color: colors.muted, fontSize: 13 }}>{t('sonstiges.nasSuchtGerade')}</Text>
+              </View>
+            ) : (
+              <Text style={{ color: gradient[0], fontSize: 13.5, fontWeight: '600' }}>
+                🔍 {t('sonstiges.nasSuchen')}
+              </Text>
+            )}
+          </Pressable>
+
+          {vorschlaege !== null && (
+            <View style={{ marginBottom: 10 }}>
+              {vorschlaege.length === 0 ? (
+                <Text style={{ color: '#B45309', fontSize: 12.5, lineHeight: 18 }}>
+                  {t('sonstiges.nasNichtsGefunden')}
+                </Text>
+              ) : (
+                <>
+                  <Text style={{ color: colors.muted, fontSize: 12.5, marginBottom: 6 }}>
+                    {t('sonstiges.nasGefunden')}
+                  </Text>
+                  {vorschlaege.map((v) => (
+                    <Pressable
+                      key={v.url}
+                      onPress={() => { setNasUrl(v.url); setVorschlaege(null); }}
+                      style={{ minHeight: 44, justifyContent: 'center', paddingVertical: 4 }}
+                    >
+                      <Text style={{ color: colors.text, fontSize: 13 }}>{v.url}</Text>
+                      {v.status === 'zugang' && (
+                        <Text style={{ color: '#B45309', fontSize: 11.5 }}>
+                          {t('sonstiges.nasZugangFalsch')}
+                        </Text>
+                      )}
+                    </Pressable>
+                  ))}
+                </>
+              )}
+            </View>
+          )}
+
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 }}>
             <Pressable
               onPress={() => nasAufruf('test')} disabled={nasLaeuft}
