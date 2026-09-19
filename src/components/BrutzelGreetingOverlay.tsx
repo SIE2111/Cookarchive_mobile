@@ -3,7 +3,7 @@ import { View, Text, Pressable, StyleSheet, Animated, Image } from 'react-native
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import * as Speech from 'expo-speech';
-import { SPEECH_LANGUAGE } from '../utils/speech';
+import { SPEECH_LANGUAGE, BRUTZEL_PITCH, BRUTZEL_RATE, brutzelStimme } from '../utils/speech';
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
 
@@ -16,29 +16,14 @@ interface Props {
   mitVideo?: boolean;
 }
 
-// Bekannte deutsche MAENNLICHE System-Stimmennamen (Apple/Android) - eine
-// wirklich eigene, individuelle KI-Stimme fuer Brutzel ist mit den vom
-// Betriebssystem mitgelieferten Text-zu-Sprache-Stimmen nicht moeglich,
-// nur eine Auswahl UNTER diesen. expo-speech liefert kein Geschlechts-Feld
-// mit, deshalb ueber bekannte Namen gefiltert statt eines Attributs -
-// deckt aeltere UND neuere iOS-Stimmenpakete ab, da sich Apples Namen
-// zwischen iOS-Versionen unterscheiden koennen.
-const GERMAN_MALE_VOICE_HINTS = [
-  'markus', 'martin', 'yannick', 'conrad', 'de-de-wavenet-b', 'de-de-wavenet-d',
-  'male', 'mann', 'herr',
-];
 
 /**
  * Animierte Begruessung beim Start (Profil-Schalter "Begruessungs-
  * Animation") - nutzt dasselbe echte Brutzel-Video wie die Guten-Appetit-
  * Feier am Ende (siehe CookingFinishedCelebration.tsx), nicht mehr eine
  * reine Bounce-Animation mit dem statischen Bild. Liest den
- * Begruessungstext zusaetzlich vor, bevorzugt mit einer deutschen
- * maennlichen Systemstimme UND merklich abgesenkter Tonhoehe (pitch) -
- * letzteres sorgt auch dann fuer einen hoerbar maennlicheren Klang, wenn
- * keine passend benannte maennliche Stimme gefunden wird (die reine
- * Namenssuche ist nicht zuverlaessig, da sich Apples Stimmennamen
- * zwischen iOS-Versionen unterscheiden koennen).
+ * Begruessungstext zusaetzlich vor - mit derselben Stimme und Tonlage wie
+ * ueberall sonst, siehe brutzelStimme() in utils/speech.ts.
  */
 export default function BrutzelGreetingOverlay({ name, onDismiss, mitVideo = true }: Props) {
   const { colors, gradient, radius } = useTheme();
@@ -68,21 +53,21 @@ export default function BrutzelGreetingOverlay({ name, onDismiss, mitVideo = tru
       };
     }
 
-    Speech.getAvailableVoicesAsync()
-      .then((voices) => {
-        const germanVoices = voices.filter((v) => v.language?.toLowerCase().startsWith('de'));
-        const germanMale = germanVoices.find((v) =>
-          GERMAN_MALE_VOICE_HINTS.some((hint) => v.identifier.toLowerCase().includes(hint) || v.name.toLowerCase().includes(hint)),
-        );
+    // Gleiche Stimme und gleiche Tonlage wie ueberall sonst: Vorher suchte
+    // dieser Bildschirm selbst nach Namen und setzte pitch fest auf 0.8 -
+    // Brutzel klang beim Start deutlich brummiger als im Koch-Modus, obwohl
+    // es dieselbe Figur ist.
+    brutzelStimme()
+      .then((voice) => {
         Speech.speak(greetingText, {
           language: SPEECH_LANGUAGE,
-          voice: (germanMale ?? germanVoices[0])?.identifier,
-          pitch: 0.8,
-          rate: 0.98,
+          voice,
+          pitch: BRUTZEL_PITCH,
+          rate: BRUTZEL_RATE,
         });
       })
       .catch(() => {
-        Speech.speak(greetingText, { language: SPEECH_LANGUAGE, pitch: 0.8 });
+        Speech.speak(greetingText, { language: SPEECH_LANGUAGE, pitch: BRUTZEL_PITCH, rate: BRUTZEL_RATE });
       });
 
     return () => {
