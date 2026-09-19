@@ -31,6 +31,10 @@ interface RecipeForCooking {
 
 const HAT_COUNT_TO_LEVEL: Record<number, HaubenLevel> = { 1: 'anfaenger', 2: 'fortgeschritten', 3: 'profi' };
 
+// Gelb nur auf der GEWAEHLTEN Stufe: Die anderen beiden Knoepfe stehen auf
+// hellem Grund, dort waere Gelb auf Weiss nicht mehr lesbar.
+const STUFE_AKTIV_FARBE = '#FFD84D';
+
 function formatTime(totalSeconds: number): string {
   const m = Math.floor(totalSeconds / 60);
   const s = totalSeconds % 60;
@@ -864,9 +868,19 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
               <MaterialCommunityIcons
                 name="chef-hat"
                 size={15}
-                color={aktiv ? '#fff' : colors.muted}
+                color={aktiv ? STUFE_AKTIV_FARBE : colors.muted}
               />
-              <Text style={[styles.levelButtonText, { color: aktiv ? '#fff' : colors.text }]}>
+              {/* numberOfLines: "Fortgeschritten" brach auf zwei Zeilen um und
+                  sprengte den Knopf, weil alle drei gleich breit sind.
+                  Abgeschnitten mit Auslassungspunkten bleibt die Reihe ruhig. */}
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.levelButtonText,
+                  { color: aktiv ? STUFE_AKTIV_FARBE : colors.text },
+                  aktiv && styles.levelButtonTextAktiv,
+                ]}
+              >
                 {t(stufe === 'anfaenger' ? 'profil.haubenAnfaenger'
                    : stufe === 'profi' ? 'profil.haubenProfi'
                    : 'profil.haubenFortgeschritten')}
@@ -1252,7 +1266,8 @@ const styles = StyleSheet.create({
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 5, minHeight: 40, paddingHorizontal: 6,
   },
-  levelButtonText: { fontSize: 12.5, fontWeight: '600' },
+  levelButtonText: { fontSize: 12.5, fontWeight: '600', flexShrink: 1 },
+  levelButtonTextAktiv: { fontWeight: '800' },
   ingredientsToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12, marginBottom: 4 },
   ingredientsToggleText: { fontSize: 12.5, fontWeight: '600' },
   ingredientsList: { padding: 12, marginBottom: 16 },
