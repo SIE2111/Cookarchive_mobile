@@ -627,6 +627,10 @@
     "geaendert": "Password changed",
     "geaendertText": "You can now sign in with your new password.",
     "zurueckZurAnmeldung": "Back to sign in",
-    "fehlgeschlagen": "That didn't work"
+    "fehlgeschlagen": "That didn't work",
+    "feldEmail": "Email address",
+    "feldCode": "Code from the email",
+    "feldPasswort": "New password",
+    "mindestens": "At least 8 characters"
   }
 }

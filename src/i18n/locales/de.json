@@ -627,6 +627,10 @@
     "geaendert": "Passwort geändert",
     "geaendertText": "Du kannst dich jetzt mit dem neuen Passwort anmelden.",
     "zurueckZurAnmeldung": "Zurück zur Anmeldung",
-    "fehlgeschlagen": "Hat nicht geklappt"
+    "fehlgeschlagen": "Hat nicht geklappt",
+    "feldEmail": "E-Mail-Adresse",
+    "feldCode": "Code aus der E-Mail",
+    "feldPasswort": "Neues Passwort",
+    "mindestens": "Mindestens 8 Zeichen"
   }
 }

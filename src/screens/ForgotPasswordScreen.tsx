@@ -79,6 +79,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
         {schritt === 'email' ? t('passwort.vergessenText') : t('passwort.codeGeschickt')}
       </Text>
 
+      <Text style={[styles.beschriftung, { color: colors.muted }]}>{t('passwort.feldEmail')}</Text>
       <TextInput
         style={[styles.feld, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
         placeholder="name@beispiel.at"
@@ -93,6 +94,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
 
       {schritt === 'code' && (
         <>
+          <Text style={[styles.beschriftung, { color: colors.muted }]}>{t('passwort.feldCode')}</Text>
           <TextInput
             style={[styles.feld, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md, letterSpacing: 6 }]}
             placeholder={t('passwort.codeEingeben')}
@@ -102,15 +104,27 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
             value={code}
             onChangeText={setCode}
           />
+          {/* Beschriftung UEBER dem Feld, nicht nur als Platzhalter: iOS
+              blendet bei Passwortfeldern seinen eigenen Vorschlag ein und
+              verdeckt den Platzhalter. Ein leeres Feld ohne Beschriftung
+              erklaert nicht, warum der Knopf blass bleibt. */}
+          <Text style={[styles.beschriftung, { color: colors.muted }]}>{t('passwort.feldPasswort')}</Text>
           <TextInput
-            style={[styles.feld, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
+            style={[styles.feld, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md, marginBottom: 4 }]}
             placeholder={t('passwort.neuesPasswort')}
             placeholderTextColor={colors.muted}
             secureTextEntry
             autoCapitalize="none"
+            textContentType="newPassword"
             value={passwort}
             onChangeText={setPasswort}
           />
+          <Text style={{
+            color: passwort.length > 0 && passwort.length < 8 ? '#B45309' : colors.muted,
+            fontSize: 12, marginBottom: 12,
+          }}>
+            {t('passwort.mindestens')}
+          </Text>
         </>
       )}
 
@@ -142,6 +156,7 @@ const styles = StyleSheet.create({
   container: { padding: 24, paddingTop: 40 },
   titel: { fontSize: 24, fontWeight: '700', marginBottom: 8 },
   text: { fontSize: 13.5, lineHeight: 20, marginBottom: 22 },
+  beschriftung: { fontSize: 12.5, marginBottom: 5, marginLeft: 2 },
   feld: { minHeight: 48, paddingHorizontal: 14, fontSize: 15, marginBottom: 12 },
   knopf: { minHeight: 50, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
   knopfText: { color: '#fff', fontSize: 15.5, fontWeight: '700' },
