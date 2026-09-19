@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { useTheme } from '../theme/ThemeContext';
+import { useUebersetzung } from '../i18n';
 import BrutzelAvatar from './BrutzelAvatar';
 import { api } from '../api/client';
 import { IOS_REVIEW_URL, ANDROID_REVIEW_URL, SHARE_MESSAGE } from '../config/appLinks';
@@ -42,6 +43,7 @@ const COOK_COUNT_KEY = 'cook_finished_count';
 
 export default function CookingFinishedCelebration({ recipeTitle, onDone }: Props) {
   const { colors, gradient, radius } = useTheme();
+  const { t } = useUebersetzung();
   const [showText, setShowText] = useState(false);
   const [showBrutzel, setShowBrutzel] = useState(true);
   const [animated, setAnimated] = useState(true);
@@ -123,14 +125,14 @@ export default function CookingFinishedCelebration({ recipeTitle, onDone }: Prop
           erst, wenn jemand die App wirklich benutzt hat. */}
       {showPromo && (
         <View style={[styles.promoCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
-          <Text style={[styles.promoTitle, { color: colors.text }]}>Schmeckt's mit Mein Kochbuch?</Text>
+          <Text style={[styles.promoTitle, { color: colors.text }]}>{t('sonstiges.schmecktsFrage')}</Text>
           <Text style={[styles.promoText, { color: colors.muted }]}>
             Dann erzähl es weiter – das hilft der App mehr als alles andere.
           </Text>
           <View style={styles.promoRow}>
             <Pressable onPress={handleShare} style={[styles.promoButton, { borderColor: gradient[0], borderRadius: radius.sm }]}>
               <MaterialCommunityIcons name="share-variant-outline" size={15} color={gradient[0]} />
-              <Text style={[styles.promoButtonText, { color: gradient[0] }]}>Weiterempfehlen</Text>
+              <Text style={[styles.promoButtonText, { color: gradient[0] }]}>{t('sonstiges.weiterempfehlen')}</Text>
             </Pressable>
             {/* Nur wenn ein Store-Link hinterlegt ist - siehe config/appLinks.ts.
                 Ein Knopf, der auf eine Fehlerseite fuehrt, ist schlimmer
@@ -141,7 +143,7 @@ export default function CookingFinishedCelebration({ recipeTitle, onDone }: Prop
                 style={[styles.promoButton, { borderColor: gradient[0], borderRadius: radius.sm }]}
               >
                 <MaterialCommunityIcons name="star-outline" size={15} color={gradient[0]} />
-                <Text style={[styles.promoButtonText, { color: gradient[0] }]}>Bewerten</Text>
+                <Text style={[styles.promoButtonText, { color: gradient[0] }]}>{t('sonstiges.bewerten')}</Text>
               </Pressable>
             )}
           </View>
@@ -159,12 +161,12 @@ export default function CookingFinishedCelebration({ recipeTitle, onDone }: Prop
 
       {showText && (
         <Animated.View style={{ opacity: textOpacity, alignItems: 'center' }}>
-          <Text style={[styles.title, { color: colors.text }]}>Guten Appetit! 🍽️</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{t('sonstiges.gutenAppetit')}</Text>
           {recipeTitle && (
             <Text style={[styles.subtitle, { color: colors.muted }]}>{recipeTitle} ist fertig.</Text>
           )}
           <Pressable onPress={onDone} style={[styles.doneButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}>
-            <Text style={styles.doneButtonText}>Fertig</Text>
+            <Text style={styles.doneButtonText}>{t('allgemein.fertig')}</Text>
           </Pressable>
         </Animated.View>
       )}

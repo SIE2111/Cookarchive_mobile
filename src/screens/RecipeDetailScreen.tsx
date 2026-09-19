@@ -809,7 +809,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
         </View>
         <TextInput
           style={[styles.pickerSearch, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-          placeholder="Rezept suchen…"
+          placeholder={t('wochenplan.suchen')}
           placeholderTextColor={colors.muted}
           value={recipeSearch}
           onChangeText={setRecipeSearch}
@@ -890,7 +890,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
           <Text style={[styles.modalTitle, { color: colors.text }]}>{t('detail.zutatBearbeiten')}</Text>
           <TextInput
             style={[styles.modalInput, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md, marginBottom: 8 }]}
-            placeholder="Name"
+            placeholder={t('kochen.name')}
             placeholderTextColor={colors.muted}
             value={ingredientDraft.name}
             onChangeText={(v) => setIngredientDraft((prev) => ({ ...prev, name: v }))}
@@ -899,7 +899,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <TextInput
               style={[styles.modalInput, { flex: 1, backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-              placeholder="Menge"
+              placeholder={t('kochen.menge')}
               placeholderTextColor={colors.muted}
               keyboardType="numeric"
               value={ingredientDraft.amount}
@@ -907,7 +907,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
             />
             <TextInput
               style={[styles.modalInput, { flex: 1, backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-              placeholder="Einheit"
+              placeholder={t('kochen.einheit')}
               placeholderTextColor={colors.muted}
               value={ingredientDraft.unit}
               onChangeText={(v) => setIngredientDraft((prev) => ({ ...prev, unit: v }))}

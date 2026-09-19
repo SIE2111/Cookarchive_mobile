@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, Alert, Share, ScrollView } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
+import { useUebersetzung } from '../i18n';
 import { api, ApiError } from '../api/client';
 
 interface Member {
@@ -29,6 +30,7 @@ interface InviteListItem {
 
 export default function HouseholdScreen() {
   const { colors, gradient, radius } = useTheme();
+  const { t } = useUebersetzung();
   const [household, setHousehold] = useState<Household | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,7 +46,7 @@ export default function HouseholdScreen() {
     api
       .get<Household | null>('/households/me')
       .then(setHousehold)
-      .catch((err) => setError(err instanceof ApiError ? err.detail : 'Haushalt konnte nicht geladen werden'));
+      .catch((err) => setError(err instanceof ApiError ? err.detail : t('haushalt.nichtGeladen')));
   };
 
   useEffect(() => {
@@ -61,7 +63,7 @@ export default function HouseholdScreen() {
       setHousehold(created);
       setNewHouseholdName('');
     } catch (err) {
-      Alert.alert('Anlegen fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+      Alert.alert(t('haushalt.anlegenFehlgeschlagen'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
     } finally {
       setIsBusy(false);
     }
@@ -75,7 +77,7 @@ export default function HouseholdScreen() {
       setHousehold(joined);
       setJoinCode('');
     } catch (err) {
-      Alert.alert('Beitreten fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+      Alert.alert(t('haushalt.beitretenFehlgeschlagen'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
     } finally {
       setIsBusy(false);
     }
@@ -93,7 +95,7 @@ export default function HouseholdScreen() {
   const handleInviteByEmail = async () => {
     const email = inviteEmail.trim();
     if (!email.includes('@')) {
-      Alert.alert('E-Mail fehlt', 'Bitte eine gültige E-Mail-Adresse eingeben.');
+      Alert.alert(t('haushalt.emailFehlt'), t('haushalt.bitteEmail'));
       return;
     }
     setIsBusy(true);
@@ -106,7 +108,7 @@ export default function HouseholdScreen() {
       setInviteEmail('');
       await loadInvites();
       if (invite.email_sent) {
-        Alert.alert('Einladung verschickt', `${email} hat eine E-Mail mit dem Beitrittscode bekommen.`);
+        Alert.alert(t('haushalt.einladungVerschickt'), t('haushalt.einladungVerschicktText', { email }));
       } else {
         // Der Code gilt trotzdem - deshalb wird er hier gezeigt, statt nur
         // einen Fehler zu melden. Sonst waere die Einladung angelegt, aber
@@ -118,7 +120,7 @@ export default function HouseholdScreen() {
         );
       }
     } catch (err) {
-      Alert.alert('Einladen fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+      Alert.alert(t('haushalt.einladenFehlgeschlagen'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
     } finally {
       setIsBusy(false);
     }
@@ -126,21 +128,21 @@ export default function HouseholdScreen() {
 
   const handleDeleteInvite = (invite: InviteListItem) => {
     Alert.alert(
-      'Einladung entfernen?',
+      t('haushalt.einladungEntfernen'),
       invite.status === 'beigetreten'
-        ? 'Der Eintrag verschwindet aus der Liste. Das Mitglied bleibt im Haushalt – zum Entfernen den Knopf bei den Mitgliedern verwenden.'
-        : 'Der Code wird ungültig und kann nicht mehr eingelöst werden.',
+        ? t('haushalt.einladungEntfernenMitglied')
+        : t('haushalt.einladungEntfernenCode'),
       [
-        { text: 'Abbrechen', style: 'cancel' },
+        { text: t('allgemein.abbrechen'), style: 'cancel' },
         {
-          text: 'Entfernen',
+          text: t('allgemein.entfernen'),
           style: 'destructive',
           onPress: async () => {
             try {
               await api.delete(`/households/invites/${invite.id}`);
               await loadInvites();
             } catch (err) {
-              Alert.alert('Fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+              Alert.alert(t('haushalt.fehlgeschlagen'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
             }
           },
         },
@@ -154,7 +156,7 @@ export default function HouseholdScreen() {
       const invite = await api.post<{ code: string; expires_at: string }>('/households/invite');
       setInviteCode(invite.code);
     } catch (err) {
-      Alert.alert('Einladung fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+      Alert.alert(t('haushalt.einladungFehlgeschlagen'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
     } finally {
       setIsBusy(false);
     }
@@ -170,10 +172,10 @@ export default function HouseholdScreen() {
   };
 
   const handleLeave = () => {
-    Alert.alert('Haushalt verlassen?', 'Geteilte Rezepte bleiben in deiner eigenen Sammlung, aber nicht mehr für die anderen sichtbar.', [
-      { text: 'Abbrechen', style: 'cancel' },
+    Alert.alert(t('haushalt.verlassenFrage'), t('haushalt.verlassenHinweis'), [
+      { text: t('allgemein.abbrechen'), style: 'cancel' },
       {
-        text: 'Verlassen',
+        text: t('haushalt.verlassen'),
         style: 'destructive',
         onPress: async () => {
           setIsBusy(true);
@@ -182,7 +184,7 @@ export default function HouseholdScreen() {
             setHousehold(null);
             setInviteCode(null);
           } catch (err) {
-            Alert.alert('Fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+            Alert.alert(t('haushalt.fehlgeschlagen'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
           } finally {
             setIsBusy(false);
           }
@@ -192,17 +194,17 @@ export default function HouseholdScreen() {
   };
 
   const handleRemoveMember = (memberUserId: string) => {
-    Alert.alert('Mitglied entfernen?', undefined, [
-      { text: 'Abbrechen', style: 'cancel' },
+    Alert.alert(t('haushalt.mitgliedEntfernen'), undefined, [
+      { text: t('allgemein.abbrechen'), style: 'cancel' },
       {
-        text: 'Entfernen',
+        text: t('allgemein.entfernen'),
         style: 'destructive',
         onPress: async () => {
           try {
             await api.delete(`/households/members/${memberUserId}`);
             loadHousehold();
           } catch (err) {
-            Alert.alert('Fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+            Alert.alert(t('haushalt.fehlgeschlagen'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
           }
         },
       },
@@ -231,26 +233,26 @@ export default function HouseholdScreen() {
         <Text style={[styles.sectionLabel, { color: colors.muted }]}>HAUSHALT ANLEGEN</Text>
         <TextInput
           style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-          placeholder="z.B. Familie Müller"
+          placeholder={t('haushalt.namePlatzhalter')}
           placeholderTextColor={colors.muted}
           value={newHouseholdName}
           onChangeText={setNewHouseholdName}
         />
         <Pressable onPress={handleCreate} disabled={isBusy} style={[styles.primaryButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}>
-          <Text style={styles.primaryButtonText}>Haushalt anlegen</Text>
+          <Text style={styles.primaryButtonText}>{t('haushalt.haushaltAnlegen')}</Text>
         </Pressable>
 
         <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 28 }]}>ODER BEITRETEN</Text>
         <TextInput
           style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-          placeholder="6-stelliger Einladungscode"
+          placeholder={t('haushalt.codePlatzhalter')}
           placeholderTextColor={colors.muted}
           autoCapitalize="characters"
           value={joinCode}
           onChangeText={setJoinCode}
         />
         <Pressable onPress={handleJoin} disabled={isBusy} style={[styles.secondaryButton, { borderColor: gradient[0], borderRadius: radius.md }]}>
-          <Text style={[styles.secondaryButtonText, { color: gradient[0] }]}>Beitreten</Text>
+          <Text style={[styles.secondaryButtonText, { color: gradient[0] }]}>{t('haushalt.beitreten')}</Text>
         </Pressable>
       </View>
     );
@@ -259,7 +261,7 @@ export default function HouseholdScreen() {
   return (
     // Scrollbar, seit Einladungsformular und -liste dazugekommen sind:
     // Bei mehreren Einladungen passt der Inhalt sonst nicht mehr auf eine
-    // Bildschirmhoehe und 'Haushalt verlassen' liegt unerreichbar unten.
+    // Bildschirmhoehe und t('haushalt.haushaltVerlassen') liegt unerreichbar unten.
     <ScrollView
       style={{ backgroundColor: colors.bg }}
       contentContainerStyle={styles.scrollContent}
@@ -277,10 +279,10 @@ export default function HouseholdScreen() {
           <Text style={[styles.memberText, { color: colors.text }]} numberOfLines={1}>
             {member.display_name}
           </Text>
-          <Text style={[styles.roleTag, { color: colors.muted }]}>{member.role === 'owner' ? 'Owner' : 'Mitglied'}</Text>
+          <Text style={[styles.roleTag, { color: colors.muted }]}>{member.role === 'owner' ? 'Owner' : t('haushalt.mitglied')}</Text>
           {member.role !== 'owner' && (
             <Pressable onPress={() => handleRemoveMember(member.user_id)} hitSlop={8}>
-              <Text style={{ color: '#DC2626', fontSize: 12 }}>Entfernen</Text>
+              <Text style={{ color: '#DC2626', fontSize: 12 }}>{t('allgemein.entfernen')}</Text>
             </Pressable>
           )}
         </View>
@@ -293,14 +295,14 @@ export default function HouseholdScreen() {
       <TextInput
         value={inviteName}
         onChangeText={setInviteName}
-        placeholder="Name (optional)"
+        placeholder={t('haushalt.einladungNamePlatzhalter')}
         placeholderTextColor={colors.muted}
         style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
       />
       <TextInput
         value={inviteEmail}
         onChangeText={setInviteEmail}
-        placeholder="familie@beispiel.at"
+        placeholder={t('haushalt.einladungEmailPlatzhalter')}
         placeholderTextColor={colors.muted}
         autoCapitalize="none"
         keyboardType="email-address"
@@ -311,7 +313,7 @@ export default function HouseholdScreen() {
         disabled={isBusy}
         style={[styles.secondaryButton, { borderColor: gradient[0], borderRadius: radius.md, marginTop: 10, opacity: isBusy ? 0.6 : 1 }]}
       >
-        <Text style={[styles.secondaryButtonText, { color: gradient[0] }]}>Einladung senden</Text>
+        <Text style={[styles.secondaryButtonText, { color: gradient[0] }]}>{t('haushalt.einladungSenden')}</Text>
       </Pressable>
 
       {/* Der reine Code bleibt als zweiter Weg erhalten: fuer alle, die
@@ -334,11 +336,11 @@ export default function HouseholdScreen() {
                 </Text>
                 <Text style={{ fontSize: 11, marginTop: 2, color: invite.status === 'beigetreten' ? '#16A34A' : colors.muted }}>
                   {invite.status === 'beigetreten'
-                    ? 'Beigetreten'
+                    ? t('haushalt.beigetreten')
                     : invite.status === 'ausgetreten'
-                      ? 'War beigetreten, hat den Haushalt verlassen'
+                      ? t('haushalt.ausgetreten')
                       : invite.status === 'abgelaufen'
-                        ? 'Abgelaufen'
+                        ? t('haushalt.abgelaufen')
                         : `Offen · Code ${invite.code}`}
                   {invite.invitee_name && invite.invitee_email ? ` · ${invite.invitee_email}` : ''}
                 </Text>
@@ -353,16 +355,16 @@ export default function HouseholdScreen() {
 
       {inviteCode && (
         <View style={[styles.inviteCodeBox, { backgroundColor: colors.card, borderRadius: radius.md }]}>
-          <Text style={[styles.inviteCodeLabel, { color: colors.muted }]}>Einladungscode (24 Std. gültig)</Text>
+          <Text style={[styles.inviteCodeLabel, { color: colors.muted }]}>{t('haushalt.einladungscode')}</Text>
           <Text style={[styles.inviteCodeValue, { color: gradient[0] }]}>{inviteCode}</Text>
           <Pressable onPress={handleShareInvite} style={[styles.shareInviteButton, { borderColor: gradient[0], borderRadius: radius.sm }]}>
-            <Text style={{ color: gradient[0], fontSize: 12.5, fontWeight: '700' }}>Code teilen</Text>
+            <Text style={{ color: gradient[0], fontSize: 12.5, fontWeight: '700' }}>{t('haushalt.codeTeilen')}</Text>
           </Pressable>
         </View>
       )}
 
       <Pressable onPress={handleLeave} style={[styles.leaveButton, { borderColor: '#DC2626', borderRadius: radius.md, marginTop: 28 }]}>
-        <Text style={styles.leaveButtonText}>Haushalt verlassen</Text>
+        <Text style={styles.leaveButtonText}>{t('haushalt.haushaltVerlassen')}</Text>
       </Pressable>
     </ScrollView>
   );

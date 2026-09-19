@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Image, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
+import { useUebersetzung } from '../i18n';
 import { api, ApiError } from '../api/client';
 import { askWhatNext } from '../utils/afterRecipeSaved';
 import type { HaubenLevel } from '../utils/stepLevels';
@@ -45,6 +46,7 @@ const LEVELS: { key: HaubenLevel; label: string; hats: number }[] = [
 export default function PoolRecipeDetailScreen({ route, navigation }: Props) {
   const { publicRecipeId } = route.params;
   const { colors, gradient, radius } = useTheme();
+  const { t } = useUebersetzung();
   const [recipe, setRecipe] = useState<PublicRecipeDetail | null>(null);
   const [level, setLevel] = useState<HaubenLevel>('fortgeschritten');
   const [isLoading, setIsLoading] = useState(true);
@@ -64,7 +66,7 @@ export default function PoolRecipeDetailScreen({ route, navigation }: Props) {
       setLevel(data.level as HaubenLevel);
       setError(null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : 'Rezept konnte nicht geladen werden');
+      setError(err instanceof ApiError ? err.detail : t('detail.nichtGeladen'));
     }
   };
 
@@ -92,7 +94,7 @@ export default function PoolRecipeDetailScreen({ route, navigation }: Props) {
       const result = await api.post<{ local_recipe_id: string }>(`/pool/${recipe.id}/fork`);
       askWhatNext(navigation, { id: result.local_recipe_id, title: recipe.title });
     } catch (err) {
-      Alert.alert('Übernehmen fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+      Alert.alert(t('sonstiges.uebernehmenFehlgeschlagen'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
     } finally {
       setIsForking(false);
     }
@@ -110,7 +112,7 @@ export default function PoolRecipeDetailScreen({ route, navigation }: Props) {
     return (
       <View style={[styles.centered, { backgroundColor: colors.bg, padding: 24 }]}>
         <Text style={{ color: colors.muted, fontSize: 13, textAlign: 'center' }}>
-          {error ?? 'Rezept nicht gefunden'}
+          {error ?? t('sonstiges.rezeptNichtGefunden')}
         </Text>
       </View>
     );
@@ -152,7 +154,7 @@ export default function PoolRecipeDetailScreen({ route, navigation }: Props) {
         {isForking ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.forkButtonText}>In mein Kochbuch übernehmen</Text>
+          <Text style={styles.forkButtonText}>{t('sonstiges.inKochbuchUebernehmen')}</Text>
         )}
       </Pressable>
 
@@ -204,7 +206,7 @@ export default function PoolRecipeDetailScreen({ route, navigation }: Props) {
 
       {recipe.steps.map((step) => (
         <View key={step.order} style={[styles.stepCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
-          <Text style={[styles.stepNumber, { color: colors.muted }]}>Schritt {step.order}</Text>
+          <Text style={[styles.stepNumber, { color: colors.muted }]}>{t('detail.schritt', { nummer: step.order })}</Text>
           <Text style={[styles.stepText, { color: colors.text }]}>{step.text}</Text>
           {step.timer_seconds ? (
             <View style={styles.timerRow}>

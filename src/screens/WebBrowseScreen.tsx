@@ -9,6 +9,7 @@ import { WebView } from 'react-native-webview';
 const WebViewAny = WebView as any;
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
+import { useUebersetzung } from '../i18n';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/AppNavigator';
 
@@ -20,6 +21,7 @@ function buildGoogleSearchUrl(query: string): string {
 
 export default function WebBrowseScreen({ navigation, route }: Props) {
   const { colors, gradient, radius } = useTheme();
+  const { t } = useUebersetzung();
   const webViewRef = useRef<WebView>(null);
 
   const [searchText, setSearchText] = useState(route.params?.initialQuery ?? '');
@@ -46,7 +48,7 @@ export default function WebBrowseScreen({ navigation, route }: Props) {
         <MaterialCommunityIcons name="magnify" size={18} color={colors.muted} />
         <TextInput
           style={[styles.searchInput, { color: colors.text }]}
-          placeholder="Rezept suchen…"
+          placeholder={t('wochenplan.suchen')}
           placeholderTextColor={colors.muted}
           value={searchText}
           onChangeText={setSearchText}
@@ -88,7 +90,7 @@ export default function WebBrowseScreen({ navigation, route }: Props) {
           onPress={handleUseThisLink}
           style={[styles.useButton, { backgroundColor: gradient[0], borderRadius: radius.sm }]}
         >
-          <Text style={styles.useButtonText}>Diesen Link übernehmen</Text>
+          <Text style={styles.useButtonText}>{t('sonstiges.linkUebernehmen')}</Text>
         </Pressable>
       </View>
     </SafeAreaView>

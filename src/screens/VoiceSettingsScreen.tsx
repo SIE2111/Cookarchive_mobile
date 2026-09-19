@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Switch, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
+import { useUebersetzung } from '../i18n';
 import { api, ApiError } from '../api/client';
 import BrutzelVoicePicker from '../components/BrutzelVoicePicker';
 
@@ -14,6 +15,7 @@ import BrutzelVoicePicker from '../components/BrutzelVoicePicker';
  */
 export default function VoiceSettingsScreen() {
   const { colors } = useTheme();
+  const { t } = useUebersetzung();
   const [autoRead, setAutoRead] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -34,7 +36,7 @@ export default function VoiceSettingsScreen() {
       await api.patch('/preferences/', { auto_read_steps: value });
     } catch (err) {
       setAutoRead(!value);
-      Alert.alert('Nicht gespeichert', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+      Alert.alert(t('sonstiges.nichtGespeichert'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
     }
   };
 
@@ -51,7 +53,7 @@ export default function VoiceSettingsScreen() {
       <Text style={[styles.label, { color: colors.muted }]}>BEIM KOCHEN</Text>
       <View style={[styles.row, { backgroundColor: colors.card }]}>
         <View style={{ flex: 1 }}>
-          <Text style={[styles.rowTitle, { color: colors.text }]}>Schritte automatisch vorlesen</Text>
+          <Text style={[styles.rowTitle, { color: colors.text }]}>{t('sonstiges.schritteVorlesen')}</Text>
           <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
             Jeder Schritt wird beim Aufrufen vorgelesen – praktisch bei schmutzigen Händen
           </Text>

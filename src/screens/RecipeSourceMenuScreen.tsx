@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
+import { useUebersetzung } from '../i18n';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/AppNavigator';
 
@@ -15,15 +16,16 @@ interface SourceOption {
 }
 
 const OPTIONS: SourceOption[] = [
-  { key: 'manual', title: 'Selbst erstellen', subtitle: 'Titel, Zutaten, Schritte eintragen', target: 'ManualRecipe' },
-  { key: 'photo', title: 'Foto aufnehmen', subtitle: 'Kochbuchseite oder fertiges Gericht', target: 'PhotoCapture' },
-  { key: 'ai', title: 'KI generieren', subtitle: 'Nach Zutaten, Diät oder Zeit', target: 'AIGenerate' },
-  { key: 'web', title: 'Aus dem Internet', subtitle: 'Link einfügen, KI formuliert neu', target: 'WebImport' },
-  { key: 'pool', title: 'Community-Pool', subtitle: 'Rezept eines anderen übernehmen', target: 'CommunityPool' },
+  { key: 'manual', title: 'sonstiges.quelleSelbst', subtitle: 'sonstiges.quelleSelbstText', target: 'ManualRecipe' },
+  { key: 'photo', title: 'sonstiges.quelleFoto', subtitle: 'sonstiges.quelleFotoText', target: 'PhotoCapture' },
+  { key: 'ai', title: 'sonstiges.quelleKi', subtitle: 'sonstiges.quelleKiText', target: 'AIGenerate' },
+  { key: 'web', title: 'sonstiges.quelleWeb', subtitle: 'sonstiges.quelleWebText', target: 'WebImport' },
+  { key: 'pool', title: 'sonstiges.quellePool', subtitle: 'sonstiges.quellePoolText', target: 'CommunityPool' },
 ];
 
 export default function RecipeSourceMenuScreen({ navigation }: Props) {
   const { colors, radius } = useTheme();
+  const { t } = useUebersetzung();
 
   return (
     <View style={[styles.overlay, { backgroundColor: 'rgba(0,0,0,0.4)' }]}>
@@ -36,8 +38,8 @@ export default function RecipeSourceMenuScreen({ navigation }: Props) {
             schliessen laesst, wirkt wie eine Sackgasse. */}
         <View style={styles.titleRow}>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.title, { color: colors.text }]}>Neues Rezept</Text>
-            <Text style={[styles.subtitle, { color: colors.muted }]}>Wähle einen Weg</Text>
+            <Text style={[styles.title, { color: colors.text }]}>{t('sonstiges.neuesRezept')}</Text>
+            <Text style={[styles.subtitle, { color: colors.muted }]}>{t('sonstiges.waehleWeg')}</Text>
           </View>
           <Pressable
             onPress={() => navigation.goBack()}
@@ -64,16 +66,16 @@ export default function RecipeSourceMenuScreen({ navigation }: Props) {
               { backgroundColor: colors.card, borderRadius: radius.md, opacity: option.target ? 1 : 0.4 },
             ]}
           >
-            <Text style={[styles.optionTitle, { color: colors.text }]}>{option.title}</Text>
-            <Text style={[styles.optionSubtitle, { color: colors.muted }]}>{option.subtitle}</Text>
+            <Text style={[styles.optionTitle, { color: colors.text }]}>{t(option.title)}</Text>
+            <Text style={[styles.optionSubtitle, { color: colors.muted }]}>{t(option.subtitle)}</Text>
             {!option.target && (
-              <Text style={[styles.comingSoon, { color: colors.muted }]}>Noch nicht als Screen gebaut</Text>
+              <Text style={[styles.comingSoon, { color: colors.muted }]}>{t('sonstiges.nochNichtGebaut')}</Text>
             )}
           </Pressable>
         ))}
 
         <Pressable onPress={() => navigation.goBack()} style={styles.cancelRow}>
-          <Text style={[styles.cancelText, { color: colors.muted }]}>Abbrechen</Text>
+          <Text style={[styles.cancelText, { color: colors.muted }]}>{t('allgemein.abbrechen')}</Text>
         </Pressable>
       </View>
     </View>

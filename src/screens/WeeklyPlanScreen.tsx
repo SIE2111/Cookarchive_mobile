@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Alert, Modal, TextInput } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
+import { useUebersetzung } from '../i18n';
 import { api, ApiError } from '../api/client';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/AppNavigator';
@@ -9,12 +10,18 @@ import type { MainStackParamList } from '../navigation/AppNavigator';
 type Props = NativeStackScreenProps<MainStackParamList, 'WeeklyPlan'>;
 
 type MealSlot = 'fruehstueck' | 'mittag' | 'abend';
+// Schluessel statt Texte: Die Tabellen werden einmal beim Laden der
+// Datei ausgewertet, ein Text darin bliebe fuer immer in der Sprache des
+// ersten Starts.
 const MEAL_SLOTS: { key: MealSlot; title: string }[] = [
-  { key: 'fruehstueck', title: 'Frühstück' },
-  { key: 'mittag', title: 'Mittag' },
-  { key: 'abend', title: 'Abend' },
+  { key: 'fruehstueck', title: 'wochenplan.fruehstueck' },
+  { key: 'mittag', title: 'wochenplan.mittag' },
+  { key: 'abend', title: 'wochenplan.abend' },
 ];
-const WEEKDAY_NAMES = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+const WEEKDAY_KEYS = [
+  'wochenplan.montag', 'wochenplan.dienstag', 'wochenplan.mittwoch', 'wochenplan.donnerstag',
+  'wochenplan.freitag', 'wochenplan.samstag', 'wochenplan.sonntag',
+];
 
 interface PlanEntry {
   id: string;
@@ -61,6 +68,7 @@ function getMondayOfWeek(reference: Date, weekOffset: number): Date {
 
 export default function WeeklyPlanScreen({ navigation }: Props) {
   const { colors, gradient, radius } = useTheme();
+  const { t } = useUebersetzung();
   const [weekOffset, setWeekOffset] = useState(0);
   const [entries, setEntries] = useState<PlanEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -97,7 +105,7 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
     api
       .get<PlanEntry[]>(`/weekly-plan/?start_date=${startKey}&end_date=${endKey}`)
       .then(setEntries)
-      .catch((err) => setError(err instanceof ApiError ? err.detail : 'Wochenplan konnte nicht geladen werden'))
+      .catch((err) => setError(err instanceof ApiError ? err.detail : t('wochenplan.nichtGeladen')))
       .finally(() => setIsLoading(false));
   }, [startKey, endKey]);
 
@@ -136,22 +144,22 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
       setPickerTarget(null);
       loadWeek();
     } catch (err) {
-      Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Konnte nicht zugewiesen werden');
+      Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('wochenplan.nichtZugewiesen'));
     }
   };
 
   const removeEntry = (entryId: string) => {
-    Alert.alert('Entfernen?', 'Diese Zuweisung wieder entfernen?', [
-      { text: 'Abbrechen', style: 'cancel' },
+    Alert.alert(t('wochenplan.entfernenFrage'), t('wochenplan.entfernenText'), [
+      { text: t('allgemein.abbrechen'), style: 'cancel' },
       {
-        text: 'Entfernen',
+        text: t('allgemein.entfernen'),
         style: 'destructive',
         onPress: async () => {
           try {
             await api.delete(`/weekly-plan/${entryId}`);
             loadWeek();
           } catch (err) {
-            Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Konnte nicht entfernt werden');
+            Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('wochenplan.nichtEntfernt'));
           }
         },
       },
@@ -160,16 +168,16 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
 
   const handleAddWeekToShoppingList = () => {
     if (entries.length === 0) {
-      Alert.alert('Noch leer', 'Für diese Woche ist noch kein Rezept eingeplant.');
+      Alert.alert(t('wochenplan.nochLeer'), t('wochenplan.keinRezeptGeplant'));
       return;
     }
     Alert.alert(
-      'Zur Einkaufsliste hinzufügen?',
-      'Sollen die Zutaten aller diese Woche eingeplanten Rezepte zur Einkaufsliste hinzugefügt werden?',
+      t('wochenplan.zurListeFrage'),
+      t('wochenplan.zurListeText'),
       [
-        { text: 'Abbrechen', style: 'cancel' },
+        { text: t('allgemein.abbrechen'), style: 'cancel' },
         {
-          text: 'Hinzufügen',
+          text: t('wochenplan.hinzufuegen'),
           onPress: async () => {
             setIsAddingToList(true);
             try {
@@ -177,9 +185,9 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
                 start_date: startKey,
                 end_date: endKey,
               });
-              Alert.alert('Erledigt', `Zutaten aus ${result.recipes_count} Rezept(en) zur Einkaufsliste hinzugefügt.`);
+              Alert.alert(t('wochenplan.erledigt'), t('wochenplan.erledigtText', { anzahl: result.recipes_count }));
             } catch (err) {
-              Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Konnte nicht hinzugefügt werden');
+              Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('wochenplan.nichtHinzugefuegt'));
             } finally {
               setIsAddingToList(false);
             }
@@ -207,7 +215,7 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
           <MaterialCommunityIcons name="chevron-left" size={24} color={colors.text} />
         </Pressable>
         <Text style={[styles.weekLabel, { color: colors.text }]}>
-          {weekOffset === 0 ? 'Diese Woche' : formatShort(weekDays[0]) + ' – ' + formatShort(weekDays[6])}
+          {weekOffset === 0 ? t('wochenplan.dieseWoche') : formatShort(weekDays[0]) + ' – ' + formatShort(weekDays[6])}
         </Text>
         <Pressable onPress={() => setWeekOffset((w) => w + 1)} hitSlop={10}>
           <MaterialCommunityIcons name="chevron-right" size={24} color={colors.text} />
@@ -224,7 +232,7 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
         ) : (
           <>
             <MaterialCommunityIcons name="cart-plus" size={16} color="#fff" />
-            <Text style={styles.addAllButtonText}>Zutaten der Woche zur Einkaufsliste</Text>
+            <Text style={styles.addAllButtonText}>{t('wochenplan.zutatenDerWoche')}</Text>
           </>
         )}
       </Pressable>
@@ -243,7 +251,7 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
             return (
               <View key={dateKey} style={styles.daySection}>
                 <Text style={[styles.dayLabel, { color: isToday ? gradient[0] : colors.text }]}>
-                  {WEEKDAY_NAMES[i]}, {formatShort(day)}
+                  {t(WEEKDAY_KEYS[i])}, {formatShort(day)}
                 </Text>
                 {MEAL_SLOTS.map((slot) => {
                   const slotEntries = entriesFor(dateKey, slot.key);
@@ -262,7 +270,7 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
                         onLongPress={() => openPicker(dateKey, slot.key, 0)}
                         style={[styles.slotRow, { backgroundColor: colors.card, borderRadius: radius.sm, marginBottom: 0 }]}
                       >
-                        <Text style={[styles.slotLabel, { color: colors.muted }]}>{slot.title}</Text>
+                        <Text style={[styles.slotLabel, { color: colors.muted }]}>{t(slot.title)}</Text>
                         {haupt ? (
                           <View style={styles.slotFilled}>
                             <Text style={[styles.slotRecipeTitle, { color: colors.text }]} numberOfLines={1}>
@@ -303,7 +311,7 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
                                 return;
                               }
                               if (beilagen.length >= 2) {
-                                Alert.alert('Voll', 'Mehr als zwei Beilagen pro Mahlzeit sind nicht vorgesehen.');
+                                Alert.alert(t('wochenplan.voll'), t('wochenplan.maxZweiBeilagen'));
                                 return;
                               }
                               openPicker(dateKey, slot.key);
@@ -314,7 +322,7 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
                               {!offen
                                 ? '+ Beilage'
                                 : beilagen.length >= 2
-                                  ? 'Beilagen voll (2 von 2)'
+                                  ? t('wochenplan.beilagenVoll')
                                   : `+ Beilage (${beilagen.length} von 2)`}
                             </Text>
                           </Pressable>
@@ -332,13 +340,13 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
       <Modal visible={pickerTarget !== null} animationType="slide" onRequestClose={() => setPickerTarget(null)}>
         <View style={[styles.pickerContainer, { backgroundColor: colors.bg }]}>
           <View style={styles.pickerHeader}>
-            <Text style={[styles.pickerTitle, { color: colors.text }]}>Rezept wählen</Text>
+            <Text style={[styles.pickerTitle, { color: colors.text }]}>{t('wochenplan.rezeptWaehlen')}</Text>
             <Pressable onPress={() => setPickerTarget(null)} hitSlop={10}>
               <MaterialCommunityIcons name="close" size={24} color={colors.text} />
             </Pressable>
           </View>
           <View style={styles.servingsRow}>
-            <Text style={{ color: colors.muted, fontSize: 12.5 }}>Portionen:</Text>
+            <Text style={{ color: colors.muted, fontSize: 12.5 }}>{t('wochenplan.portionen')}</Text>
             <TextInput
               value={servingsInput}
               onChangeText={setServingsInput}
@@ -348,7 +356,7 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
           </View>
           <TextInput
             style={[styles.pickerSearch, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-            placeholder="Rezept suchen…"
+            placeholder={t('wochenplan.suchen')}
             placeholderTextColor={colors.muted}
             value={recipeSearch}
             onChangeText={setRecipeSearch}

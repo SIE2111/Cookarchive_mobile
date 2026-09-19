@@ -3,6 +3,7 @@ import { View, Text, Image, Pressable, StyleSheet, ActivityIndicator, Alert } fr
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
+import { useUebersetzung } from '../i18n';
 import { api, ApiError } from '../api/client';
 
 interface IncomingShare {
@@ -26,6 +27,7 @@ interface IncomingShare {
  */
 export default function IncomingSharesCard() {
   const { colors, gradient, radius } = useTheme();
+  const { t } = useUebersetzung();
   const [shares, setShares] = useState<IncomingShare[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -50,10 +52,10 @@ export default function IncomingSharesCard() {
       await api.post(`/shares/${share.id}/${action}`);
       setShares((prev) => prev.filter((s) => s.id !== share.id));
       if (action === 'accept') {
-        Alert.alert('Übernommen', `„${share.recipe_title}" liegt jetzt in deinem Kochbuch.`);
+        Alert.alert(t('detail.uebernommen'), t('sonstiges.uebernommenText', { titel: share.recipe_title }));
       }
     } catch (err) {
-      Alert.alert('Fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+      Alert.alert(t('haushalt.fehlgeschlagen'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
     } finally {
       setBusyId(null);
     }
@@ -64,7 +66,7 @@ export default function IncomingSharesCard() {
   return (
     <View style={{ marginBottom: 16 }}>
       <Text style={[styles.label, { color: colors.muted }]}>
-        {shares.length === 1 ? 'FÜR DICH GESCHICKT' : `FÜR DICH GESCHICKT (${shares.length})`}
+        {shares.length === 1 ? t('sonstiges.fuerDichGeschickt') : `FÜR DICH GESCHICKT (${shares.length})`}
       </Text>
 
       {shares.map((share) => (
@@ -101,7 +103,7 @@ export default function IncomingSharesCard() {
                 hitSlop={6}
                 style={styles.decline}
               >
-                <Text style={{ color: colors.muted, fontSize: 12 }}>Ablehnen</Text>
+                <Text style={{ color: colors.muted, fontSize: 12 }}>{t('sonstiges.ablehnen')}</Text>
               </Pressable>
             </View>
           </View>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, Modal, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
+import { useUebersetzung } from '../i18n';
 import { api, ApiError } from '../api/client';
 
 /**
@@ -29,6 +30,7 @@ export default function ShareRecipeButton({
   style?: object;
 }) {
   const { colors, gradient, radius } = useTheme();
+  const { t } = useUebersetzung();
   const [isOpen, setIsOpen] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -37,7 +39,7 @@ export default function ShareRecipeButton({
 
   const send = async () => {
     if (!email.includes('@')) {
-      Alert.alert('E-Mail fehlt', 'Bitte eine gültige E-Mail-Adresse eingeben.');
+      Alert.alert(t('haushalt.emailFehlt'), t('haushalt.bitteEmail'));
       return;
     }
     setIsSending(true);
@@ -52,9 +54,9 @@ export default function ShareRecipeButton({
       setName('');
       setEmail('');
       setMessage('');
-      Alert.alert('Verschickt', `„${recipeTitle}" ist unterwegs.`);
+      Alert.alert(t('teilen.verschickt'), `„${recipeTitle}" ist unterwegs.`);
     } catch (err) {
-      Alert.alert('Verschicken fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+      Alert.alert(t('teilen.verschickenFehlgeschlagen'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
     } finally {
       setIsSending(false);
     }
@@ -75,7 +77,7 @@ export default function ShareRecipeButton({
       <Modal visible={isOpen} transparent animationType="fade" onRequestClose={() => setIsOpen(false)}>
         <View style={styles.backdrop}>
           <View style={[styles.card, { backgroundColor: colors.bg, borderRadius: radius.lg }]}>
-            <Text style={[styles.title, { color: colors.text }]}>Rezept schicken</Text>
+            <Text style={[styles.title, { color: colors.text }]}>{t('teilen.rezeptSchicken')}</Text>
             <Text style={[styles.body, { color: colors.muted }]}>
               „{recipeTitle}" an eine Person senden. Sie bekommt eine E-Mail und kann das Rezept in
               ihr Kochbuch übernehmen – auch wenn sie die App noch nicht hat.
@@ -84,14 +86,14 @@ export default function ShareRecipeButton({
             <TextInput
               value={name}
               onChangeText={setName}
-              placeholder="Name (optional)"
+              placeholder={t('teilen.namePlatzhalter')}
               placeholderTextColor={colors.muted}
               style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
             />
             <TextInput
               value={email}
               onChangeText={setEmail}
-              placeholder="empfaenger@beispiel.at"
+              placeholder={t('teilen.emailPlatzhalter')}
               placeholderTextColor={colors.muted}
               autoCapitalize="none"
               keyboardType="email-address"
@@ -100,7 +102,7 @@ export default function ShareRecipeButton({
             <TextInput
               value={message}
               onChangeText={setMessage}
-              placeholder="Kurze Nachricht dazu (optional)"
+              placeholder={t('teilen.nachrichtPlatzhalter')}
               placeholderTextColor={colors.muted}
               multiline
               style={[styles.input, styles.multiline, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md, marginTop: 8 }]}
@@ -111,10 +113,10 @@ export default function ShareRecipeButton({
               disabled={isSending}
               style={[styles.sendButton, { backgroundColor: gradient[0], borderRadius: radius.md, opacity: isSending ? 0.6 : 1 }]}
             >
-              {isSending ? <ActivityIndicator color="#fff" /> : <Text style={styles.sendButtonText}>Schicken</Text>}
+              {isSending ? <ActivityIndicator color="#fff" /> : <Text style={styles.sendButtonText}>{t('teilen.schicken')}</Text>}
             </Pressable>
             <Pressable onPress={() => setIsOpen(false)} disabled={isSending} style={{ marginTop: 12 }}>
-              <Text style={{ color: colors.muted, fontSize: 12.5, textAlign: 'center' }}>Abbrechen</Text>
+              <Text style={{ color: colors.muted, fontSize: 12.5, textAlign: 'center' }}>{t('allgemein.abbrechen')}</Text>
             </Pressable>
           </View>
         </View>

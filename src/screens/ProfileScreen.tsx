@@ -282,7 +282,7 @@ export default function ProfileScreen({ navigation }: Props) {
           onChangeText={setNameInput}
           onBlur={handleSaveDisplayName}
           onSubmitEditing={handleSaveDisplayName}
-          placeholder="Dein Name"
+          placeholder={t('sonstiges.deinName')}
           placeholderTextColor={colors.muted}
         />
         {savingKey === 'display_name' && <ActivityIndicator color={colors.muted} size="small" />}

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
+import { useUebersetzung } from '../i18n';
 import { api } from '../api/client';
 import SingleRecipeCookView from '../components/SingleRecipeCookView';
 import CookingFinishedCelebration from '../components/CookingFinishedCelebration';
@@ -13,6 +14,7 @@ const MAX_PARALLEL_RECIPES = 3;
 
 export default function CookModeScreen({ route, navigation }: Props) {
   const { colors, gradient } = useTheme();
+  const { t } = useUebersetzung();
   const recipeIds = route.params.recipeIds.slice(0, MAX_PARALLEL_RECIPES);
 
   const [activeIndex, setActiveIndex] = useState(0);
@@ -30,7 +32,7 @@ export default function CookModeScreen({ route, navigation }: Props) {
   // hier einmalig beim Betreten des Koch-Modus angezeigt.
   useEffect(() => {
     if (route.params.sessionNote) {
-      Alert.alert('Für diesen Kochvorgang', route.params.sessionNote);
+      Alert.alert(t('sonstiges.fuerDiesenKochvorgang'), route.params.sessionNote);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

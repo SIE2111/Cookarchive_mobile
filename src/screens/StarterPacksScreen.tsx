@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet, ActivityIndicator, ScrollView, Alert
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
+import { useUebersetzung } from '../i18n';
 import { api, ApiError } from '../api/client';
 
 type Pack = {
@@ -31,6 +32,7 @@ const PACK_ICONS: Record<string, string> = {
 
 export default function StarterPacksScreen({ navigation }: any) {
   const { colors, radius, gradient } = useTheme();
+  const { t } = useUebersetzung();
   const [packs, setPacks] = useState<Pack[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -127,7 +129,7 @@ export default function StarterPacksScreen({ navigation }: any) {
           </Pressable>
         )}
 
-        <Text style={[styles.title, { color: colors.text }]}>Starter-Rezepte</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{t('starter.titel')}</Text>
         <Text style={[styles.subtitle, { color: colors.muted }]}>
           Drei Pakete, einzeln zum Holen und wieder Loswerden. Was schon in deinem Kochbuch liegt, wird
           beim Import übersprungen – es entstehen keine Doppelten.
@@ -208,7 +210,7 @@ export default function StarterPacksScreen({ navigation }: any) {
                   disabled={busy !== null}
                   style={styles.removeButton}
                 >
-                  <Text style={{ color: '#DC2626', fontSize: 13, fontWeight: '600' }}>Entfernen</Text>
+                  <Text style={{ color: '#DC2626', fontSize: 13, fontWeight: '600' }}>{t('allgemein.entfernen')}</Text>
                 </Pressable>
               )}
             </View>

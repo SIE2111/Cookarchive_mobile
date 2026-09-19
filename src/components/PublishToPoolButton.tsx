@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
+import { useUebersetzung } from '../i18n';
 import { api, ApiError } from '../api/client';
 import { useServerSync } from '../context/ServerSyncContext';
 
@@ -34,6 +35,7 @@ export default function PublishToPoolButton({
   style?: object;
 }) {
   const { colors, gradient } = useTheme();
+  const { t } = useUebersetzung();
   const { serverSyncEnabled, isLoading: syncLoading } = useServerSync();
   const [isPublishing, setIsPublishing] = useState(false);
   const [isPublished, setIsPublished] = useState(false);
@@ -47,18 +49,18 @@ export default function PublishToPoolButton({
     try {
       await api.post('/pool/publish', { recipe_id: recipeId });
       setIsPublished(true);
-      Alert.alert('Veröffentlicht', `"${recipeTitle}" steht jetzt im Community-Pool.`);
+      Alert.alert(t('sonstiges.veroeffentlicht'), t('sonstiges.veroeffentlichtText', { titel: recipeTitle }));
     } catch (err) {
-      const detail = err instanceof ApiError ? err.detail : 'Unbekannter Fehler';
+      const detail = err instanceof ApiError ? err.detail : t('profil.unbekannterFehler');
       const title =
         err instanceof ApiError && err.status === 403
-          ? 'Server-Sync nötig'
+          ? t('sonstiges.syncNoetig')
           : err instanceof ApiError && err.status === 429
-            ? 'Tageslimit erreicht'
-            : 'Veröffentlichen fehlgeschlagen';
+            ? t('sonstiges.tageslimit')
+            : t('sonstiges.veroeffentlichenFehlgeschlagen');
       const message =
         err instanceof ApiError && err.status === 403
-          ? 'Der Community-Pool braucht aktivierten Server-Sync. Du findest den Schalter im Profil unter „Darstellung & Bedienung".'
+          ? t('sonstiges.poolBrauchtSync')
           : detail;
       Alert.alert(title, message);
     } finally {
@@ -73,18 +75,17 @@ export default function PublishToPoolButton({
       // bekommt den Grund gesagt statt gar nichts. Ein Knopf, der auf
       // Beruehrung schweigt, wirkt kaputt.
       Alert.alert(
-        'Server-Sync nötig',
-        'Zum Teilen im Gemeinschaftskochbuch muss Server-Sync aktiv sein. Du findest den Schalter im Profil unter „Darstellung & Bedienung".',
+        t('sonstiges.syncNoetig'),
+        t('sonstiges.teilenBrauchtSync'),
       );
       return;
     }
     Alert.alert(
-      'Ins Gemeinschaftskochbuch stellen?',
-      `"${recipeTitle}" wird für alle Nutzerinnen und Nutzer sichtbar. Andere können es übernehmen; ` +
-        'bereits übernommene Kopien bleiben bestehen, auch wenn du es später zurückziehst.',
+      t('sonstiges.insPoolFrage'),
+      t('sonstiges.insPoolText', { titel: recipeTitle }),
       [
-        { text: 'Abbrechen', style: 'cancel' },
-        { text: 'Veröffentlichen', onPress: publish },
+        { text: t('allgemein.abbrechen'), style: 'cancel' },
+        { text: t('sonstiges.veroeffentlichen'), onPress: publish },
       ],
     );
   };
@@ -96,10 +97,10 @@ export default function PublishToPoolButton({
       accessibilityRole="button"
       accessibilityLabel={
         isLocked
-          ? 'Ins Gemeinschaftskochbuch stellen – Server-Sync nicht aktiv'
+          ? t('sonstiges.insPoolOhneSync')
           : isPublished
-            ? 'Bereits veröffentlicht'
-            : 'Ins Gemeinschaftskochbuch stellen'
+            ? t('sonstiges.bereitsVeroeffentlicht')
+            : t('sonstiges.insPool')
       }
       accessibilityState={{ disabled: isLocked }}
       style={[styles.button, isLocked && styles.locked, style]}

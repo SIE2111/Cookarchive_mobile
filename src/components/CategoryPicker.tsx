@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, Alert } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
+import { useUebersetzung } from '../i18n';
 import { api, ApiError } from '../api/client';
 
 interface Props {
@@ -18,6 +19,7 @@ interface Props {
  */
 export default function CategoryPicker({ selected, onChange }: Props) {
   const { colors, gradient, radius } = useTheme();
+  const { t } = useUebersetzung();
   const [existingCategories, setExistingCategories] = useState<string[]>([]);
   const [newCategoryText, setNewCategoryText] = useState('');
 
@@ -58,12 +60,12 @@ export default function CategoryPicker({ selected, onChange }: Props) {
 
   const handleDeleteCategory = (tag: string) => {
     Alert.alert(
-      'Kategorie löschen?',
+      t('sonstiges.kategorieLoeschen'),
       `"${tag}" wird aus ALLEN Rezepten entfernt, die diese Kategorie haben - nicht nur hier. Die Rezepte selbst bleiben erhalten.`,
       [
-        { text: 'Abbrechen', style: 'cancel' },
+        { text: t('allgemein.abbrechen'), style: 'cancel' },
         {
-          text: 'Löschen',
+          text: t('allgemein.loeschen'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -71,7 +73,7 @@ export default function CategoryPicker({ selected, onChange }: Props) {
               setExistingCategories((prev) => prev.filter((t) => t !== tag));
               if (selected.includes(tag)) onChange(selected.filter((t) => t !== tag));
             } catch (err) {
-              Alert.alert('Fehler', err instanceof ApiError ? err.detail : 'Kategorie konnte nicht gelöscht werden');
+              Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('sonstiges.kategorieNichtGeloescht'));
             }
           },
         },
@@ -103,13 +105,13 @@ export default function CategoryPicker({ selected, onChange }: Props) {
               );
             })}
           </View>
-          <Text style={{ color: colors.muted, fontSize: 10, marginBottom: 8 }}>Lange drücken, um eine Kategorie ganz zu löschen.</Text>
+          <Text style={{ color: colors.muted, fontSize: 10, marginBottom: 8 }}>{t('sonstiges.langeDruecken')}</Text>
         </>
       )}
       <View style={styles.addRow}>
         <TextInput
           style={[styles.addInput, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
-          placeholder="Neue Kategorie anlegen…"
+          placeholder={t('sonstiges.neueKategorie')}
           placeholderTextColor={colors.muted}
           value={newCategoryText}
           onChangeText={setNewCategoryText}

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, Switch, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
+import { useUebersetzung } from '../i18n';
 import { useAuth } from '../context/AuthContext';
 import { api, ApiError } from '../api/client';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -11,15 +12,16 @@ import type { HaubenLevel } from '../utils/stepLevels';
 // Gleiche Reihenfolge und Benennung wie im Profil - die Auswahl hier ist
 // nur die Erstbelegung, geaendert wird sie spaeter dort.
 const HAUBEN_OPTIONS: { key: HaubenLevel; title: string; subtitle: string; hats: number }[] = [
-  { key: 'anfaenger', title: 'Anfänger', subtitle: 'Viele kleine Schritte, Fachbegriffe werden erklärt', hats: 1 },
-  { key: 'fortgeschritten', title: 'Fortgeschritten', subtitle: 'Das Rezept so, wie es geschrieben wurde', hats: 2 },
-  { key: 'profi', title: 'Profi', subtitle: 'Wenige, zusammengefasste Schritte ohne Erklärungen', hats: 3 },
+  { key: 'anfaenger', title: 'profil.haubenAnfaenger', subtitle: 'sonstiges.stufeAnfaengerText', hats: 1 },
+  { key: 'fortgeschritten', title: 'profil.haubenFortgeschritten', subtitle: 'sonstiges.stufeFortgeschrittenText', hats: 2 },
+  { key: 'profi', title: 'profil.haubenProfi', subtitle: 'sonstiges.stufeProfiText', hats: 3 },
 ];
 
 type Props = NativeStackScreenProps<MainStackParamList, 'Onboarding'>;
 
 export default function OnboardingScreen({ navigation }: Props) {
   const { colors, gradient, radius } = useTheme();
+  const { t } = useUebersetzung();
   const { clearJustRegistered } = useAuth();
   const [createFolders, setCreateFolders] = useState(true);
   // Bei der Anmeldung wird nur das Standard-Paket angeboten. Cocktails
@@ -63,7 +65,7 @@ export default function OnboardingScreen({ navigation }: Props) {
       clearJustRegistered();
       navigation.replace('MainTabs');
     } catch (err) {
-      setError(err instanceof ApiError ? err.detail : 'Einrichtung fehlgeschlagen');
+      setError(err instanceof ApiError ? err.detail : t('sonstiges.einrichtungFehlgeschlagen'));
     } finally {
       setIsSubmitting(false);
     }
@@ -85,13 +87,13 @@ export default function OnboardingScreen({ navigation }: Props) {
           <Text style={{ color: gradient[0], fontSize: 14, fontWeight: '600' }}>‹ Zurück</Text>
         </Pressable>
       )}
-      <Text style={[styles.title, { color: colors.text }]}>Willkommen bei Mein Kochbuch</Text>
-      <Text style={[styles.subtitle, { color: colors.muted }]}>Ein paar Dinge zum Start</Text>
+      <Text style={[styles.title, { color: colors.text }]}>{t('sonstiges.willkommen')}</Text>
+      <Text style={[styles.subtitle, { color: colors.muted }]}>{t('sonstiges.paarDinge')}</Text>
 
       <View style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}>
         <View style={{ flex: 1 }}>
-          <Text style={[styles.rowTitle, { color: colors.text }]}>Standard-Ordner anlegen</Text>
-          <Text style={[styles.rowSubtitle, { color: colors.muted }]}>Vorspeisen, Hauptgerichte, Beilagen, Backen, Vegan, Getränke</Text>
+          <Text style={[styles.rowTitle, { color: colors.text }]}>{t('sonstiges.standardOrdner')}</Text>
+          <Text style={[styles.rowSubtitle, { color: colors.muted }]}>{t('sonstiges.ordnerListe')}</Text>
         </View>
         <Switch value={createFolders} onValueChange={setCreateFolders} trackColor={{ false: '#E7E1D4', true: gradient[0] }} thumbColor="#fff" />
       </View>
@@ -152,14 +154,14 @@ export default function OnboardingScreen({ navigation }: Props) {
         onPress={() => setImportStandard(false)}
         style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: !importStandard ? 1.5 : 0, borderColor: gradient[0] }]}
       >
-        <Text style={[styles.rowTitle, { color: colors.text, flex: 1 }]}>Keine Starter-Rezepte importieren</Text>
+        <Text style={[styles.rowTitle, { color: colors.text, flex: 1 }]}>{t('sonstiges.keineStarter')}</Text>
         {!importStandard && <Text style={{ color: gradient[0], fontSize: 18 }}>✓</Text>}
       </Pressable>
 
       {error && <Text style={[styles.errorText, { color: '#DC2626' }]}>{error}</Text>}
 
       <Pressable onPress={handleContinue} disabled={isSubmitting} style={[styles.continueButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}>
-        {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.continueButtonText}>Los geht's</Text>}
+        {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.continueButtonText}>{t('sonstiges.losGehts')}</Text>}
       </Pressable>
       </ScrollView>
     </SafeAreaView>

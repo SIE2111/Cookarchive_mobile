@@ -4,6 +4,7 @@ import { VideoView, useVideoPlayer } from 'expo-video';
 import * as Speech from 'expo-speech';
 import { SPEECH_LANGUAGE } from '../utils/speech';
 import { useTheme } from '../theme/ThemeContext';
+import { useUebersetzung } from '../i18n';
 
 interface Props {
   name: string;
@@ -36,6 +37,7 @@ const GERMAN_MALE_VOICE_HINTS = [
  */
 export default function BrutzelGreetingOverlay({ name, onDismiss }: Props) {
   const { colors, gradient, radius } = useTheme();
+  const { t } = useUebersetzung();
   const [showText, setShowText] = useState(false);
   const textOpacity = React.useRef(new Animated.Value(0)).current;
 
@@ -87,10 +89,10 @@ export default function BrutzelGreetingOverlay({ name, onDismiss }: Props) {
 
       {showText && (
         <Animated.View style={{ opacity: textOpacity, alignItems: 'center' }}>
-          <Text style={[styles.title, { color: colors.text }]}>Hallo {name}! 👋</Text>
-          <Text style={[styles.subtitle, { color: colors.muted }]}>Was möchtest du heute kochen?</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{t('sonstiges.hallo', { name })}</Text>
+          <Text style={[styles.subtitle, { color: colors.muted }]}>{t('sonstiges.wasKochen')}</Text>
           <Pressable onPress={handleDismiss} style={[styles.doneButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}>
-            <Text style={styles.doneButtonText}>Los geht's</Text>
+            <Text style={styles.doneButtonText}>{t('sonstiges.losGehts')}</Text>
           </Pressable>
         </Animated.View>
       )}

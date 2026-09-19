@@ -400,7 +400,7 @@ export default function RecipesScreen({ navigation, route }: Props) {
                 disabled={isSavingFolder || !newFolderName.trim()}
                 style={[styles.modalSaveButton, { backgroundColor: gradient[0], borderRadius: radius.sm, opacity: isSavingFolder ? 0.7 : 1 }]}
               >
-                {isSavingFolder ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.modalSaveText}>Anlegen</Text>}
+                {isSavingFolder ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.modalSaveText}>{t('sonstiges.anlegen')}</Text>}
               </Pressable>
             </View>
           </View>

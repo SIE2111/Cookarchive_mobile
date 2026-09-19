@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
+import { useUebersetzung } from '../i18n';
 import { api, ApiError } from '../api/client';
 
 // Muss mit "version" in app.json uebereinstimmen. Beim Versionswechsel
@@ -24,6 +25,7 @@ const APP_VERSION = '0.1.0';
  */
 export default function SupportScreen() {
   const { colors, gradient, radius } = useTheme();
+  const { t } = useUebersetzung();
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -48,7 +50,7 @@ export default function SupportScreen() {
       setSubject('');
       setMessage('');
     } catch (err) {
-      Alert.alert('Nicht gesendet', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+      Alert.alert(t('sonstiges.nichtGesendet'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
     } finally {
       setIsSending(false);
     }
@@ -58,7 +60,7 @@ export default function SupportScreen() {
     return (
       <View style={[styles.centered, { backgroundColor: colors.bg }]}>
         <MaterialCommunityIcons name="check-circle-outline" size={52} color={gradient[0]} />
-        <Text style={[styles.sentTitle, { color: colors.text }]}>Nachricht ist unterwegs</Text>
+        <Text style={[styles.sentTitle, { color: colors.text }]}>{t('sonstiges.nachrichtUnterwegs')}</Text>
         <Text style={[styles.sentBody, { color: colors.muted }]}>
           Du bekommst gleich eine Empfangsbestätigung per E-Mail. Wir melden uns so bald wie möglich.
         </Text>
@@ -66,7 +68,7 @@ export default function SupportScreen() {
           onPress={() => setSent(false)}
           style={[styles.sendButton, { backgroundColor: gradient[0], borderRadius: radius.md, marginTop: 24 }]}
         >
-          <Text style={styles.sendButtonText}>Weitere Nachricht schreiben</Text>
+          <Text style={styles.sendButtonText}>{t('sonstiges.weitereNachricht')}</Text>
         </Pressable>
       </View>
     );
@@ -88,7 +90,7 @@ export default function SupportScreen() {
       <TextInput
         value={subject}
         onChangeText={setSubject}
-        placeholder="Worum geht es?"
+        placeholder={t('sonstiges.betreffPlatzhalter')}
         placeholderTextColor={colors.muted}
         style={[styles.input, { backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
       />
@@ -97,7 +99,7 @@ export default function SupportScreen() {
       <TextInput
         value={message}
         onChangeText={setMessage}
-        placeholder="Beschreib möglichst genau, was passiert ist und was du erwartet hättest."
+        placeholder={t('sonstiges.textPlatzhalter')}
         placeholderTextColor={colors.muted}
         multiline
         style={[
@@ -115,7 +117,7 @@ export default function SupportScreen() {
           { backgroundColor: gradient[0], borderRadius: radius.md, opacity: canSend && !isSending ? 1 : 0.45 },
         ]}
       >
-        {isSending ? <ActivityIndicator color="#fff" /> : <Text style={styles.sendButtonText}>Absenden</Text>}
+        {isSending ? <ActivityIndicator color="#fff" /> : <Text style={styles.sendButtonText}>{t('sonstiges.absenden')}</Text>}
       </Pressable>
     </ScrollView>
   );

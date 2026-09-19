@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert, ScrollView, Linking } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
+import { useUebersetzung } from '../i18n';
 import { api, ApiError } from '../api/client';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/AppNavigator';
@@ -16,9 +17,9 @@ interface Preferences {
 }
 
 const STORAGE_OPTIONS: { key: StorageMode; title: string; subtitle: string; icon: keyof typeof MaterialCommunityIcons.glyphMap }[] = [
-  { key: 'lokal', title: 'Nur lokal', subtitle: 'Verbleibt ausschließlich auf diesem Gerät.', icon: 'folder-outline' },
+  { key: 'lokal', title: 'sonstiges.speicherNurLokal', subtitle: 'sonstiges.speicherNurLokalText', icon: 'folder-outline' },
   { key: 'nas', title: 'NAS', subtitle: 'Deine Rezepte, deine Daten – nur für die Anmeldung wird unser Server kontaktiert.', icon: 'nas' },
-  { key: 'eigene_cloud', title: 'Eigene Cloud', subtitle: 'Unsere Server-Infrastruktur (EU).', icon: 'cloud-outline' },
+  { key: 'eigene_cloud', title: 'Eigene Cloud', subtitle: 'sonstiges.speicherEigeneCloudText', icon: 'cloud-outline' },
 ];
 
 const CLOUD_PROVIDER_ICONS: Record<string, keyof typeof MaterialCommunityIcons.glyphMap> = {
@@ -28,9 +29,9 @@ const CLOUD_PROVIDER_ICONS: Record<string, keyof typeof MaterialCommunityIcons.g
 };
 
 const CLOUD_PROVIDERS: { key: string; apiPrefix: string; title: string; subtitle: string }[] = [
-  { key: 'google_drive', apiPrefix: '/google-auth', title: 'Google Drive', subtitle: 'Im eigenen Google Drive unter "MeinKochbuch".' },
-  { key: 'onedrive', apiPrefix: '/onedrive-auth', title: 'OneDrive', subtitle: 'Im eigenen OneDrive unter "MeinKochbuch".' },
-  { key: 'dropbox', apiPrefix: '/dropbox-auth', title: 'Dropbox', subtitle: 'In der eigenen Dropbox unter "MeinKochbuch".' },
+  { key: 'google_drive', apiPrefix: '/google-auth', title: 'Google Drive', subtitle: 'sonstiges.speicherDriveText' },
+  { key: 'onedrive', apiPrefix: '/onedrive-auth', title: 'OneDrive', subtitle: 'sonstiges.speicherOneDriveText' },
+  { key: 'dropbox', apiPrefix: '/dropbox-auth', title: 'Dropbox', subtitle: 'sonstiges.speicherDropboxText' },
 ];
 
 /**
@@ -40,6 +41,7 @@ const CLOUD_PROVIDERS: { key: string; apiPrefix: string; title: string; subtitle
  */
 export default function StorageSettingsScreen({ navigation }: Props) {
   const { colors, gradient, radius } = useTheme();
+  const { t } = useUebersetzung();
   const [prefs, setPrefs] = useState<Preferences | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [savingKey, setSavingKey] = useState<'storage_mode' | 'drittanbieter_provider' | null>(null);
@@ -49,7 +51,7 @@ export default function StorageSettingsScreen({ navigation }: Props) {
     api
       .get<Preferences>('/preferences/')
       .then(setPrefs)
-      .catch((err) => setError(err instanceof ApiError ? err.detail : 'Einstellungen konnten nicht geladen werden'));
+      .catch((err) => setError(err instanceof ApiError ? err.detail : t('profil.einstellungenNichtGeladen')));
   };
 
   useEffect(() => {
@@ -64,7 +66,7 @@ export default function StorageSettingsScreen({ navigation }: Props) {
       const { authorize_url } = await api.get<{ authorize_url: string }>(`${apiPrefix}/connect`);
       await Linking.openURL(authorize_url);
     } catch (err) {
-      Alert.alert('Verbinden fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+      Alert.alert(t('sonstiges.verbindenFehlgeschlagen'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
     } finally {
       setConnectingProvider(null);
     }
@@ -80,7 +82,7 @@ export default function StorageSettingsScreen({ navigation }: Props) {
       setPrefs(updated);
     } catch (err) {
       setPrefs(previous);
-      Alert.alert('Reaktivieren fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+      Alert.alert(t('sonstiges.reaktivierenFehlgeschlagen'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
     } finally {
       setSavingKey(null);
     }
@@ -91,7 +93,7 @@ export default function StorageSettingsScreen({ navigation }: Props) {
       await api.post(`${apiPrefix}/disconnect`);
       loadPrefs();
     } catch (err) {
-      Alert.alert('Trennen fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+      Alert.alert(t('sonstiges.trennenFehlgeschlagen'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
     }
   };
 
@@ -105,7 +107,7 @@ export default function StorageSettingsScreen({ navigation }: Props) {
       setPrefs(updated);
     } catch (err) {
       setPrefs(previous);
-      Alert.alert('Konnte nicht gespeichert werden', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+      Alert.alert(t('profil.nichtGespeichert'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
     } finally {
       setSavingKey(null);
     }
@@ -185,7 +187,7 @@ export default function StorageSettingsScreen({ navigation }: Props) {
               <Text style={[styles.rowSubtitle, { color: colors.muted }]}>{p.subtitle}</Text>
               {hasTokens && (
                 <Pressable onPress={() => handleDisconnectProvider(p.apiPrefix)} hitSlop={8} style={{ marginTop: 6, alignSelf: 'flex-start' }}>
-                  <Text style={{ color: '#DC2626', fontSize: 11.5, fontWeight: '700' }}>Trennen</Text>
+                  <Text style={{ color: '#DC2626', fontSize: 11.5, fontWeight: '700' }}>{t('sonstiges.trennen')}</Text>
                 </Pressable>
               )}
             </View>

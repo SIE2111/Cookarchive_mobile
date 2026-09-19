@@ -4,6 +4,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
+import { useUebersetzung } from '../i18n';
 import { api, ApiError } from '../api/client';
 import ScanFab from '../components/ScanFab';
 import { askWhatNext } from '../utils/afterRecipeSaved';
@@ -30,6 +31,7 @@ interface PublicRecipeSummary {
  */
 export default function CommunityPoolScreen() {
   const { colors, gradient, radius } = useTheme();
+  const { t } = useUebersetzung();
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const [recipes, setRecipes] = useState<PublicRecipeSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -43,9 +45,9 @@ export default function CommunityPoolScreen() {
       setError(null);
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
-        setError('Der Community-Pool braucht aktivierten Server-Sync. Du findest den Schalter im Profil unter „Darstellung & Bedienung".');
+        setError(t('sonstiges.poolBrauchtSync'));
       } else {
-        setError(err instanceof ApiError ? err.detail : 'Pool konnte nicht geladen werden');
+        setError(err instanceof ApiError ? err.detail : t('sonstiges.poolNichtGeladen'));
       }
     }
   }, []);
@@ -76,7 +78,7 @@ export default function CommunityPoolScreen() {
       // gleich kochen oder fertig - siehe utils/afterRecipeSaved.
       askWhatNext(navigation, { id: result.local_recipe_id, title: recipe.title });
     } catch (err) {
-      Alert.alert('Übernehmen fehlgeschlagen', err instanceof ApiError ? err.detail : 'Unbekannter Fehler');
+      Alert.alert(t('sonstiges.uebernehmenFehlgeschlagen'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
     } finally {
       setForkingId(null);
     }
@@ -109,7 +111,7 @@ export default function CommunityPoolScreen() {
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
         ListHeaderComponent={
           <>
-            <Text style={[styles.header, { color: colors.text }]}>Gemeinschaftskochbuch</Text>
+            <Text style={[styles.header, { color: colors.text }]}>{t('sonstiges.gemeinschaftskochbuch')}</Text>
             <Text style={[styles.headerSub, { color: colors.muted }]}>
               Rezepte, die andere geteilt haben. Übernommene Rezepte landen als eigene Kopie in deiner
               Sammlung – Änderungen daran bleiben bei dir.
