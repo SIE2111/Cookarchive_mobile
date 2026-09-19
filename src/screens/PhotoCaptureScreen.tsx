@@ -162,10 +162,15 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
       Alert.alert(t('erfassen.zugriffVerweigert'), t('erfassen.ohneKamera'));
       return;
     }
-    // allowsEditing blendet nach der Aufnahme einen Zuschnitt-Rahmen ein.
-    // Wichtig bei Zeitschriften: Ohne ihn landet die halbe Nachbarspalte
-    // oder der Tisch mit in der Auswertung.
-    const pickerResult = await ImagePicker.launchCameraAsync({ quality: 0.8, allowsEditing: true });
+    // KEIN allowsEditing hier. Der Zuschnitt-Rahmen erzwingt auf iOS ein
+    // Quadrat - ein hochformatiges Blatt passt nicht hinein, unten fehlen
+    // dann die letzten Zeilen. Ein abgeschnittener Schritt faellt beim
+    // Erfassen nicht auf, er fehlt einfach.
+    //
+    // Der Rahmen war gegen Nachbarspalten in Zeitschriften gedacht. Das
+    // wiegt weniger: Die Auswertung kommt mit etwas Tisch am Rand
+    // zurecht, mit einem fehlenden Drittel der Seite nicht.
+    const pickerResult = await ImagePicker.launchCameraAsync({ quality: 0.9 });
     if (!pickerResult.canceled && pickerResult.assets[0]) {
       setImageUris((prev) => [...prev, pickerResult.assets[0].uri]);
     }
@@ -175,8 +180,8 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
     if (!(await ensureMediaLibraryAccess())) return;
     const pickerResult = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      quality: 0.8,
-      allowsEditing: true,
+      // Ebenfalls ohne Zuschnitt: siehe Begruendung bei der Aufnahme.
+      quality: 0.9,
     });
     if (!pickerResult.canceled && pickerResult.assets[0]) {
       setImageUris((prev) => [...prev, pickerResult.assets[0].uri]);
