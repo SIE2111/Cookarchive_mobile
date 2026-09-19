@@ -10,6 +10,10 @@ import { useUebersetzung } from '../i18n';
 interface Props {
   name: string;
   onDismiss: () => void;
+  // Steht der Profil-Schalter "Begruessungs-Animation" auf aus, bleibt der
+  // Bildschirm samt Standbild, Gruss und Knopf trotzdem stehen - nur Video
+  // und Sprachausgabe entfallen. Vorher verschwand die ganze Begruessung.
+  mitVideo?: boolean;
 }
 
 // Bekannte deutsche MAENNLICHE System-Stimmennamen (Apple/Android) - eine
@@ -36,7 +40,7 @@ const GERMAN_MALE_VOICE_HINTS = [
  * Namenssuche ist nicht zuverlaessig, da sich Apples Stimmennamen
  * zwischen iOS-Versionen unterscheiden koennen).
  */
-export default function BrutzelGreetingOverlay({ name, onDismiss }: Props) {
+export default function BrutzelGreetingOverlay({ name, onDismiss, mitVideo = true }: Props) {
   const { colors, gradient, radius } = useTheme();
   const insets = useSafeAreaInsets();
   const { t } = useUebersetzung();
@@ -44,9 +48,11 @@ export default function BrutzelGreetingOverlay({ name, onDismiss }: Props) {
 
   const greetingText = `Hallo ${name}! Was möchtest du heute kochen?`;
 
+  // Der Haken laeuft unbedingt - Hooks duerfen nicht bedingt aufgerufen
+  // werden. Abgespielt und angezeigt wird nur bei eingeschalteter Animation.
   const player = useVideoPlayer(require('../../assets/brutzel-celebration.mp4'), (p) => {
     p.loop = false;
-    p.play();
+    if (mitVideo) p.play();
   });
 
   useEffect(() => {
@@ -55,6 +61,12 @@ export default function BrutzelGreetingOverlay({ name, onDismiss }: Props) {
     // Versatz liess den Bildschirm dazwischen halb leer wirken. Beide
     // Textbloecke erscheinen jetzt gemeinsam.
     Animated.timing(textOpacity, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+
+    if (!mitVideo) {
+      return () => {
+        Speech.stop();
+      };
+    }
 
     Speech.getAvailableVoicesAsync()
       .then((voices) => {
@@ -117,7 +129,7 @@ export default function BrutzelGreetingOverlay({ name, onDismiss }: Props) {
           Spielt das Video, verdeckt es das Bild vollstaendig. */}
       <View style={styles.videoBox}>
         <Image source={require('../../assets/brutzel-full.png')} style={styles.videoFallback} resizeMode="cover" />
-        <VideoView player={player} style={styles.video} contentFit="cover" nativeControls={false} />
+        {mitVideo && <VideoView player={player} style={styles.video} contentFit="cover" nativeControls={false} />}
       </View>
 
       <Animated.View style={{ opacity: textOpacity, alignItems: 'center' }}>
