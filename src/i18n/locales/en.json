@@ -424,7 +424,11 @@
     "bildLaeuftNoch": "Brutzel is still drawing – almost done",
     "notiz": "Note",
     "notizPlatzhalter": "Remarks about the recipe (optional)",
-    "notizAusVorlage": "Taken from your source – you can edit or delete it."
+    "notizAusVorlage": "Taken from your source – you can edit or delete it.",
+    "portionenUnklar": "Your source did not state a number of servings.",
+    "portionenBitteEintragen": "Please enter how many servings this recipe is for – every amount depends on it.",
+    "portionenFehlen": "Servings missing",
+    "portionenFehlenText": "Please enter a number of servings. Without it the amounts cannot be scaled later."
   },
   "haushalt": {
     "nichtGeladen": "The household could not be loaded",

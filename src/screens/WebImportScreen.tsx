@@ -54,6 +54,8 @@ export default function WebImportScreen({ navigation, route }: Props) {
   // Backend legt bewusst noch KEIN Rezept an, das passiert erst hier beim
   // "Speichern" (siehe routers/web_import.py).
   const [title, setTitle] = useState('');
+  const [servings, setServings] = useState('');
+  const [portionenUnklar, setPortionenUnklar] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [folders, setFolders] = useState<{ id: string; name: string }[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
@@ -138,6 +140,16 @@ export default function WebImportScreen({ navigation, route }: Props) {
     try {
       const result = await api.post<ImportedRecipe>('/web-import/import-recipe', { url: trimmedUrl });
       setTitle(result.title);
+      // Portionen wurden bisher vollstaendig verworfen - das Rezept kam
+      // ohne sie in die Sammlung, und das Umrechnen der Mengen ging
+      // damit gar nicht.
+      if (result.servings && result.servings > 0) {
+        setServings(String(result.servings));
+        setPortionenUnklar(false);
+      } else {
+        setServings('');
+        setPortionenUnklar(true);
+      }
       setSelectedTags(result.tags ?? []);
       setIngredients(
         result.ingredients.map((ing) => ({
@@ -179,6 +191,10 @@ export default function WebImportScreen({ navigation, route }: Props) {
   const handleSave = async (cookOnly = false) => {
     if (!title.trim()) {
       Alert.alert(t('erfassen.titelFehlt'), t('erfassen.bitteName'));
+      return;
+    }
+    if (!servings.trim() || Number(servings) <= 0) {
+      Alert.alert(t('erfassen.portionenFehlen'), t('erfassen.portionenFehlenText'));
       return;
     }
     const cleanIngredients = ingredients
@@ -232,6 +248,7 @@ export default function WebImportScreen({ navigation, route }: Props) {
         ingredients: cleanIngredients,
         steps: cleanSteps,
         cover_image_url: coverImageUrl,
+        servings: servings ? Number(servings) : null,
         source_type: 'web_import',
         tags: tags.length > 0 ? tags : undefined,
         folder_id: selectedFolderId,
@@ -315,6 +332,27 @@ export default function WebImportScreen({ navigation, route }: Props) {
         value={title}
         onChangeText={setTitle}
       />
+
+      <Text style={[styles.label, { color: colors.muted, marginTop: 16 }]}>{t('erfassen.portionen')}</Text>
+      <TextInput
+        style={[styles.input, {
+          width: 90, backgroundColor: colors.card, color: colors.text, borderRadius: radius.md,
+          borderWidth: portionenUnklar && !servings.trim() ? 1.5 : 0, borderColor: '#B45309',
+        }]}
+        keyboardType="numeric"
+        value={servings}
+        onChangeText={setServings}
+      />
+      {portionenUnklar && !servings.trim() && (
+        <View style={{ marginTop: 6 }}>
+          <Text style={{ color: '#B45309', fontSize: 12.5, fontWeight: '600' }}>
+            {t('erfassen.portionenUnklar')}
+          </Text>
+          <Text style={{ color: colors.muted, fontSize: 12, lineHeight: 17, marginTop: 2 }}>
+            {t('erfassen.portionenBitteEintragen')}
+          </Text>
+        </View>
+      )}
 
       <Text style={[styles.label, { color: colors.muted, marginTop: 16 }]}>{t('erfassen.kategorien')}</Text>
       <CategoryPicker selected={selectedTags} onChange={setSelectedTags} />

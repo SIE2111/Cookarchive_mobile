@@ -424,7 +424,11 @@
     "bildLaeuftNoch": "Brutzel malt noch – gleich fertig",
     "notiz": "Notiz",
     "notizPlatzhalter": "Anmerkungen zum Rezept (optional)",
-    "notizAusVorlage": "Aus der Vorlage übernommen – du kannst sie ändern oder löschen."
+    "notizAusVorlage": "Aus der Vorlage übernommen – du kannst sie ändern oder löschen.",
+    "portionenUnklar": "Auf der Vorlage stand keine Portionenzahl.",
+    "portionenBitteEintragen": "Bitte trag ein, für wie viele Portionen das Rezept gedacht ist – davon hängen alle Mengen ab.",
+    "portionenFehlen": "Portionen fehlen",
+    "portionenFehlenText": "Bitte eine Portionenzahl eintragen. Ohne sie lassen sich die Mengen später nicht umrechnen."
   },
   "haushalt": {
     "nichtGeladen": "Haushalt konnte nicht geladen werden",

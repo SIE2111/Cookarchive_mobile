@@ -72,6 +72,10 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
   // Backangaben, Bemerkungen der schreibenden Person. Die passen in keine
   // der beiden Listen und gingen beim Uebertragen bisher verloren.
   const [notiz, setNotiz] = useState('');
+  // Stand auf der Vorlage keine Portionenzahl? Dann darf nicht still die
+  // Voreinstellung aus dem Profil einspringen - alle Mengen haengen
+  // daran, und eine falsche Zahl faellt erst beim Kochen auf.
+  const [portionenUnklar, setPortionenUnklar] = useState(false);
   // Frisch aufgenommenes Foto, das noch durch den Zuschnitt geht.
   const [zuschnittUri, setZuschnittUri] = useState<string | null>(null);
   const [aiGeneratedImageUrl, setAiGeneratedImageUrl] = useState<string | null>(null);
@@ -148,6 +152,17 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
       }
       if (typedResult.tags?.length) setTags(typedResult.tags);
       if (typedResult.notes?.trim()) setNotiz(typedResult.notes.trim());
+
+      // Portionen aus der Vorlage uebernehmen - bisher blieb die
+      // Voreinstellung aus dem Profil stehen, auch wenn auf dem Blatt
+      // "fuer 1 Portion" stand.
+      if (typedResult.servings && typedResult.servings > 0) {
+        setServings(String(typedResult.servings));
+        setPortionenUnklar(false);
+      } else {
+        setServings('');
+        setPortionenUnklar(true);
+      }
     } catch (err) {
       // Statt eines generischen Platzhaltertexts die tatsaechliche Ursache
       // zeigen - auch bei Netzwerk-/Timeout-Fehlern (kein ApiError), die
@@ -200,6 +215,10 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
   const handleSave = async (cookOnly = false) => {
     if (!title.trim()) {
       Alert.alert(t('erfassen.titelFehlt'), t('erfassen.bitteName'));
+      return;
+    }
+    if (!servings.trim() || Number(servings) <= 0) {
+      Alert.alert(t('erfassen.portionenFehlen'), t('erfassen.portionenFehlenText'));
       return;
     }
     setIsSaving(true);
@@ -413,11 +432,25 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
 
       <Text style={[styles.label, { color: colors.muted, marginTop: 16 }]}>{t('erfassen.portionen')}</Text>
       <TextInput
-        style={[styles.input, { width: 90, backgroundColor: colors.card, color: colors.text, borderRadius: radius.md }]}
+        style={[styles.input, {
+          width: 90, backgroundColor: colors.card, color: colors.text, borderRadius: radius.md,
+          borderWidth: portionenUnklar && !servings.trim() ? 1.5 : 0,
+          borderColor: '#B45309',
+        }]}
         keyboardType="numeric"
         value={servings}
-        onChangeText={setServings}
+        onChangeText={(v) => { setServings(v); }}
       />
+      {portionenUnklar && !servings.trim() && (
+        <View style={{ marginTop: 6 }}>
+          <Text style={{ color: '#B45309', fontSize: 12.5, fontWeight: '600' }}>
+            {t('erfassen.portionenUnklar')}
+          </Text>
+          <Text style={{ color: colors.muted, fontSize: 12, lineHeight: 17, marginTop: 2 }}>
+            {t('erfassen.portionenBitteEintragen')}
+          </Text>
+        </View>
+      )}
 
       {folders.length > 0 && (
         <>
