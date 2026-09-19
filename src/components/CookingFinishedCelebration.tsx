@@ -46,7 +46,10 @@ export default function CookingFinishedCelebration({ recipeTitle, onDone }: Prop
   const { t } = useUebersetzung();
   const [showText, setShowText] = useState(false);
   const [showBrutzel, setShowBrutzel] = useState(true);
-  const [animated, setAnimated] = useState(true);
+  // Startet auf false, nicht auf true: Sonst ist die Videoflaeche schon
+  // da, bevor /preferences/ geantwortet hat, und bei abgeschalteter
+  // Animation blitzte das Video kurz auf, bevor es wieder verschwand.
+  const [animated, setAnimated] = useState(false);
   // Erst entscheiden, dann zeigen: Ohne dieses Warten liefe das Video
   // kurz an, bevor die Einstellung da ist - genau das, was jemand mit
   // abgeschalteter Animation nicht sehen will.
@@ -133,10 +136,10 @@ export default function CookingFinishedCelebration({ recipeTitle, onDone }: Prop
       style={{ backgroundColor: colors.bg }}
       contentContainerStyle={styles.overlay}
     >
-      {showBrutzel && animated && (
+      {prefsLoaded && showBrutzel && animated && (
         <VideoView player={player} style={styles.video} contentFit="contain" nativeControls={false} />
       )}
-      {showBrutzel && !animated && (
+      {prefsLoaded && showBrutzel && !animated && (
         <View style={{ marginBottom: 20 }}>
           <BrutzelAvatar size={150} variant="full" />
         </View>
@@ -202,7 +205,9 @@ const styles = StyleSheet.create({
   // Stelle, statt je nach Inhaltshoehe in der Mitte herumzuschwimmen.
   overlay: { flexGrow: 1, alignItems: 'center', justifyContent: 'flex-start', padding: 24, paddingTop: 32 },
   video: { width: '100%', height: 260, marginBottom: 20 },
-  promoCard: { width: '100%', padding: 14, marginBottom: 24 },
+  // Abstand nach oben, damit die Bitte um Weiterempfehlung nicht direkt
+  // am "Fertig"-Knopf klebt - sie ist Beiwerk, nicht Teil des Abschlusses.
+  promoCard: { width: '100%', padding: 14, marginTop: 48, marginBottom: 24 },
   promoTitle: { fontSize: 14, fontWeight: '700' },
   promoText: { fontSize: 12, lineHeight: 17, marginTop: 3 },
   promoRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
