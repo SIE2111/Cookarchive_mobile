@@ -342,7 +342,10 @@
     "umstellungProfi": "Brutzel is shortening the steps for pros…",
     "umstellungAllgemein": "Brutzel is switching the recipe over…",
     "umstellungHinweis": "Steps and tips are switched over together.",
-    "technikAufmerksamkeit": "This technique deserves a little extra attention – take your time with it."
+    "technikAufmerksamkeit": "This technique deserves a little extra attention – take your time with it.",
+    "timerLaeuftNochTitel": "Timer still running",
+    "timerLaeuftNochText": "A timer is still running. If you finish now, it won't keep running.",
+    "trotzdemBeenden": "Finish anyway"
   },
   "naehrwerte": {
     "titel": "Nutrition per serving",
