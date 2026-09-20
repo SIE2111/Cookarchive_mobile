@@ -5,6 +5,7 @@ import { VideoView, useVideoPlayer } from 'expo-video';
 import * as Speech from 'expo-speech';
 import { SPEECH_LANGUAGE, BRUTZEL_PITCH, BRUTZEL_RATE, brutzelStimme } from '../utils/speech';
 import { useTheme } from '../theme/ThemeContext';
+import MarkenZeile from './MarkenZeile';
 import { useUebersetzung } from '../i18n';
 
 interface Props {
@@ -87,26 +88,7 @@ export default function BrutzelGreetingOverlay({ name, onDismiss, mitVideo = tru
           dem Start und damit die einzige Stelle, an der Herkunft und Name der
           App ohne Umweg sichtbar sind. Absolut positioniert, damit sie die
           mittige Ausrichtung von Video und Text nicht verschiebt. */}
-      <View style={[styles.brandRow, { top: insets.top + 12 }]}>
-        <Image source={require('../../assets/icon.png')} style={styles.brandLogo} resizeMode="contain" />
-        <View style={styles.brandTextBlock}>
-          <Text style={[styles.brandTitle, { color: colors.text }]} numberOfLines={1}>
-            Mein Kochbuch
-          </Text>
-          {/* "AI" sitzt in einem eigenen Kaestchen statt als verschachtelter
-              Text mit Hintergrundfarbe: Innenabstand wirkt bei verschachteltem
-              Text auf iOS nicht zuverlaessig, das Kaestchen waere dort eng am
-              Buchstaben geklebt. */}
-          <View style={styles.brandClaimRow}>
-            <Text style={[styles.brandClaim, { color: colors.muted }]} numberOfLines={1}>
-              powered by HomeArchive
-            </Text>
-            <View style={[styles.brandBadge, { backgroundColor: gradient[0] }]}>
-              <Text style={styles.brandBadgeText}>AI</Text>
-            </View>
-          </View>
-        </View>
-      </View>
+      <MarkenZeile style={[styles.markenZeile, { top: insets.top + 12 }]} />
 
       {/* Standbild LIEGT HINTER dem Player, nicht als Ersatz daneben: Bleibt
           der Player stumm - was bei genau diesem Video schon am Ende des
@@ -130,21 +112,15 @@ export default function BrutzelGreetingOverlay({ name, onDismiss, mitVideo = tru
 
 const styles = StyleSheet.create({
   overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', padding: 24, zIndex: 50 },
-  brandRow: { position: 'absolute', left: 24, right: 24, flexDirection: 'row', alignItems: 'center' },
-  brandLogo: { width: 34, height: 34, borderRadius: 8, marginRight: 10 },
   // schrumpft statt ueberzulaufen, wenn der Platz eng wird
-  brandTextBlock: { flexShrink: 1 },
-  brandTitle: { fontSize: 17, fontWeight: '700' },
-  brandClaimRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
-  brandClaim: { fontSize: 11 },
-  brandBadge: { marginLeft: 4, paddingHorizontal: 4, paddingVertical: 1, borderRadius: 3 },
-  brandBadgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
   // 'cover' statt 'contain' bei beiden: Das Standbild ist hochformatig, das
   // Video breit - eingepasst blieben Raender frei und das Bild schaute unter
   // dem Video hervor. Randlos fuellend verdeckt das Video es vollstaendig.
   // overflow verhindert, dass der beschnittene Teil ueber die Ecken laeuft.
   videoBox: { width: '100%', height: 300, marginBottom: 20, borderRadius: 16, overflow: 'hidden' },
   videoFallback: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' },
+  // Position kommt von hier, Inhalt aus MarkenZeile.
+  markenZeile: { position: 'absolute', left: 24, right: 24 },
   video: { width: '100%', height: '100%' },
   title: { fontSize: 22, fontWeight: '700', marginBottom: 6 },
   subtitle: { fontSize: 13, marginBottom: 22, textAlign: 'center' },
