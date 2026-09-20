@@ -6,6 +6,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
 import { api, ApiError } from '../api/client';
+import { useLayout } from '../utils/layout';
 
 // Muss mit "version" in app.json uebereinstimmen. Beim Versionswechsel
 // hier mitziehen - sonst meldet die App im Supportfall die falsche.
@@ -25,6 +26,7 @@ const APP_VERSION = '0.1.0';
  */
 export default function SupportScreen() {
   const { colors, gradient, radius } = useTheme();
+  const { inhaltsBreite } = useLayout();
   const { t } = useUebersetzung();
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
@@ -77,7 +79,7 @@ export default function SupportScreen() {
   return (
     <ScrollView
       style={{ backgroundColor: colors.bg }}
-      contentContainerStyle={styles.container}
+      contentContainerStyle={[styles.container, inhaltsBreite]}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
     >
