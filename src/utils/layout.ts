@@ -15,6 +15,12 @@ import { useWindowDimensions } from 'react-native';
 export const MAX_INHALTSBREITE = 620;
 
 /**
+ * Fuer zweispaltige Ansichten - der Koch-Modus zeigt Zutaten und Schritt
+ * nebeneinander und braucht dafuer mehr als eine Lesespalte.
+ */
+export const MAX_BREITE_ZWEISPALTIG = 980;
+
+/**
  * Ab dieser Breite behandeln wir das Geraet als Tablet. Der Wert liegt
  * ueber dem groessten Handy im Querformat, aber unter dem kleinsten iPad.
  */
@@ -31,6 +37,11 @@ export function useLayout() {
     inhaltsBreite: {
       width: '100%' as const,
       maxWidth: MAX_INHALTSBREITE,
+      alignSelf: 'center' as const,
+    },
+    inhaltsBreiteZweispaltig: {
+      width: '100%' as const,
+      maxWidth: width >= TABLET_AB ? MAX_BREITE_ZWEISPALTIG : MAX_INHALTSBREITE,
       alignSelf: 'center' as const,
     },
   };
