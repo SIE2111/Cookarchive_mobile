@@ -169,7 +169,7 @@ export default function CommunityPoolScreen() {
               // nichts zu tun ist.
               <View style={styles.forkButton}>
                 <Text style={[styles.besitzText, { color: colors.muted }]}>
-                  {item.is_own ? 'Von dir' : 'Bereits übernommen'}
+                  {item.is_own ? t('sonstiges.vonDir') : t('sonstiges.bereitsUebernommen')}
                 </Text>
               </View>
             ) : (
