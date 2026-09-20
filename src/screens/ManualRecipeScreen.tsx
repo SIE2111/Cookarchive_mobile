@@ -343,12 +343,19 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
         tags: tags.length > 0 ? tags : null,
       };
 
-      if (editingRecipeId) {
-        await api.patch(`/recipes/${editingRecipeId}`, payload);
-      } else {
+      // Das Backend meldet hier, wenn das Rezept zwar in der Datenbank
+      // liegt, aber NICHT im gewaehlten Speicherort - NAS voll, Cloud ohne
+      // Zugriff, Geraet aus. Ausgewichen wird bewusst nicht: Wer sein
+      // Rezept auf dem eigenen NAS haben will, will es nicht ersatzweise
+      // woanders. Also muss er es erfahren.
+      const gespeichert = editingRecipeId
+        ? await api.patch<{ speicher_hinweis?: string | null }>(`/recipes/${editingRecipeId}`, payload)
         // source_type nur beim ERSTELLEN mitschicken - beim Bearbeiten
         // bleibt die urspruengliche Herkunft unangetastet.
-        await api.post('/recipes/', { ...payload, source_type: 'manual' });
+        : await api.post<{ speicher_hinweis?: string | null }>('/recipes/', { ...payload, source_type: 'manual' });
+
+      if (gespeichert?.speicher_hinweis) {
+        Alert.alert('Speicherort nicht erreicht', gespeichert.speicher_hinweis);
       }
 
       // Best-effort: alle verwendeten Zutatennamen in die Werteliste
