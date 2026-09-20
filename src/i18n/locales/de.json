@@ -342,7 +342,10 @@
     "umstellungProfi": "Brutzel kürzt die Schritte für Profis…",
     "umstellungAllgemein": "Brutzel stellt das Rezept um…",
     "umstellungHinweis": "Schritte und Tipps werden zusammen umgestellt.",
-    "technikAufmerksamkeit": "Bei dieser Technik lohnt sich besondere Aufmerksamkeit – nimm dir kurz Zeit dafür."
+    "technikAufmerksamkeit": "Bei dieser Technik lohnt sich besondere Aufmerksamkeit – nimm dir kurz Zeit dafür.",
+    "timerLaeuftNochTitel": "Timer läuft noch",
+    "timerLaeuftNochText": "Ein Timer läuft noch. Wenn du jetzt beendest, läuft er nicht mehr weiter.",
+    "trotzdemBeenden": "Trotzdem beenden"
   },
   "naehrwerte": {
     "titel": "Nährwerte pro Portion",
