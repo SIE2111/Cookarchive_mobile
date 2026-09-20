@@ -638,7 +638,9 @@
     "ausPoolNehmen": "Aus dem Pool nehmen",
     "ausPoolEntfernt": "Zurückgezogen",
     "ausPoolEntferntText": "„{titel}“ ist nicht mehr im Community-Pool.",
-    "ausPoolEntfernenFehlgeschlagen": "Konnte nicht zurückgezogen werden"
+    "ausPoolEntfernenFehlgeschlagen": "Konnte nicht zurückgezogen werden",
+    "bereitsUebernommen": "Bereits übernommen",
+    "vonDir": "Von dir"
   },
   "uebersetzung": {
     "angebotTitel": "Dieses Rezept ist auf {sprache} verfasst.",
