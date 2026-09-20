@@ -6,6 +6,7 @@ import { VideoView, useVideoPlayer } from 'expo-video';
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
 import BrutzelAvatar from './BrutzelAvatar';
+import MarkenZeile from './MarkenZeile';
 import { api } from '../api/client';
 import { IOS_REVIEW_URL, ANDROID_REVIEW_URL, SHARE_MESSAGE } from '../config/appLinks';
 
@@ -136,6 +137,11 @@ export default function CookingFinishedCelebration({ recipeTitle, onDone }: Prop
       style={{ backgroundColor: colors.bg }}
       contentContainerStyle={styles.overlay}
     >
+      {/* Dieselbe Markenzeile wie in der Begruessung. Der Abschluss ist
+          der zweite Moment, in dem der Bildschirm ganz der App gehoert -
+          und der einzige, den man nach jedem Kochen sieht. */}
+      <MarkenZeile style={styles.markenZeile} />
+
       {prefsLoaded && showBrutzel && animated && (
         <VideoView player={player} style={styles.video} contentFit="contain" nativeControls={false} />
       )}
@@ -207,6 +213,8 @@ const styles = StyleSheet.create({
   video: { width: '100%', height: 260, marginBottom: 20 },
   // Abstand nach oben, damit die Bitte um Weiterempfehlung nicht direkt
   // am "Fertig"-Knopf klebt - sie ist Beiwerk, nicht Teil des Abschlusses.
+  // Im Fluss statt absolut: Der Abschluss scrollt, die Begruessung nicht.
+  markenZeile: { alignSelf: 'flex-start', marginBottom: 28 },
   promoCard: { width: '100%', padding: 14, marginTop: 48, marginBottom: 24 },
   promoTitle: { fontSize: 14, fontWeight: '700' },
   promoText: { fontSize: 12, lineHeight: 17, marginTop: 3 },
