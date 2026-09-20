@@ -29,6 +29,8 @@ const PACK_ICONS: Record<string, string> = {
   standard: 'silverware-fork-knife',
   vegetarisch: 'leaf',
   cocktails: 'glass-cocktail',
+  italienisch: 'pasta',
+  polnisch: 'food-drumstick',
 };
 
 export default function StarterPacksScreen({ navigation }: any) {
