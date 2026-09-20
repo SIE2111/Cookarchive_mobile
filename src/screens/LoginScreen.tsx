@@ -112,7 +112,9 @@ export default function LoginScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   logo: { width: 84, height: 84, alignSelf: 'center', marginBottom: 10, borderRadius: 18 },
   container: { flex: 1, justifyContent: 'center' },
-  card: { marginHorizontal: 20, padding: 24 },
+  // Obergrenze fuers Tablet: Ein Formular ueber die volle Breite wirkt
+  // verloren. Breiter als jedes Handy, dort also unveraendert.
+  card: { marginHorizontal: 20, padding: 24, width: '100%', maxWidth: 460, alignSelf: 'center' },
   title: { fontSize: 20, fontWeight: '700', textAlign: 'center', marginBottom: 28 },
   label: { fontSize: 11, fontWeight: '500', marginBottom: 6, marginTop: 12 },
   input: { height: 46, paddingHorizontal: 14, fontSize: 14 },
