@@ -117,9 +117,13 @@ interface Props {
   // Detail (VOR dem Kochstart bearbeitet, siehe RecipeDetailScreen) - werden
   // NACH dem Laden ueber das Rezept vom Server gelegt, nie gespeichert.
   sessionOverrides?: { ingredients?: Ingredient[]; steps?: RecipeStep[] };
+  // Portionenzahl, wie sie im Rezeptdetail vor dem Start eingestellt war.
+  // Fehlt sie (z.B. bei einer Beilage oder direkt aus dem Pool gekocht),
+  // wird wie bisher der Profilwert geladen.
+  initialServings?: number;
 }
 
-export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded, onFinished, sessionOverrides }: Props) {
+export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded, onFinished, sessionOverrides, initialServings }: Props) {
   const { colors, gradient, radius } = useTheme();
   const { inhaltsBreiteZweispaltig, istTablet } = useLayout();
   const { t, sprache } = useUebersetzung();
@@ -211,7 +215,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
   // Portionen NUR fuer diesen Kochvorgang. Das Rezept behaelt seinen Wert -
   // ein Schweinsbraten ist fuer sechs gedacht, auch wenn heute fuer vier
   // gekocht wird. Deshalb wird hier nichts gespeichert.
-  const [kochPortionen, setKochPortionen] = useState<number | null>(null);
+  const [kochPortionen, setKochPortionen] = useState<number | null>(initialServings ?? null);
 
   useEffect(() => {
     api
@@ -221,7 +225,13 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
         setLevel(prefs.default_hauben_level);
         setLargeText(prefs.large_text);
         setShowBrutzel(prefs.show_brutzel);
-        setKochPortionen(prefs.default_servings);
+        // Nur den Profilwert nehmen, wenn keine Portionenzahl vom
+        // Rezeptdetail mitkam - sonst wuerde die eigene Einstellung des
+        // Nutzers ("ich koche heute fuer 8") vom Profil-Standard (4)
+        // ueberschrieben, sobald diese Antwort zurueckkommt.
+        if (initialServings == null) {
+          setKochPortionen(prefs.default_servings);
+        }
       })
       .catch(() => {
         // Praeferenz konnte nicht geladen werden - Auto-Vorlesen bleibt aus,
