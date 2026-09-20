@@ -11,6 +11,7 @@ import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { MainTabParamList, MainStackParamList } from '../navigation/AppNavigator';
+import { useLayout } from '../utils/layout';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabParamList, 'Einkauf'>,
@@ -29,6 +30,7 @@ interface ShoppingItem {
 
 export default function ShoppingListScreen({}: Props) {
   const { colors, gradient, radius } = useTheme();
+  const { inhaltsBreite } = useLayout();
   const { t } = useUebersetzung();
   const [sections, setSections] = useState<{ title: string; data: ShoppingItem[] }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -263,7 +265,7 @@ export default function ShoppingListScreen({}: Props) {
       <SectionList
         sections={sections}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={[{ paddingBottom: 40 }, inhaltsBreite]}
         ListEmptyComponent={
           !error ? (
             <Text style={[styles.emptyText, { color: colors.muted }]}>
