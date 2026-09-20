@@ -160,7 +160,9 @@ export default function ConfirmEmailScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'center' },
-  card: { marginHorizontal: 20, padding: 24, alignItems: 'center' },
+  // Obergrenze fuers Tablet: Ein Formular ueber die volle Breite wirkt
+  // verloren. Breiter als jedes Handy, dort also unveraendert.
+  card: { marginHorizontal: 20, padding: 24, alignItems: 'center', width: '100%', maxWidth: 460, alignSelf: 'center' },
   emoji: { fontSize: 40, marginBottom: 8 },
   title: { fontSize: 20, fontWeight: '700', textAlign: 'center' },
   subtitle: { fontSize: 13, lineHeight: 20, textAlign: 'center', marginTop: 10 },
