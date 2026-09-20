@@ -9,6 +9,7 @@ import { useUebersetzung } from '../i18n';
 import { api, ApiError } from '../api/client';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/AppNavigator';
+import { useLayout } from '../utils/layout';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'ManualRecipe'>;
 
@@ -24,6 +25,7 @@ interface StepDraft {
 
 export default function ManualRecipeScreen({ navigation, route }: Props) {
   const { colors, gradient, radius } = useTheme();
+  const { inhaltsBreite } = useLayout();
   const { t } = useUebersetzung();
   const editingRecipeId = route.params?.recipeId ?? null;
   const [isLoadingExisting, setIsLoadingExisting] = useState(!!editingRecipeId);
@@ -382,7 +384,7 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
   return (
     <ScrollView
       keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="on-drag" style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
+      keyboardDismissMode="on-drag" style={{ backgroundColor: colors.bg }} contentContainerStyle={[styles.container, inhaltsBreite]}>
       <Pressable onPress={handleAddImagePress} disabled={isGeneratingImage} style={[styles.imagePicker, { backgroundColor: colors.card, borderRadius: radius.md }]}>
         {isGeneratingImage ? (
           <>
