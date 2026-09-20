@@ -6,6 +6,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
 import { api, ApiError } from '../api/client';
 import PasswortFeld from '../components/PasswortFeld';
+import { useLayout } from '../utils/layout';
 
 type Props = { navigation: any };
 
@@ -24,6 +25,7 @@ type Props = { navigation: any };
  */
 export default function ForgotPasswordScreen({ navigation }: Props) {
   const { colors, gradient, radius } = useTheme();
+  const { inhaltsBreite } = useLayout();
   const { t } = useUebersetzung();
 
   const [schritt, setSchritt] = useState<'email' | 'code'>('email');
@@ -72,7 +74,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
   return (
     <ScrollView
       style={{ backgroundColor: colors.bg }}
-      contentContainerStyle={styles.container}
+      contentContainerStyle={[styles.container, inhaltsBreite]}
       keyboardShouldPersistTaps="handled"
     >
       <Text style={[styles.titel, { color: colors.text }]}>{t('passwort.vergessenTitel')}</Text>
