@@ -15,7 +15,7 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": false,
+      "supportsTablet": true,
       "bundleIdentifier": "at.homearchive.meinkochbuch",
       "infoPlist": {
         "NSCameraUsageDescription": "Mein Kochbuch braucht Kamerazugriff, um Kochbuchseiten oder Rezeptzettel zu fotografieren und automatisch zu erfassen.",
