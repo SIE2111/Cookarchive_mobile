@@ -4,11 +4,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../theme/ThemeContext';
 import { SPRACHEN, Sprachwahl, spracheSetzen, useUebersetzung } from '../i18n';
+import { useLayout } from '../utils/layout';
 
 const SPEICHER_SCHLUESSEL = 'meinkochbuch:sprache';
 
 export default function LanguageSettingsScreen({ navigation }: any) {
   const { colors, radius, gradient } = useTheme();
+  const { inhaltsBreite } = useLayout();
   const { t } = useUebersetzung();
   const [wahl, setWahl] = useState<Sprachwahl>('system');
 
@@ -49,7 +51,7 @@ export default function LanguageSettingsScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.container, inhaltsBreite]} keyboardShouldPersistTaps="handled">
         {navigation.canGoBack() && (
           <Pressable onPress={() => navigation.goBack()} hitSlop={10} style={{ marginBottom: 10 }}>
             <Text style={{ color: gradient[0], fontSize: 14, fontWeight: '600' }}>
