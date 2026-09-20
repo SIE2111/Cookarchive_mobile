@@ -9,6 +9,7 @@ import { askWhatNext } from '../utils/afterRecipeSaved';
 import { api, ApiError } from '../api/client';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/AppNavigator';
+import { useLayout } from '../utils/layout';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'WebImport'>;
 
@@ -37,6 +38,7 @@ interface ImportedRecipe {
 
 export default function WebImportScreen({ navigation, route }: Props) {
   const { colors, gradient, radius } = useTheme();
+  const { inhaltsBreite } = useLayout();
   const { t } = useUebersetzung();
   const [url, setUrl] = useState('');
   const [isImporting, setIsImporting] = useState(false);
@@ -308,7 +310,7 @@ export default function WebImportScreen({ navigation, route }: Props) {
   return (
     <ScrollView
       keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="on-drag" style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
+      keyboardDismissMode="on-drag" style={{ backgroundColor: colors.bg }} contentContainerStyle={[styles.container, inhaltsBreite]}>
       <Text style={[styles.sourceHint, { color: colors.muted }]} numberOfLines={1}>
         Quelle: {originUrl}
       </Text>
