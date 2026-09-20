@@ -6,6 +6,7 @@ import { useUebersetzung } from '../i18n';
 import { api, ApiError } from '../api/client';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/AppNavigator';
+import { useLayout } from '../utils/layout';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'WeeklyPlan'>;
 
@@ -68,6 +69,7 @@ function getMondayOfWeek(reference: Date, weekOffset: number): Date {
 
 export default function WeeklyPlanScreen({ navigation }: Props) {
   const { colors, gradient, radius } = useTheme();
+  const { istTablet, inhaltsBreiteZweispaltig } = useLayout();
   const { t } = useUebersetzung();
   const [weekOffset, setWeekOffset] = useState(0);
   const [entries, setEntries] = useState<PlanEntry[]>([]);
@@ -244,12 +246,17 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
       ) : (
         <ScrollView
       keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="on-drag" contentContainerStyle={{ paddingBottom: 40, paddingTop: 4 }}>
+      keyboardDismissMode="on-drag" contentContainerStyle={[{ paddingBottom: 40, paddingTop: 4 }, inhaltsBreiteZweispaltig]}>
+          {/* Auf dem Tablet zwei Tage nebeneinander statt sieben
+              untereinander: Ein Wochenplan will als Woche gelesen werden,
+              nicht als Liste. Umbruch statt fester Spalten, damit das
+              Querformat automatisch mehr Platz nutzt. */}
+          <View style={istTablet ? styles.tageRaster : undefined}>
           {weekDays.map((day, i) => {
             const dateKey = toDateKey(day);
             const isToday = toDateKey(new Date()) === dateKey;
             return (
-              <View key={dateKey} style={styles.daySection}>
+              <View key={dateKey} style={[styles.daySection, istTablet && styles.tagInSpalte]}>
                 <Text style={[styles.dayLabel, { color: isToday ? gradient[0] : colors.text }]}>
                   {t(WEEKDAY_KEYS[i])}, {formatShort(day)}
                 </Text>
@@ -334,6 +341,7 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
               </View>
             );
           })}
+          </View>
         </ScrollView>
       )}
 
@@ -391,6 +399,9 @@ const styles = StyleSheet.create({
   // dem Knopf klebt und angeschnitten wirkt.
   addAllButton: { flexDirection: 'row', gap: 7, alignItems: 'center', justifyContent: 'center', height: 44, marginBottom: 12 },
   addAllButtonText: { color: '#fff', fontWeight: '700', fontSize: 12.5 },
+  tageRaster: { flexDirection: 'row', flexWrap: 'wrap', gap: 18 },
+  // Knapp unter der Haelfte, damit der Abstand dazwischen Platz hat.
+  tagInSpalte: { width: '47%' },
   daySection: { marginBottom: 18 },
   dayLabel: { fontSize: 13.5, fontWeight: '700', marginBottom: 8 },
   slotRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 11, marginBottom: 6 },
