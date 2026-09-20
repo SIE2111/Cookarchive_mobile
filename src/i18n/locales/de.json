@@ -632,7 +632,13 @@
     "nasAnleitungAndere": "Such in den Einstellungen deines NAS nach „WebDAV\" und schalte es mit HTTPS ein. Notier dir Port und Pfad.",
     "nasWichtig": "Dein NAS muss aus dem Internet erreichbar sein – unser Server steht nicht in deinem Heimnetz und kann eine Adresse wie 192.168.1.50 nicht erreichen.",
     "istFertig": "{titel} ist fertig.",
-    "erzaehlWeiter": "Dann erzähl es weiter – das hilft der App mehr als alles andere."
+    "erzaehlWeiter": "Dann erzähl es weiter – das hilft der App mehr als alles andere.",
+    "ausPoolFrage": "Aus dem Pool nehmen?",
+    "ausPoolText": "„{titel}“ ist danach im Community-Pool nicht mehr sichtbar. Kopien, die andere bereits übernommen haben, bleiben bei ihnen bestehen.",
+    "ausPoolNehmen": "Aus dem Pool nehmen",
+    "ausPoolEntfernt": "Zurückgezogen",
+    "ausPoolEntferntText": "„{titel}“ ist nicht mehr im Community-Pool.",
+    "ausPoolEntfernenFehlgeschlagen": "Konnte nicht zurückgezogen werden"
   },
   "uebersetzung": {
     "angebotTitel": "Dieses Rezept ist auf {sprache} verfasst.",
