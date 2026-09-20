@@ -7,6 +7,7 @@ import PasswortFeld from '../components/PasswortFeld';
 import { api, ApiError } from '../api/client';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/AppNavigator';
+import { useLayout } from '../utils/layout';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'StorageSettings'>;
 
@@ -54,6 +55,7 @@ const CLOUD_PROVIDERS: { key: string; apiPrefix: string; title: string; subtitle
  */
 export default function StorageSettingsScreen({ navigation }: Props) {
   const { colors, gradient, radius } = useTheme();
+  const { inhaltsBreite } = useLayout();
   const { t } = useUebersetzung();
   const [prefs, setPrefs] = useState<Preferences | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -252,7 +254,7 @@ export default function StorageSettingsScreen({ navigation }: Props) {
   }
 
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
+    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={[styles.container, inhaltsBreite]}>
       {STORAGE_OPTIONS.map((option) => {
         const isSelected = prefs.storage_mode === option.key;
         return (
