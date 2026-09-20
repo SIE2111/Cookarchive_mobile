@@ -10,6 +10,7 @@ import { useFocusEffect, type CompositeScreenProps } from '@react-navigation/nat
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { MainTabParamList, MainStackParamList } from '../navigation/AppNavigator';
+import { useLayout } from '../utils/layout';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabParamList, 'Profil'>,
@@ -97,6 +98,7 @@ const ROWS: { key: PreferenceKey; title: string; subtitle: string; lockedWhen?: 
 
 export default function ProfileScreen({ navigation }: Props) {
   const { colors, gradient, radius, theme, setTheme } = useTheme();
+  const { inhaltsBreite } = useLayout();
   const { t } = useUebersetzung();
   const { signOut, session } = useAuth();
   const { refresh: refreshServerSync } = useServerSync();
@@ -270,7 +272,7 @@ export default function ProfileScreen({ navigation }: Props) {
   return (
     <ScrollView
       keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="on-drag" style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
+      keyboardDismissMode="on-drag" style={{ backgroundColor: colors.bg }} contentContainerStyle={[styles.container, inhaltsBreite]}>
       <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 4 }]}>{t('profil.name')}</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 }}>
         <TextInput
