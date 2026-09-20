@@ -151,7 +151,7 @@ export default function CommunityPoolScreen() {
               </View>
             )}
             <View style={{ flex: 1 }}>
-              <Text style={[styles.title, { color: colors.text }]}>{item.title}</Text>
+              <Text style={[styles.title, { color: colors.text }]} numberOfLines={2}>{item.title}</Text>
               <Text style={[styles.meta, { color: colors.muted }]}>
                 {[
                   item.prep_time_minutes ? `${item.prep_time_minutes} Min.` : null,
@@ -167,8 +167,8 @@ export default function CommunityPoolScreen() {
               // Statt des Knopfes ein Hinweis: Eine leere Stelle wuerde wie
               // ein Fehler wirken, und der Nutzer soll sehen, WARUM hier
               // nichts zu tun ist.
-              <View style={styles.forkButton}>
-                <Text style={[styles.besitzText, { color: colors.muted }]}>
+              <View style={[styles.forkButton, styles.statusBox]}>
+                <Text style={[styles.besitzText, { color: colors.muted }]} numberOfLines={2}>
                   {item.is_own ? t('sonstiges.vonDir') : t('sonstiges.bereitsUebernommen')}
                 </Text>
               </View>
@@ -176,7 +176,7 @@ export default function CommunityPoolScreen() {
               <Pressable
                 onPress={() => handleFork(item)}
                 disabled={forkingId === item.id}
-                style={[styles.forkButton, { backgroundColor: gradient[0], borderRadius: radius.sm }]}
+                style={[styles.forkButton, styles.statusBox, { backgroundColor: gradient[0], borderRadius: radius.sm }]}
               >
                 {forkingId === item.id ? (
                   <ActivityIndicator color="#fff" size="small" />
@@ -196,14 +196,20 @@ export default function CommunityPoolScreen() {
 const styles = StyleSheet.create({
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   thumb: { width: 54, height: 54, marginRight: 12 },
+  // Feste Breite fuer die rechte Spalte (Knopf oder Status-Hinweis):
+  // React Native schrumpft Geschwister in einer Reihe NICHT automatisch
+  // wie im Web (flexShrink ist dort standardmaessig 0). Ohne diese Grenze
+  // beanspruchte "Bereits uebernommen" seine volle Textbreite und drueckte
+  // die Titel-Spalte daneben bis auf einzelne Woerter zusammen.
+  statusBox: { width: 92, alignItems: 'center', justifyContent: 'center' },
   thumbEmpty: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(128,128,128,0.15)' },
   header: { fontSize: 19, fontWeight: '700', marginBottom: 4 },
   headerSub: { fontSize: 11.5, lineHeight: 17, marginBottom: 16 },
   card: { flexDirection: 'row', alignItems: 'center', padding: 14, marginBottom: 9 },
   karteInSpalte: { flex: 1 },
-  title: { fontSize: 14, fontWeight: '700' },
+  title: { fontSize: 14, fontWeight: '700', flexShrink: 1 },
   meta: { fontSize: 10.5, marginTop: 3 },
   forkButton: { paddingHorizontal: 14, paddingVertical: 9 },
-  forkButtonText: { color: '#fff', fontWeight: '700', fontSize: 11.5 },
-  besitzText: { fontSize: 11, fontWeight: '600' },
+  forkButtonText: { color: '#fff', fontWeight: '700', fontSize: 11.5, textAlign: 'center' },
+  besitzText: { fontSize: 11, fontWeight: '600', textAlign: 'center' },
 });
