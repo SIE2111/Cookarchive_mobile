@@ -4,6 +4,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
 import { api, ApiError } from '../api/client';
 import BrutzelVoicePicker from '../components/BrutzelVoicePicker';
+import { useLayout } from '../utils/layout';
 
 /**
  * Alles zum Vorlesen an einem Ort.
@@ -15,6 +16,7 @@ import BrutzelVoicePicker from '../components/BrutzelVoicePicker';
  */
 export default function VoiceSettingsScreen() {
   const { colors } = useTheme();
+  const { inhaltsBreite } = useLayout();
   const { t } = useUebersetzung();
   const [autoRead, setAutoRead] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -49,7 +51,7 @@ export default function VoiceSettingsScreen() {
   }
 
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
+    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={[styles.container, inhaltsBreite]}>
       <Text style={[styles.label, { color: colors.muted }]}>BEIM KOCHEN</Text>
       <View style={[styles.row, { backgroundColor: colors.card }]}>
         <View style={{ flex: 1 }}>
