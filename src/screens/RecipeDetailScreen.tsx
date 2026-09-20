@@ -72,7 +72,7 @@ const MAX_SELECTABLE_SIDES = 2;
 
 export default function RecipeDetailScreen({ route, navigation }: Props) {
   const { colors, gradient, radius } = useTheme();
-  const { inhaltsBreite } = useLayout();
+  const { inhaltsBreiteZweispaltig, istTablet } = useLayout();
   const { t, sprache } = useUebersetzung();
   const { recipeId } = route.params;
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
@@ -606,7 +606,14 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
 
   return (
     <>
-    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={[styles.container, inhaltsBreite]}>
+    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={[styles.container, inhaltsBreiteZweispaltig]}>
+      {/* Tablet: links das Rezept selbst (Bild, Titel, Portionen,
+          Ausruestung), rechts alles zum Handeln (Zubereitung starten,
+          Einkaufsliste, Beilagen, Naehrwerte). Untereinander scrollt man
+          auf 10 Zoll an halb leeren Zeilen vorbei. Auf dem Handy sind die
+          Spaltenstile undefined, die Reihenfolge bleibt. */}
+      <View style={istTablet ? styles.spaltenReihe : undefined}>
+      <View style={istTablet ? styles.spalteLinks : undefined}>
       {recipe.cover_image_url && (
         <Image source={{ uri: recipe.cover_image_url }} style={[styles.heroImage, { borderRadius: radius.md }]} />
       )}
@@ -676,6 +683,8 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
         </View>
       )}
 
+      </View>
+      <View style={istTablet ? styles.spalteRechts : undefined}>
       <Pressable
         onPress={() => {
           // Merken, welche Beilagen tatsaechlich mitgekocht werden - beim
@@ -941,6 +950,8 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
           <Text style={[styles.noteText, { color: colors.text }]}>{recipe.personal_note}</Text>
         </View>
       )}
+      </View>
+      </View>
     </ScrollView>
 
     <Modal visible={isPickerOpen} animationType="slide" onRequestClose={() => setIsPickerOpen(false)}>
@@ -1098,6 +1109,9 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, fontWeight: '700' },
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4, marginBottom: 20 },
   meta: { fontSize: 12 },
+  spaltenReihe: { flexDirection: 'row', gap: 22, alignItems: 'flex-start' },
+  spalteLinks: { width: 340 },
+  spalteRechts: { flex: 1 },
   sourceHint: { fontSize: 10.5, marginTop: -12, marginBottom: 18 },
   servingsCard: { alignItems: 'center', padding: 16, marginBottom: 14 },
   servingsLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginBottom: 10, textTransform: 'uppercase' },
