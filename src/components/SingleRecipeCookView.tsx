@@ -121,7 +121,7 @@ interface Props {
 
 export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded, onFinished, sessionOverrides }: Props) {
   const { colors, gradient, radius } = useTheme();
-  const { inhaltsBreite } = useLayout();
+  const { inhaltsBreiteZweispaltig, istTablet } = useLayout();
   const { t, sprache } = useUebersetzung();
 
   const [recipe, setRecipe] = useState<RecipeForCooking | null>(null);
@@ -865,7 +865,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
     <View style={[styles.container, { backgroundColor: colors.bg, display: isActive ? 'flex' : 'none' }]}>
       <ScrollView
       keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="on-drag" style={{ flex: 1 }} contentContainerStyle={[{ paddingBottom: 16 }, inhaltsBreite]}>
+      keyboardDismissMode="on-drag" style={{ flex: 1 }} contentContainerStyle={[{ paddingBottom: 16 }, inhaltsBreiteZweispaltig]}>
       {brauchtUebersetzung && (
         <TranslationBanner
           quellsprache={quellsprache}
@@ -916,6 +916,13 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
         })}
       </View>
 
+      {/* Auf dem Tablet nebeneinander: Zutaten links, Schritt rechts.
+          Untereinander bliebe die halbe Flaeche leer, und man muesste zum
+          Nachsehen der Menge scrollen - mitten im Kochen der laestigste
+          Moment. Auf dem Handy bleibt alles wie bisher, die Stile sind
+          dort undefined. */}
+      <View style={istTablet ? styles.spaltenReihe : undefined}>
+      <View style={istTablet ? styles.spalteZutaten : undefined}>
       <Pressable
         onPress={() => setIsIngredientsOpen((prev) => !prev)}
         style={[styles.ingredientsToggle, { backgroundColor: colors.card, borderRadius: radius.sm }]}
@@ -927,7 +934,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
         <Text style={{ color: colors.muted, fontSize: 12 }}>{isIngredientsOpen ? '▲' : '▼'}</Text>
       </Pressable>
 
-      {isIngredientsOpen && (
+      {(isIngredientsOpen || istTablet) && (
         <View style={[styles.ingredientsList, { backgroundColor: colors.card, borderRadius: radius.sm }]}>
           {recipe.ingredients.map((ing, i) => (
             <Pressable
@@ -945,6 +952,8 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
         </View>
       )}
 
+      </View>
+      <View style={istTablet ? styles.spalteSchritt : undefined}>
       <Text style={[styles.stepIndicator, { color: colors.muted }]}>
         SCHRITT {currentIndex + 1}/{totalSteps}
       </Text>
@@ -1101,6 +1110,8 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
           )}
         </View>
       )}
+      </View>
+      </View>
       </ScrollView>
 
       <View style={styles.navRow}>
@@ -1293,6 +1304,9 @@ const styles = StyleSheet.create({
     gap: 3, minHeight: 44, paddingHorizontal: 6,
   },
   levelHat: { fontSize: 17 },
+  spaltenReihe: { flexDirection: 'row', gap: 20, alignItems: 'flex-start' },
+  spalteZutaten: { width: 260 },
+  spalteSchritt: { flex: 1 },
   ingredientsToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12, marginBottom: 4 },
   ingredientsToggleText: { fontSize: 12.5, fontWeight: '600' },
   ingredientsList: { padding: 12, marginBottom: 16 },
