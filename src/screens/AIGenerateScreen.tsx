@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, ActivityIndicator, Image, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, ActivityIndicator, Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { ensureMediaLibraryAccess } from '../utils/mediaPermissions';
 import { useTheme } from '../theme/ThemeContext';
@@ -337,15 +337,12 @@ export default function AIGenerateScreen({ navigation }: Props) {
 
   // Schritt 2: generiertes Ergebnis bearbeiten und speichern
   return (
-    // Ohne KeyboardAvoidingView weiss die ScrollView nichts von der
-    // Tastatur - siehe ManualRecipeScreen fuer denselben Fall: ein
-    // spaetes Zutaten- oder Schrittfeld landet unerreichbar darunter.
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.bg }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-    >
-    <ScrollView contentContainerStyle={[styles.container, inhaltsBreite]}>
+    // automaticallyAdjustKeyboardInsets statt KeyboardAvoidingView: siehe
+    // ManualRecipeScreen fuer den Grund - bei einer langen Liste scrollt
+    // KeyboardAvoidingView nicht zum fokussierten Feld, dieser Weg schon.
+    <ScrollView
+      automaticallyAdjustKeyboardInsets
+      contentContainerStyle={[styles.container, inhaltsBreite]}>
       <Pressable onPress={handleAddImagePress} disabled={isGeneratingImage} style={[styles.imagePicker, { backgroundColor: colors.card, borderRadius: radius.md }]}>
         {isGeneratingImage ? (
           <>
@@ -479,7 +476,6 @@ export default function AIGenerateScreen({ navigation }: Props) {
         </Text>
       </Pressable>
     </ScrollView>
-    </KeyboardAvoidingView>
   );
 }
 
