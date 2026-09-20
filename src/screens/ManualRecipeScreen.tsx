@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, ActivityIndicator, Image, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, ActivityIndicator, Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { ensureMediaLibraryAccess } from '../utils/mediaPermissions';
@@ -387,17 +387,14 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
   }
 
   return (
-    // Ohne KeyboardAvoidingView weiss die ScrollView nichts von der
-    // Tastatur: Ein spaetes Zutaten- oder Schrittfeld landet dann darunter
-    // und ist nicht erreichbar, waehrend man genau dort tippt. "padding"
-    // auf iOS, "height" auf Android - das ist dort der Modus, der mit
-    // einer ScrollView zusammenarbeitet statt sie zu verdraengen.
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.bg }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-    >
+    // automaticallyAdjustKeyboardInsets statt KeyboardAvoidingView: Bei
+    // einer langen Liste verschiebt KeyboardAvoidingView nur die ganze
+    // Ansicht, scrollt aber NICHT zum fokussierten Feld - das Feld blieb
+    // dadurch weiter unter der Tastatur, sobald die Liste laenger war als
+    // der sichtbare Ausschnitt. Dieser Weg scrollt tatsaechlich zum Feld,
+    // in das gerade getippt wird (iOS 0.71+, hier vorhanden).
     <ScrollView
+      automaticallyAdjustKeyboardInsets
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag" contentContainerStyle={[styles.container, inhaltsBreite]}>
       <Pressable onPress={handleAddImagePress} disabled={isGeneratingImage} style={[styles.imagePicker, { backgroundColor: colors.card, borderRadius: radius.md }]}>
@@ -556,7 +553,6 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
         )}
       </Pressable>
     </ScrollView>
-    </KeyboardAvoidingView>
   );
 }
 
