@@ -345,7 +345,11 @@
     "technikAufmerksamkeit": "Bei dieser Technik lohnt sich besondere Aufmerksamkeit – nimm dir kurz Zeit dafür.",
     "timerLaeuftNochTitel": "Timer läuft noch",
     "timerLaeuftNochText": "Ein Timer läuft noch. Wenn du jetzt beendest, läuft er nicht mehr weiter.",
-    "trotzdemBeenden": "Trotzdem beenden"
+    "trotzdemBeenden": "Trotzdem beenden",
+    "kochvorgangAbbrechenTitel": "Kochvorgang abbrechen?",
+    "kochvorgangAbbrechenText": "Du bist beim ersten Schritt. Zurück verlässt den Kochvorgang.",
+    "weiterkochen": "Weiterkochen",
+    "abbrechenBestaetigen": "Abbrechen"
   },
   "naehrwerte": {
     "titel": "Nährwerte pro Portion",
