@@ -661,7 +661,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
             gerade gekocht hat, entscheidet hier, ob es andere sehen
             sollen. */}
         <ShareRecipeButton recipeId={recipe.id} recipeTitle={recipe.title} size={23} style={{ paddingLeft: 8 }} />
-        <PublishToPoolButton recipeId={recipe.id} recipeTitle={recipe.title} size={24} style={{ paddingLeft: 8 }} />
+        <PublishToPoolButton recipeId={recipe.id} recipeTitle={recipe.title} size={24} style={{ paddingLeft: 8 }} initialPublished={recipe.visibility === 'public_pool'} />
         <Pressable onPress={handleToggleFavorite} disabled={isSavingFavorite} hitSlop={10} style={{ paddingLeft: 8 }}>
           <MaterialCommunityIcons
             name={recipe.is_favorite ? 'heart' : 'heart-outline'}
