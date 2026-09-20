@@ -847,6 +847,20 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
 
   const goNext = () => {
     if (isLastStep) {
+      // Laeuft noch ein Timer - egal auf welchem Schritt -, erst
+      // nachfragen. Ohne das beendet "Fertig" den Kochvorgang und der
+      // Timer verschwindet mit, obwohl das Fleisch noch im Ofen steht.
+      if (activeTimerStepIndex !== null && isTimerRunning) {
+        Alert.alert(
+          t('kochen.timerLaeuftNochTitel'),
+          t('kochen.timerLaeuftNochText'),
+          [
+            { text: t('allgemein.abbrechen'), style: 'cancel' },
+            { text: t('kochen.trotzdemBeenden'), style: 'destructive', onPress: () => onFinished(true) },
+          ],
+        );
+        return;
+      }
       onFinished(true);
       return;
     }
