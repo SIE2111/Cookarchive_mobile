@@ -5,6 +5,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
 import { api, ApiError } from '../api/client';
+import { useLayout } from '../utils/layout';
 
 type Pack = {
   key: string;
@@ -32,6 +33,7 @@ const PACK_ICONS: Record<string, string> = {
 
 export default function StarterPacksScreen({ navigation }: any) {
   const { colors, radius, gradient } = useTheme();
+  const { inhaltsBreite } = useLayout();
   const { t } = useUebersetzung();
   const [packs, setPacks] = useState<Pack[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -122,7 +124,7 @@ export default function StarterPacksScreen({ navigation }: any) {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.container, inhaltsBreite]} keyboardShouldPersistTaps="handled">
         {navigation.canGoBack() && (
           <Pressable onPress={() => navigation.goBack()} hitSlop={10} style={{ marginBottom: 10 }}>
             <Text style={{ color: gradient[0], fontSize: 14, fontWeight: '600' }}>‹ Zurück</Text>
