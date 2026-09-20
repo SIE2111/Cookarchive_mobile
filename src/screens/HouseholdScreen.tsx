@@ -4,6 +4,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
 import { api, ApiError } from '../api/client';
+import { useLayout } from '../utils/layout';
 
 interface Member {
   user_id: string;
@@ -30,6 +31,7 @@ interface InviteListItem {
 
 export default function HouseholdScreen() {
   const { colors, gradient, radius } = useTheme();
+  const { inhaltsBreite } = useLayout();
   const { t } = useUebersetzung();
   const [household, setHousehold] = useState<Household | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
@@ -264,7 +266,7 @@ export default function HouseholdScreen() {
     // Bildschirmhoehe und t('haushalt.haushaltVerlassen') liegt unerreichbar unten.
     <ScrollView
       style={{ backgroundColor: colors.bg }}
-      contentContainerStyle={styles.scrollContent}
+      contentContainerStyle={[styles.scrollContent, inhaltsBreite]}
       keyboardShouldPersistTaps="handled"
     >
       <Text style={[styles.householdName, { color: colors.text }]}>{household.name}</Text>
