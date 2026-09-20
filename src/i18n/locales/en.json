@@ -345,7 +345,11 @@
     "technikAufmerksamkeit": "This technique deserves a little extra attention – take your time with it.",
     "timerLaeuftNochTitel": "Timer still running",
     "timerLaeuftNochText": "A timer is still running. If you finish now, it won't keep running.",
-    "trotzdemBeenden": "Finish anyway"
+    "trotzdemBeenden": "Finish anyway",
+    "kochvorgangAbbrechenTitel": "Cancel cooking?",
+    "kochvorgangAbbrechenText": "You're on the first step. Going back leaves cooking mode.",
+    "weiterkochen": "Keep cooking",
+    "abbrechenBestaetigen": "Cancel"
   },
   "naehrwerte": {
     "titel": "Nutrition per serving",
