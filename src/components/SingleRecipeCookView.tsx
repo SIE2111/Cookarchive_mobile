@@ -869,7 +869,18 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
 
   const goBackStep = () => {
     if (currentIndex === 0) {
-      onFinished(false);
+      // "Zurueck" auf dem ERSTEN Schritt verlaesst den Kochvorgang - anders
+      // als auf jedem spaeteren Schritt, wo es nur einen Schritt zurueck
+      // geht. Ohne Nachfrage verliert man versehentlich den ganzen
+      // Fortschritt durch einen Tipp, der bisher immer harmlos war.
+      Alert.alert(
+        t('kochen.kochvorgangAbbrechenTitel'),
+        t('kochen.kochvorgangAbbrechenText'),
+        [
+          { text: t('kochen.weiterkochen'), style: 'cancel' },
+          { text: t('kochen.abbrechenBestaetigen'), style: 'destructive', onPress: () => onFinished(false) },
+        ],
+      );
       return;
     }
     setCurrentIndex((i) => i - 1);
