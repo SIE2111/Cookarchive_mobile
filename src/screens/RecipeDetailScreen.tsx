@@ -484,6 +484,16 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
       zeilen.push(recipe.personal_note.trim());
     }
     zeilen.push('');
+    // Vorschau-Link dazu: der Text allein liest sich in WhatsApp & Co.
+    // als Wall of Text ohne Bild. Der Link fuehrt auf eine oeffentliche
+    // Seite mit Foto, Zutaten und Schritten (siehe
+    // homearchive.at/meinkochbuch/rezept/{id}, backend/routers/
+    // public_recipes.py) - wer die App schon hat, kann von dort auch
+    // direkt weiter zur App, wer nicht, landet auf der Produktseite.
+    // Kein automatisches Uebernehmen ins eigene Kochbuch ueber diesen
+    // Weg - dafuer gibt es den Teilen-per-E-Mail-Knopf oben (ShareRecipeButton).
+    zeilen.push(`https://homearchive.at/meinkochbuch/rezept/${recipe.id}`);
+    zeilen.push('');
     zeilen.push(t('detail.geteiltMit'));
 
     try {
