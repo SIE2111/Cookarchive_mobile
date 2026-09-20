@@ -14,6 +14,7 @@ import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { MainTabParamList, MainStackParamList } from '../navigation/AppNavigator';
+import { useLayout } from '../utils/layout';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabParamList, 'Home'>,
@@ -41,6 +42,7 @@ let hasShownGreetingThisSession = false;
 
 export default function DashboardScreen({ navigation }: Props) {
   const { colors, gradient, radius } = useTheme();
+  const { inhaltsBreite } = useLayout();
   const { t } = useUebersetzung();
   const { session } = useAuth();
   const [recipes, setRecipes] = useState<RecipeSummary[]>([]);
@@ -206,7 +208,7 @@ export default function DashboardScreen({ navigation }: Props) {
     <>
     <ScrollView
       style={{ backgroundColor: colors.bg }}
-      contentContainerStyle={styles.container}
+      contentContainerStyle={[styles.container, inhaltsBreite]}
       refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
     >
       {/* Begruessung ("Hallo …! 👋" / "Was kochen wir heute?") bewusst
