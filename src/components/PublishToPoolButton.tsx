@@ -28,17 +28,25 @@ export default function PublishToPoolButton({
   recipeTitle,
   size = 18,
   style,
+  // Ob das Rezept schon veroeffentlicht ist, wenn der Bildschirm
+  // OEFFNET - vom Rezeptdetail aus recipe.visibility === 'public_pool'
+  // gereicht. Ohne das wuesste der Knopf beim Wiederoeffnen eines
+  // frueher veroeffentlichten Rezepts nichts von diesem Zustand und
+  // wuerde faelschlich "Veroeffentlichen" statt "Aus dem Pool nehmen"
+  // anbieten.
+  initialPublished = false,
 }: {
   recipeId: string;
   recipeTitle: string;
   size?: number;
   style?: object;
+  initialPublished?: boolean;
 }) {
   const { colors, gradient } = useTheme();
   const { t } = useUebersetzung();
   const { serverSyncEnabled, isLoading: syncLoading } = useServerSync();
   const [isPublishing, setIsPublishing] = useState(false);
-  const [isPublished, setIsPublished] = useState(false);
+  const [isPublished, setIsPublished] = useState(initialPublished);
 
   // Solange der Wert noch laedt, NICHT sperren: Ein kurz verzoegerter
   // Ladevorgang darf nicht wie eine Sperre aussehen.
@@ -68,8 +76,43 @@ export default function PublishToPoolButton({
     }
   };
 
+  // Keyed ueber die PRIVATE recipe_id, nicht die id des PublicRecipe-
+  // Datensatzes - die kennt dieser Knopf gar nicht (siehe
+  // routers/pool.py unpublish_recipe fuer den Grund).
+  const unpublish = async () => {
+    setIsPublishing(true);
+    try {
+      await api.post('/pool/unpublish', { recipe_id: recipeId });
+      setIsPublished(false);
+      Alert.alert(t('sonstiges.ausPoolEntfernt'), t('sonstiges.ausPoolEntferntText', { titel: recipeTitle }));
+    } catch (err) {
+      Alert.alert(
+        t('sonstiges.ausPoolEntfernenFehlgeschlagen'),
+        err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'),
+      );
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
   const confirm = () => {
-    if (isPublished || isPublishing) return;
+    if (isPublishing) return;
+    if (isPublished) {
+      // Bewusst mit derselben Rueckfrage-Staerke wie das Veroeffentlichen
+      // selbst: Kopien, die andere schon uebernommen haben, bleiben
+      // bestehen - das steht auch schon im Text beim Veroeffentlichen,
+      // hier wird es noch einmal explizit gesagt, weil es der Moment ist,
+      // in dem es tatsaechlich relevant wird.
+      Alert.alert(
+        t('sonstiges.ausPoolFrage'),
+        t('sonstiges.ausPoolText', { titel: recipeTitle }),
+        [
+          { text: t('allgemein.abbrechen'), style: 'cancel' },
+          { text: t('sonstiges.ausPoolNehmen'), style: 'destructive', onPress: unpublish },
+        ],
+      );
+      return;
+    }
     if (isLocked) {
       // Der Knopf ist sichtbar ausgegraut - wer ihn trotzdem antippt,
       // bekommt den Grund gesagt statt gar nichts. Ein Knopf, der auf
@@ -96,10 +139,10 @@ export default function PublishToPoolButton({
       hitSlop={8}
       accessibilityRole="button"
       accessibilityLabel={
-        isLocked
-          ? t('sonstiges.insPoolOhneSync')
-          : isPublished
-            ? t('sonstiges.bereitsVeroeffentlicht')
+        isPublished
+          ? t('sonstiges.ausPoolNehmen')
+          : isLocked
+            ? t('sonstiges.insPoolOhneSync')
             : t('sonstiges.insPool')
       }
       accessibilityState={{ disabled: isLocked }}
