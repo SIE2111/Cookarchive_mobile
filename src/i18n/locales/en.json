@@ -638,7 +638,9 @@
     "ausPoolNehmen": "Remove from pool",
     "ausPoolEntfernt": "Withdrawn",
     "ausPoolEntferntText": "\"{titel}\" is no longer in the community pool.",
-    "ausPoolEntfernenFehlgeschlagen": "Couldn't withdraw it"
+    "ausPoolEntfernenFehlgeschlagen": "Couldn't withdraw it",
+    "bereitsUebernommen": "Already added",
+    "vonDir": "From you"
   },
   "uebersetzung": {
     "angebotTitel": "This recipe is written in {sprache}.",
