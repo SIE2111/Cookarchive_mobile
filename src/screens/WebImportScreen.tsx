@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, ActivityIndicator, Image, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, ActivityIndicator, Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { ensureMediaLibraryAccess } from '../utils/mediaPermissions';
 import CategoryPicker from '../components/CategoryPicker';
@@ -308,12 +308,8 @@ export default function WebImportScreen({ navigation, route }: Props) {
 
   // Schritt 2: importiertes Ergebnis bearbeiten und speichern
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.bg }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-    >
     <ScrollView
+      automaticallyAdjustKeyboardInsets
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag" contentContainerStyle={[styles.container, inhaltsBreite]}>
       <Text style={[styles.sourceHint, { color: colors.muted }]} numberOfLines={1}>
@@ -457,7 +453,6 @@ export default function WebImportScreen({ navigation, route }: Props) {
         </Text>
       </Pressable>
     </ScrollView>
-    </KeyboardAvoidingView>
   );
 }
 
