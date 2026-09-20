@@ -23,6 +23,7 @@ import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { MainTabParamList, MainStackParamList } from '../navigation/AppNavigator';
+import { useLayout } from '../utils/layout';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabParamList, 'Rezepte'>,
@@ -60,6 +61,7 @@ interface FolderSummary {
 
 export default function RecipesScreen({ navigation, route }: Props) {
   const { colors, gradient, radius } = useTheme();
+  const { istTablet, inhaltsBreiteZweispaltig } = useLayout();
   const { t } = useUebersetzung();
   const [recipes, setRecipes] = useState<RecipeSummary[]>([]);
   const [folders, setFolders] = useState<FolderSummary[]>([]);
@@ -327,11 +329,17 @@ export default function RecipesScreen({ navigation, route }: Props) {
       <FlatList
         data={visibleRecipes}
         keyExtractor={(item) => item.id}
+        // key MUSS sich mit der Spaltenzahl aendern: React Native lehnt es
+        // ab, numColumns an einer bestehenden Liste zu aendern, und wirft
+        // beim Drehen des Tablets sonst einen Fehler.
+        key={`spalten-${istTablet ? 2 : 1}`}
+        numColumns={istTablet ? 2 : 1}
+        columnWrapperStyle={istTablet ? { gap: 9 } : undefined}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
         // Nimmt den restlichen Platz auf, damit er nicht an die
         // Filterleisten darueber verteilt wird (siehe styles.folderBar).
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={[{ paddingBottom: 100 }, inhaltsBreiteZweispaltig]}
         ListEmptyComponent={
           !error ? (
             <Text style={[styles.emptyText, { color: colors.muted }]}>
@@ -350,7 +358,7 @@ export default function RecipesScreen({ navigation, route }: Props) {
         renderItem={({ item }) => (
           <Pressable
             onPress={() => navigation.navigate('RecipeDetail', { recipeId: item.id, title: item.title })}
-            style={[styles.recipeRow, { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.cardBorder }]}
+            style={[styles.recipeRow, istTablet && styles.karteInSpalte, { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.cardBorder }]}
           >
             {item.cover_image_url ? (
               <Image source={{ uri: item.cover_image_url }} style={[styles.thumbnail, { borderRadius: radius.sm }]} />
@@ -434,6 +442,8 @@ const styles = StyleSheet.create({
   newFolderChip: { borderWidth: 1.3, paddingHorizontal: 10 },
   emptyText: { fontSize: 13, textAlign: 'center', marginTop: 40, lineHeight: 20 },
   recipeRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 10, marginBottom: 9 },
+  // In der zweispaltigen Ansicht teilen sich die Karten die Zeile.
+  karteInSpalte: { flex: 1 },
   thumbnail: { width: 46, height: 46 },
   thumbnailPlaceholder: { width: 46, height: 46 },
   recipeTitle: { fontSize: 14, fontWeight: '700', flexShrink: 1 },
