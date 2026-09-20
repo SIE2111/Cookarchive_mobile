@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, Modal, TextInput, Linking, Alert, ScrollView, Keyboard } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import * as Speech from 'expo-speech';
+import { useLayout } from '../utils/layout';
 import { SPEECH_LANGUAGE, BRUTZEL_PITCH, BRUTZEL_RATE, loadBrutzelVoice } from '../utils/speech';
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
@@ -120,6 +121,7 @@ interface Props {
 
 export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded, onFinished, sessionOverrides }: Props) {
   const { colors, gradient, radius } = useTheme();
+  const { inhaltsBreite } = useLayout();
   const { t, sprache } = useUebersetzung();
 
   const [recipe, setRecipe] = useState<RecipeForCooking | null>(null);
@@ -863,7 +865,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
     <View style={[styles.container, { backgroundColor: colors.bg, display: isActive ? 'flex' : 'none' }]}>
       <ScrollView
       keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="on-drag" style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 16 }}>
+      keyboardDismissMode="on-drag" style={{ flex: 1 }} contentContainerStyle={[{ paddingBottom: 16 }, inhaltsBreite]}>
       {brauchtUebersetzung && (
         <TranslationBanner
           quellsprache={quellsprache}
