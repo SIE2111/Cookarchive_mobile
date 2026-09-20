@@ -22,6 +22,7 @@ import { askWhatNext } from '../utils/afterRecipeSaved';
 import { api, ApiError } from '../api/client';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/AppNavigator';
+import { useLayout } from '../utils/layout';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'PhotoCapture'>;
 
@@ -50,6 +51,7 @@ interface ScanPhotoResponse {
 
 export default function PhotoCaptureScreen({ navigation }: Props) {
   const { colors, gradient, radius } = useTheme();
+  const { inhaltsBreite } = useLayout();
   const { t } = useUebersetzung();
 
   // Mehrere Fotos statt einem: Ein gedrucktes Rezept geht oft ueber zwei
@@ -385,7 +387,7 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
   return (
     <ScrollView
       keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="on-drag" style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
+      keyboardDismissMode="on-drag" style={{ backgroundColor: colors.bg }} contentContainerStyle={[styles.container, inhaltsBreite]}>
       {zuschnittFenster}
       <Image source={{ uri: imageUri }} style={[styles.reviewThumbnail, { borderRadius: radius.md }]} />
 
