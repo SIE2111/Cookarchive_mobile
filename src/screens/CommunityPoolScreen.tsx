@@ -9,6 +9,7 @@ import { api, ApiError } from '../api/client';
 import ScanFab from '../components/ScanFab';
 import { askWhatNext } from '../utils/afterRecipeSaved';
 import type { MainStackParamList } from '../navigation/AppNavigator';
+import { useLayout } from '../utils/layout';
 
 interface PublicRecipeSummary {
   id: string;
@@ -35,6 +36,7 @@ interface PublicRecipeSummary {
  */
 export default function CommunityPoolScreen() {
   const { colors, gradient, radius } = useTheme();
+  const { istTablet, inhaltsBreiteZweispaltig } = useLayout();
   const { t } = useUebersetzung();
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const [recipes, setRecipes] = useState<PublicRecipeSummary[]>([]);
@@ -109,9 +111,14 @@ export default function CommunityPoolScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <FlatList
-        contentContainerStyle={{ padding: 18, paddingBottom: 100 }}
+        contentContainerStyle={[{ padding: 18, paddingBottom: 100 }, inhaltsBreiteZweispaltig]}
         data={recipes}
         keyExtractor={(item) => item.id}
+        // key MUSS sich mit der Spaltenzahl aendern, sonst wirft React
+        // Native beim Drehen des Tablets einen Fehler.
+        key={`spalten-${istTablet ? 2 : 1}`}
+        numColumns={istTablet ? 2 : 1}
+        columnWrapperStyle={istTablet ? { gap: 9 } : undefined}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
         ListHeaderComponent={
           <>
@@ -134,7 +141,7 @@ export default function CommunityPoolScreen() {
           // danach in der eigenen Sammlung.
           <Pressable
             onPress={() => navigation.navigate('PoolRecipeDetail', { publicRecipeId: item.id, title: item.title })}
-            style={[styles.card, { backgroundColor: colors.card, borderRadius: radius.md }]}
+            style={[styles.card, istTablet && styles.karteInSpalte, { backgroundColor: colors.card, borderRadius: radius.md }]}
           >
             {item.cover_image_url ? (
               <Image source={{ uri: item.cover_image_url }} style={[styles.thumb, { borderRadius: radius.sm }]} />
@@ -193,6 +200,7 @@ const styles = StyleSheet.create({
   header: { fontSize: 19, fontWeight: '700', marginBottom: 4 },
   headerSub: { fontSize: 11.5, lineHeight: 17, marginBottom: 16 },
   card: { flexDirection: 'row', alignItems: 'center', padding: 14, marginBottom: 9 },
+  karteInSpalte: { flex: 1 },
   title: { fontSize: 14, fontWeight: '700' },
   meta: { fontSize: 10.5, marginTop: 3 },
   forkButton: { paddingHorizontal: 14, paddingVertical: 9 },
