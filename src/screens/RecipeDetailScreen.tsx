@@ -315,6 +315,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
   const currentIngredients = sessionIngredientsOverride
     ?? (zeigtUebersetzung ? uebersetzung!.ingredients : recipe?.ingredients)
     ?? [];
+
   const currentSteps = sessionStepsOverride
     ?? (zeigtUebersetzung ? uebersetzung!.steps : recipe?.steps)
     ?? [];
@@ -433,7 +434,15 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
   const handleAddToShoppingList = async () => {
     setIsAddingToList(true);
     try {
-      await api.post('/shopping-list/add-recipes', { recipe_ids: [recipeId, ...selectedSideIds] });
+      // Die gerade angezeigte Portionenzahl mitschicken, nicht die im
+      // Rezept gespeicherte - sonst landen auf der Liste Mengen fuer 4,
+      // waehrend am Bildschirm 8 stand. Nur fuer das Hauptgericht: Die
+      // Beilagen behalten ihre eigene Menge, dafuer gibt es hier keinen
+      // eigenen Regler.
+      await api.post('/shopping-list/add-recipes', {
+        recipe_ids: [recipeId, ...selectedSideIds],
+        servings_by_recipe_id: angezeigtePortionen ? { [recipeId]: angezeigtePortionen } : undefined,
+      });
       Alert.alert(t('detail.erledigt'), t('detail.zutatenHinzugefuegt'));
     } catch (err) {
       Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('detail.zutatenNichtHinzugefuegt'));
@@ -518,6 +527,22 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
   }, []);
 
   const angezeigtePortionen = portionen ?? recipe?.servings ?? null;
+
+  // Anzeige-Mengen fuer die aktuelle Portionenzahl. currentIngredients
+  // selbst bleibt die gespeicherte Fassung - Bearbeiten und Speichern
+  // greifen weiterhin auf die ECHTEN Mengen zu, nicht auf die skalierten
+  // (siehe handleOpenIngredientEdit: dort wird bewusst currentIngredients
+  // genommen, nicht anzeigeIngredients).
+  const portionenFaktor =
+    recipe?.servings && angezeigtePortionen ? angezeigtePortionen / recipe.servings : 1;
+  const anzeigeIngredients = portionenFaktor === 1
+    ? currentIngredients
+    : currentIngredients.map((ing) => {
+        if (ing.amount == null) return ing;
+        const wert = ing.amount * portionenFaktor;
+        const gerundet = Math.round(wert * 10) / 10;
+        return { ...ing, amount: Number.isInteger(gerundet) ? gerundet : gerundet };
+      });
 
   const handleChangeServings = (delta: number) => {
     setPortionen((prev) => Math.max(1, (prev ?? recipe?.servings ?? 1) + delta));
@@ -698,6 +723,10 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
           navigation.navigate('CookMode', {
             recipeIds: [recipeId, ...selectedSideIds],
             sessionNote: sessionOnlyNote ?? undefined,
+            // Dieselbe Zahl, die hier auf dem Bildschirm stand - sonst
+            // laedt der Koch-Modus unabhaengig den Profilwert und zeigt
+            // etwas anderes als das, was man gerade eingestellt hatte.
+            sessionServings: angezeigtePortionen ?? undefined,
             sessionOverrides:
               sessionIngredientsOverride || sessionStepsOverride
                 ? { ingredients: sessionIngredientsOverride ?? undefined, steps: sessionStepsOverride ?? undefined }
@@ -906,7 +935,11 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
       />
 
       <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('detail.zutaten')}</Text>
-      {currentIngredients.map((ing, i) => (
+      {/* anzeigeIngredients fuer den Text, currentIngredients fuers
+          Bearbeiten (per Index i, siehe handleOpenIngredientEdit) - sonst
+          wuerde ein Tippen auf die skalierte Menge die skalierte als neuen
+          Rezeptwert speichern. */}
+      {anzeigeIngredients.map((ing, i) => (
         <Pressable
           key={i}
           onPress={() => !zeigtUebersetzung && handleOpenIngredientEdit(i)}
