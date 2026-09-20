@@ -12,6 +12,7 @@ import { api, ApiError } from '../api/client';
 import BrutzelAvatar from '../components/BrutzelAvatar';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/AppNavigator';
+import { useLayout } from '../utils/layout';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'RecipeDetail'>;
 
@@ -71,6 +72,7 @@ const MAX_SELECTABLE_SIDES = 2;
 
 export default function RecipeDetailScreen({ route, navigation }: Props) {
   const { colors, gradient, radius } = useTheme();
+  const { inhaltsBreite } = useLayout();
   const { t, sprache } = useUebersetzung();
   const { recipeId } = route.params;
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
@@ -604,7 +606,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
 
   return (
     <>
-    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
+    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={[styles.container, inhaltsBreite]}>
       {recipe.cover_image_url && (
         <Image source={{ uri: recipe.cover_image_url }} style={[styles.heroImage, { borderRadius: radius.md }]} />
       )}
