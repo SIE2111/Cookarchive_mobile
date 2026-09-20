@@ -8,6 +8,7 @@ import { askWhatNext } from '../utils/afterRecipeSaved';
 import { api, ApiError } from '../api/client';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/AppNavigator';
+import { useLayout } from '../utils/layout';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'AIGenerate'>;
 
@@ -50,6 +51,7 @@ interface GeneratedRecipe {
 
 export default function AIGenerateScreen({ navigation }: Props) {
   const { colors, gradient, radius } = useTheme();
+  const { inhaltsBreite } = useLayout();
   const { t } = useUebersetzung();
 
   // Vorgaben-Formular
@@ -263,7 +265,7 @@ export default function AIGenerateScreen({ navigation }: Props) {
     return (
       <ScrollView
       keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="on-drag" style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.introContainer}>
+      keyboardDismissMode="on-drag" style={{ backgroundColor: colors.bg }} contentContainerStyle={[styles.introContainer, inhaltsBreite]}>
         <Text style={[styles.introTitle, { color: colors.text }]}>KI-Rezept nach Vorgaben</Text>
         <Text style={[styles.introText, { color: colors.muted }]}>
           Alle Felder sind optional – je mehr du ausfüllst, desto passender wird der Vorschlag.
@@ -335,7 +337,7 @@ export default function AIGenerateScreen({ navigation }: Props) {
 
   // Schritt 2: generiertes Ergebnis bearbeiten und speichern
   return (
-    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={styles.container}>
+    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={[styles.container, inhaltsBreite]}>
       <Pressable onPress={handleAddImagePress} disabled={isGeneratingImage} style={[styles.imagePicker, { backgroundColor: colors.card, borderRadius: radius.md }]}>
         {isGeneratingImage ? (
           <>
