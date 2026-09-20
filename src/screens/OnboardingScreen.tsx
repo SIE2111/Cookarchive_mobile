@@ -8,6 +8,7 @@ import { api, ApiError } from '../api/client';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/AppNavigator';
 import type { HaubenLevel } from '../utils/stepLevels';
+import { useLayout } from '../utils/layout';
 
 // Gleiche Reihenfolge und Benennung wie im Profil - die Auswahl hier ist
 // nur die Erstbelegung, geaendert wird sie spaeter dort.
@@ -21,6 +22,7 @@ type Props = NativeStackScreenProps<MainStackParamList, 'Onboarding'>;
 
 export default function OnboardingScreen({ navigation }: Props) {
   const { colors, gradient, radius } = useTheme();
+  const { inhaltsBreite } = useLayout();
   const { t } = useUebersetzung();
   const { clearJustRegistered } = useAuth();
   const [createFolders, setCreateFolders] = useState(true);
@@ -76,7 +78,7 @@ export default function OnboardingScreen({ navigation }: Props) {
   // und der "Los geht's"-Button lag unerreichbar unterhalb der Kante.
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.container, inhaltsBreite]} keyboardShouldPersistTaps="handled">
       {/* Nur wenn es ueberhaupt ein Zurueck gibt: Beim ersten Start nach
           der Registrierung ist das hier der Anfang, da waere ein
           Zurueck-Knopf sinnlos. Wird der Screen dagegen aus dem Profil
