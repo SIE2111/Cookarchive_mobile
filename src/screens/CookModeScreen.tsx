@@ -148,6 +148,7 @@ export default function CookModeScreen({ route, navigation }: Props) {
           onTitleLoaded={(title) => setTitles((prev) => ({ ...prev, [id]: title }))}
           onFinished={(completed) => handleFinished(id, completed)}
           sessionOverrides={index === 0 ? route.params.sessionOverrides : undefined}
+          initialServings={index === 0 ? route.params.sessionServings : undefined}
         />
       ))}
     </View>
