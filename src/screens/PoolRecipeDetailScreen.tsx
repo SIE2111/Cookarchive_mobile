@@ -24,6 +24,15 @@ interface PublicRecipeDetail {
   ingredients: { name: string; amount?: number | null; unit?: string | null }[];
   steps: { order: number; text: string; timer_seconds?: number | null }[];
   level: string;
+  // Ob der BETRACHTER selbst der Autor ist bzw. es schon uebernommen hat -
+  // vom eigenen Rezept eine Kopie anzubieten waere ein Duplikat ohne
+  // Nutzen (siehe CommunityPoolScreen fuer dieselbe Unterscheidung in der
+  // Liste).
+  is_own?: boolean;
+  already_forked?: boolean;
+  // Nur gesetzt, wenn is_own - die id der PRIVATEN Quelle, die
+  // /pool/unpublish erwartet.
+  original_recipe_id?: string | null;
 }
 
 const LEVELS: { key: HaubenLevel; label: string; hats: number }[] = [
@@ -54,6 +63,7 @@ export default function PoolRecipeDetailScreen({ route, navigation }: Props) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSwitchingLevel, setIsSwitchingLevel] = useState(false);
   const [isForking, setIsForking] = useState(false);
+  const [isUnpublishing, setIsUnpublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = async (wantedLevel: HaubenLevel) => {
@@ -102,6 +112,39 @@ export default function PoolRecipeDetailScreen({ route, navigation }: Props) {
     }
   };
 
+  // Eigenes Rezept aus dem Pool nehmen - dieselbe Aktion wie der Knopf
+  // im eigenen Rezeptdetail (PublishToPoolButton), hier direkt aus der
+  // Pool-Ansicht heraus, weil man genau von hier kommt, wenn man das
+  // eigene Rezept im Pool nachschlaegt.
+  const handleUnpublish = () => {
+    if (!recipe?.original_recipe_id) return;
+    Alert.alert(
+      t('sonstiges.ausPoolFrage'),
+      t('sonstiges.ausPoolText', { titel: recipe.title }),
+      [
+        { text: t('allgemein.abbrechen'), style: 'cancel' },
+        {
+          text: t('sonstiges.ausPoolNehmen'),
+          style: 'destructive',
+          onPress: async () => {
+            setIsUnpublishing(true);
+            try {
+              await api.post('/pool/unpublish', { recipe_id: recipe.original_recipe_id });
+              Alert.alert(t('sonstiges.ausPoolEntfernt'), t('sonstiges.ausPoolEntferntText', { titel: recipe.title }));
+              navigation.goBack();
+            } catch (err) {
+              Alert.alert(
+                t('sonstiges.ausPoolEntfernenFehlgeschlagen'),
+                err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'),
+              );
+              setIsUnpublishing(false);
+            }
+          },
+        },
+      ],
+    );
+  };
+
   if (isLoading) {
     return (
       <View style={[styles.centered, { backgroundColor: colors.bg }]}>
@@ -148,17 +191,35 @@ export default function PoolRecipeDetailScreen({ route, navigation }: Props) {
         <Text style={[styles.meta, { color: colors.muted }]}>{recipe.tags.join(' · ')}</Text>
       )}
 
-      <Pressable
-        onPress={handleFork}
-        disabled={isForking}
-        style={[styles.forkButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}
-      >
-        {isForking ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.forkButtonText}>{t('sonstiges.inKochbuchUebernehmen')}</Text>
-        )}
-      </Pressable>
+      {recipe.is_own ? (
+        <Pressable
+          onPress={handleUnpublish}
+          disabled={isUnpublishing || !recipe.original_recipe_id}
+          style={[styles.forkButton, styles.dangerButton, { borderRadius: radius.md }]}
+        >
+          {isUnpublishing ? (
+            <ActivityIndicator color={colors.muted} />
+          ) : (
+            <Text style={[styles.forkButtonText, { color: '#C0392B' }]}>{t('sonstiges.ausPoolNehmen')}</Text>
+          )}
+        </Pressable>
+      ) : recipe.already_forked ? (
+        <View style={[styles.forkButton, styles.disabledButton, { borderRadius: radius.md }]}>
+          <Text style={[styles.forkButtonText, { color: colors.muted }]}>{t('sonstiges.bereitsUebernommen')}</Text>
+        </View>
+      ) : (
+        <Pressable
+          onPress={handleFork}
+          disabled={isForking}
+          style={[styles.forkButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}
+        >
+          {isForking ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.forkButtonText}>{t('sonstiges.inKochbuchUebernehmen')}</Text>
+          )}
+        </Pressable>
+      )}
 
       <Text style={[styles.sectionLabel, { color: colors.muted }]}>ZUTATEN</Text>
       {recipe.ingredients.map((ing, i) => (
@@ -231,6 +292,8 @@ const styles = StyleSheet.create({
   title: { fontSize: 21, fontWeight: '700' },
   meta: { fontSize: 12, marginTop: 4 },
   forkButton: { height: 46, alignItems: 'center', justifyContent: 'center', marginTop: 16 },
+  dangerButton: { backgroundColor: '#FBEAE8', borderWidth: 1, borderColor: '#F0C6C1' },
+  disabledButton: { backgroundColor: '#EFEFEF' },
   forkButtonText: { color: '#fff', fontWeight: '700', fontSize: 14.5 },
   sectionLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginTop: 26, marginBottom: 8 },
   ingredientRow: { flexDirection: 'row', paddingVertical: 5 },
