@@ -8,6 +8,7 @@ import { askWhatNext } from '../utils/afterRecipeSaved';
 import type { HaubenLevel } from '../utils/stepLevels';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/AppNavigator';
+import { useLayout } from '../utils/layout';
 
 type Props = NativeStackScreenProps<MainStackParamList, 'PoolRecipeDetail'>;
 
@@ -46,6 +47,7 @@ const LEVELS: { key: HaubenLevel; label: string; hats: number }[] = [
 export default function PoolRecipeDetailScreen({ route, navigation }: Props) {
   const { publicRecipeId } = route.params;
   const { colors, gradient, radius } = useTheme();
+  const { inhaltsBreite } = useLayout();
   const { t } = useUebersetzung();
   const [recipe, setRecipe] = useState<PublicRecipeDetail | null>(null);
   const [level, setLevel] = useState<HaubenLevel>('fortgeschritten');
@@ -130,7 +132,7 @@ export default function PoolRecipeDetailScreen({ route, navigation }: Props) {
   return (
     <ScrollView
       style={{ backgroundColor: colors.bg }}
-      contentContainerStyle={styles.container}
+      contentContainerStyle={[styles.container, inhaltsBreite]}
     >
       {recipe.cover_image_url && (
         <Image
