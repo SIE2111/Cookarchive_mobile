@@ -33,6 +33,7 @@ import StarterPacksScreen from '../screens/StarterPacksScreen';
 import LanguageSettingsScreen from '../screens/LanguageSettingsScreen';
 import StorageSettingsScreen from '../screens/StorageSettingsScreen';
 import PhotoCaptureScreen from '../screens/PhotoCaptureScreen';
+import ManageCategoriesScreen from '../screens/ManageCategoriesScreen';
 
 export type AuthStackParamList = {
   ForgotPassword: undefined;
@@ -86,6 +87,7 @@ export type MainStackParamList = {
   Household: undefined;
   Onboarding: undefined;
   StarterPacks: undefined;
+  ManageCategories: undefined;
   LanguageSettings: undefined;
   StorageSettings: undefined;
   PhotoCapture: undefined;
@@ -217,6 +219,7 @@ function MainNavigator() {
       <MainStack.Screen name="Household" component={HouseholdScreen} options={{ title: 'Haushalt' }} />
       <MainStack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false, gestureEnabled: false }} />
       <MainStack.Screen name="StarterPacks" component={StarterPacksScreen} options={{ headerShown: false }} />
+      <MainStack.Screen name="ManageCategories" component={ManageCategoriesScreen} options={{ headerShown: false }} />
       <MainStack.Screen name="LanguageSettings" component={LanguageSettingsScreen} options={{ headerShown: false }} />
       <MainStack.Screen name="StorageSettings" component={StorageSettingsScreen} options={{ title: 'Speicherort' }} />
       <MainStack.Screen name="PhotoCapture" component={PhotoCaptureScreen} options={{ title: 'Foto erfassen' }} />
