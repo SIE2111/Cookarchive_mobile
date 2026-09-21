@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, Switch, ScrollView, Alert } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
@@ -114,14 +114,14 @@ export default function ManageCategoriesScreen({ navigation }: any) {
 
   if (isLoading) {
     return (
-      <View style={[styles.center, { backgroundColor: colors.background }]}>
+      <View style={[styles.center, { backgroundColor: colors.bg }]}>
         <ActivityIndicator color={gradient[0]} />
       </View>
     );
   }
 
   return (
-    <View style={[styles.page, { backgroundColor: colors.background }]}>
+    <View style={[styles.page, { backgroundColor: colors.bg }]}>
       <View style={styles.topBar}>
         <Pressable onPress={() => navigation.goBack()} style={styles.backButton} hitSlop={8}>
           <MaterialCommunityIcons name="chevron-left" size={22} color={colors.text} />
@@ -179,7 +179,7 @@ export default function ManageCategoriesScreen({ navigation }: any) {
         </Pressable>
       </ScrollView>
 
-      <View style={[styles.footer, { backgroundColor: colors.background }]}>
+      <View style={[styles.footer, { backgroundColor: colors.bg }]}>
         <Pressable
           onPress={handleSave}
           disabled={isSaving}
