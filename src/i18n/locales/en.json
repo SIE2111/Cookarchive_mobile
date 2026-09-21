@@ -298,7 +298,8 @@
     "loeschenText": "\"{titel}\" will be deleted permanently. This cannot be undone.",
     "fremdesRezept": "Someone else's recipe",
     "fremdesRezeptText": "\"{titel}\" belongs to another member of your household. Deleting it removes it for them too – without notice and without any way to get it back.",
-    "trotzdemLoeschen": "Delete anyway"
+    "trotzdemLoeschen": "Delete anyway",
+    "vonHaushaltsmitglied": "Added by {name} in your household"
   },
   "kochen": {
     "tipp": {
