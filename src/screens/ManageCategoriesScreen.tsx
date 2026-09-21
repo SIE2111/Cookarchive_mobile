@@ -1,36 +1,31 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, Switch, Alert, Animated } from 'react-native';
-import { PanGestureHandler, ScrollView, State } from 'react-native-gesture-handler';
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, Switch, ScrollView, Alert } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
 import { api, ApiError } from '../api/client';
 
 /**
- * Verwaltung der Kategorien-Zeile im Dashboard: Reihenfolge per Ziehen
- * festlegen und einzelne Kategorien ein-/ausblenden.
+ * Verwaltung der Kategorien-Zeile im Dashboard: Reihenfolge festlegen und
+ * einzelne Kategorien ein-/ausblenden.
  *
- * ZWEITER ANLAUF beim Ziehen. Die erste Fassung hatte kleine Pfeile
- * (zu fummelig), die zweite ein reines PanResponder-Drag - das sah in
- * der Theorie richtig aus, scheiterte aber am bekannten Konflikt
- * zwischen PanResponder und der umgebenden ScrollView: beide reagieren
- * auf senkrechte Fingerbewegung, und PanResponder hat im JS-Responder-
- * System keine zuverlaessige Moeglichkeit, sich gegen eine native
- * ScrollView durchzusetzen (die Geste "gewinnt" oft die ScrollView statt
- * der gezogenen Zeile - fuehlt sich dann an, als wuerde gar nichts
- * passieren, oder es scrollt einfach nur die Liste).
+ * DRITTER Anlauf beim Umsortieren, diesmal bewusst OHNE Ziehen. Die ersten
+ * zwei Versuche (kleine Pfeile, dann PanResponder, dann react-native-
+ * gesture-handler) sind alle an echten Problemen gescheitert, die letzte
+ * Fassung sogar an einem haengenden Zustand, dessen genaue Ursache sich
+ * ohne die App vor Augen nicht zuverlaessig fassen liess. Statt eines
+ * vierten Versuchs mit einer noch invasiveren Abhaengigkeit (reanimated 4,
+ * nur mit New Architecture lauffaehig, eigene Babel-Konfiguration - eine
+ * App-weite Aenderung mit echtem Risiko) jetzt eine Loesung, die gar
+ * nicht erst scheitern kann: vier eindeutige Knoepfe statt einer Geste.
  *
- * Diese Fassung nutzt stattdessen react-native-gesture-handler: in
- * Expo Go fest eingebaut (React Navigation selbst nutzt es intern fuer
- * Screen-Uebergaenge), erkennt Gesten auf dem nativen Thread und kann
- * sich darum sauber gegen die eigene, ebenfalls von dieser Bibliothek
- * stammende ScrollView (Import unten von 'react-native-gesture-handler',
- * NICHT von 'react-native') abgrenzen. Voraussetzung: GestureHandlerRootView
- * einmal nahe der App-Wurzel (siehe App.tsx) - ohne die schlagen Gesten
- * mit einer Fehlermeldung fehl statt nichts zu tun.
+ * Bewusst NICHT "antippen zum Auswaehlen, dann Zielposition antippen" -
+ * das braucht einen unsichtbaren Zwischenzustand und ist fehleranfaellig
+ * (ein Tipp auf den Schalter waehrend "Ziel waehlen" aktiv ist, koennte
+ * als Zielauswahl statt als Sichtbarkeits-Umschalten missverstanden
+ * werden). Jeder der vier Knoepfe hat dagegen genau eine, sofortige
+ * Wirkung - nichts, das sich falsch interpretieren laesst.
  */
-
-const ROW_HEIGHT = 60;
 
 interface RecipeSummary {
   tags: string[] | null;
@@ -46,19 +41,6 @@ export default function ManageCategoriesScreen({ navigation }: any) {
   const [order, setOrder] = useState<string[]>([]);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
 
-  const [draggingTag, setDraggingTag] = useState<string | null>(null);
-  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
-  const dragStartIndexRef = useRef(0);
-  const dragY = useRef(new Animated.Value(0)).current;
-  // Ueberlebt die ganze Geste, anders als lokale Variablen im Render -
-  // ein Wert pro Tag, wird beim ersten Bedarf angelegt und danach nur
-  // noch wiederverwendet (Map bleibt ueber Rerenders hinweg bestehen).
-  const rowOffsets = useRef<Map<string, Animated.Value>>(new Map()).current;
-  const offsetFuer = (tag: string) => {
-    if (!rowOffsets.has(tag)) rowOffsets.set(tag, new Animated.Value(0));
-    return rowOffsets.get(tag)!;
-  };
-
   const load = useCallback(async () => {
     try {
       const [recipes, prefs] = await Promise.all([
@@ -69,9 +51,9 @@ export default function ManageCategoriesScreen({ navigation }: any) {
       recipes.forEach((r) => (r.tags ?? []).forEach((tg) => counts.set(tg, (counts.get(tg) ?? 0) + 1)));
 
       const gespeicherteReihenfolge = (prefs.category_order ?? []).filter((tg) => counts.has(tg));
-      // Dieselbe Standard-Regel wie im Dashboard (siehe dort): "Einfach"
-      // und "Klassiker" zuerst, falls vorhanden, danach alphabetisch -
-      // nur fuer Tags, die der Nutzer noch nicht selbst einsortiert hat.
+      // Standard-Regel wie im Dashboard: "Einfach" und "Klassiker" zuerst,
+      // falls vorhanden, danach alphabetisch - nur fuer Tags, die der
+      // Nutzer noch nicht selbst einsortiert hat.
       const restKandidaten = Array.from(counts.keys()).filter((tg) => !gespeicherteReihenfolge.includes(tg));
       const STANDARD_ZUERST = ['Einfach', 'Klassiker'];
       const vorrang = STANDARD_ZUERST.filter((tg) => restKandidaten.includes(tg));
@@ -93,44 +75,25 @@ export default function ManageCategoriesScreen({ navigation }: any) {
     load();
   }, [load]);
 
-  // Waehrend des Ziehens: alle NICHT gezogenen Zeilen animiert zur Seite
-  // ruecken, wenn sie zwischen Start- und aktueller Zielposition liegen.
-  useEffect(() => {
-    order.forEach((tag, index) => {
-      if (tag === draggingTag) return;
-      let ziel = 0;
-      if (draggingTag != null && hoverIndex != null) {
-        const start = dragStartIndexRef.current;
-        if (start < hoverIndex && index > start && index <= hoverIndex) ziel = -ROW_HEIGHT;
-        else if (start > hoverIndex && index >= hoverIndex && index < start) ziel = ROW_HEIGHT;
-      }
-      Animated.timing(offsetFuer(tag), { toValue: ziel, duration: 150, useNativeDriver: true }).start();
+  const moveOne = (index: number, richtung: -1 | 1) => {
+    setOrder((vorher) => {
+      const ziel = index + richtung;
+      if (ziel < 0 || ziel >= vorher.length) return vorher;
+      const neu = [...vorher];
+      [neu[index], neu[ziel]] = [neu[ziel], neu[index]];
+      return neu;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [order, draggingTag, hoverIndex]);
-
-  const commitDrag = (aktuellerHoverIndex: number | null) => {
-    const von = dragStartIndexRef.current;
-    const nach = aktuellerHoverIndex ?? von;
-    if (von !== nach) {
-      setOrder((vorher) => {
-        const neu = [...vorher];
-        const [element] = neu.splice(von, 1);
-        neu.splice(nach, 0, element);
-        return neu;
-      });
-    }
-    dragY.setValue(0);
-    setDraggingTag(null);
-    setHoverIndex(null);
   };
 
-  // hoverIndex per Ref zusaetzlich zum State fuehren: der State-Wert kann
-  // im onHandlerStateChange-Callback (der bei ENDED sofort commitDrag
-  // aufruft) noch den Stand VOR dem letzten Move-Event zeigen, weil
-  // React State-Updates asynchron sind. Die Ref ist immer aktuell.
-  const hoverIndexRef = useRef<number | null>(null);
-  useEffect(() => { hoverIndexRef.current = hoverIndex; }, [hoverIndex]);
+  const moveToEdge = (index: number, kante: 'anfang' | 'ende') => {
+    setOrder((vorher) => {
+      const neu = [...vorher];
+      const [element] = neu.splice(index, 1);
+      if (kante === 'anfang') neu.unshift(element);
+      else neu.push(element);
+      return neu;
+    });
+  };
 
   const toggleHidden = (tag: string) => {
     setHidden((vorher) => {
@@ -180,97 +143,100 @@ export default function ManageCategoriesScreen({ navigation }: any) {
   }
 
   return (
-      <View style={[styles.page, { backgroundColor: colors.bg }]}>
-        <View style={styles.topBar}>
-          <Pressable onPress={() => navigation.goBack()} style={styles.backButton} hitSlop={8}>
-            <MaterialCommunityIcons name="chevron-left" size={22} color={colors.text} />
-            <Text style={[styles.backText, { color: colors.text }]}>{t('allgemein.zurueck')}</Text>
-          </Pressable>
-        </View>
-
-        <ScrollView contentContainerStyle={styles.content} scrollEnabled={draggingTag == null}>
-          <Text style={[styles.title, { color: colors.text }]}>{t('dashboard.kategorienVerwalten')}</Text>
-          <Text style={[styles.lead, { color: colors.muted }]}>{t('dashboard.kategorienVerwaltenText')}</Text>
-
-          {error && <Text style={[styles.errorText, { color: '#C0392B' }]}>{error}</Text>}
-
-          <View style={{ height: order.length * ROW_HEIGHT }}>
-            {order.map((tag, index) => {
-              const istGezogen = tag === draggingTag;
-              const translateY = istGezogen
-                ? Animated.add(new Animated.Value(index * ROW_HEIGHT), dragY)
-                : Animated.add(new Animated.Value(index * ROW_HEIGHT), offsetFuer(tag));
-              return (
-                <Animated.View
-                  key={tag}
-                  style={[
-                    styles.row,
-                    { backgroundColor: colors.card, borderRadius: radius.sm },
-                    { position: 'absolute', left: 0, right: 0, height: ROW_HEIGHT - 8 },
-                    { transform: [{ translateY }] },
-                    istGezogen && { zIndex: 10, elevation: 6, shadowOpacity: 0.18, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
-                  ]}
-                >
-                  <PanGestureHandler
-                    activeOffsetY={[-6, 6]}
-                    failOffsetX={[-20, 20]}
-                    onHandlerStateChange={(evt) => {
-                      const { state } = evt.nativeEvent;
-                      if (state === State.BEGAN) {
-                        dragStartIndexRef.current = index;
-                        dragY.setValue(0);
-                        setDraggingTag(tag);
-                        setHoverIndex(index);
-                      } else if (state === State.END || state === State.CANCELLED || state === State.FAILED) {
-                        commitDrag(hoverIndexRef.current);
-                      }
-                    }}
-                    onGestureEvent={(evt) => {
-                      dragY.setValue(evt.nativeEvent.translationY);
-                      const rohesZiel = index + Math.round(evt.nativeEvent.translationY / ROW_HEIGHT);
-                      setHoverIndex(Math.max(0, Math.min(order.length - 1, rohesZiel)));
-                    }}
-                  >
-                    <View style={styles.dragHandle} hitSlop={4}>
-                      <MaterialCommunityIcons name="drag-horizontal-variant" size={22} color={colors.muted} />
-                    </View>
-                  </PanGestureHandler>
-                  <Text
-                    style={[styles.rowText, { color: hidden.has(tag) ? colors.muted : colors.text }]}
-                    numberOfLines={1}
-                  >
-                    {tag}
-                  </Text>
-                  <Switch
-                    value={!hidden.has(tag)}
-                    onValueChange={() => toggleHidden(tag)}
-                    trackColor={{ false: '#E7E1D4', true: gradient[0] }}
-                    thumbColor="#fff"
-                  />
-                </Animated.View>
-              );
-            })}
-          </View>
-
-          {allTags.length === 0 && (
-            <Text style={[styles.lead, { color: colors.muted }]}>{t('dashboard.kategorienKeine')}</Text>
-          )}
-
-          <Pressable onPress={handleReset} style={styles.resetLink}>
-            <Text style={[styles.resetText, { color: gradient[0] }]}>{t('dashboard.zuruecksetzen')}</Text>
-          </Pressable>
-        </ScrollView>
-
-        <View style={[styles.footer, { backgroundColor: colors.bg }]}>
-          <Pressable
-            onPress={handleSave}
-            disabled={isSaving}
-            style={[styles.saveButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}
-          >
-            {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveText}>{t('allgemein.speichern')}</Text>}
-          </Pressable>
-        </View>
+    <View style={[styles.page, { backgroundColor: colors.bg }]}>
+      <View style={styles.topBar}>
+        <Pressable onPress={() => navigation.goBack()} style={styles.backButton} hitSlop={8}>
+          <MaterialCommunityIcons name="chevron-left" size={22} color={colors.text} />
+          <Text style={[styles.backText, { color: colors.text }]}>{t('allgemein.zurueck')}</Text>
+        </Pressable>
       </View>
+
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={[styles.title, { color: colors.text }]}>{t('dashboard.kategorienVerwalten')}</Text>
+        <Text style={[styles.lead, { color: colors.muted }]}>{t('dashboard.kategorienVerwaltenText')}</Text>
+
+        {error && <Text style={[styles.errorText, { color: '#C0392B' }]}>{error}</Text>}
+
+        {order.map((tag, index) => {
+          const istErste = index === 0;
+          const istLetzte = index === order.length - 1;
+          return (
+            <View key={tag} style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.sm }]}>
+              <View style={styles.rowTop}>
+                <Text
+                  style={[styles.rowText, { color: hidden.has(tag) ? colors.muted : colors.text }]}
+                  numberOfLines={1}
+                >
+                  {tag}
+                </Text>
+                <Switch
+                  value={!hidden.has(tag)}
+                  onValueChange={() => toggleHidden(tag)}
+                  trackColor={{ false: '#E7E1D4', true: gradient[0] }}
+                  thumbColor="#fff"
+                />
+              </View>
+              <View style={styles.moveRow}>
+                <Pressable
+                  onPress={() => moveToEdge(index, 'anfang')}
+                  disabled={istErste}
+                  style={styles.moveButton}
+                  hitSlop={4}
+                  accessibilityLabel={t('dashboard.anDenAnfang')}
+                >
+                  <MaterialCommunityIcons name="arrow-collapse-up" size={20} color={istErste ? colors.cardBorder : colors.muted} />
+                </Pressable>
+                <Pressable
+                  onPress={() => moveOne(index, -1)}
+                  disabled={istErste}
+                  style={styles.moveButton}
+                  hitSlop={4}
+                  accessibilityLabel={t('dashboard.nachOben')}
+                >
+                  <MaterialCommunityIcons name="chevron-up" size={24} color={istErste ? colors.cardBorder : colors.text} />
+                </Pressable>
+                <Pressable
+                  onPress={() => moveOne(index, 1)}
+                  disabled={istLetzte}
+                  style={styles.moveButton}
+                  hitSlop={4}
+                  accessibilityLabel={t('dashboard.nachUnten')}
+                >
+                  <MaterialCommunityIcons name="chevron-down" size={24} color={istLetzte ? colors.cardBorder : colors.text} />
+                </Pressable>
+                <Pressable
+                  onPress={() => moveToEdge(index, 'ende')}
+                  disabled={istLetzte}
+                  style={styles.moveButton}
+                  hitSlop={4}
+                  accessibilityLabel={t('dashboard.ansEnde')}
+                >
+                  <MaterialCommunityIcons name="arrow-collapse-down" size={20} color={istLetzte ? colors.cardBorder : colors.muted} />
+                </Pressable>
+              </View>
+            </View>
+          );
+        })}
+
+        {allTags.length === 0 && (
+          <Text style={[styles.lead, { color: colors.muted }]}>{t('dashboard.kategorienKeine')}</Text>
+        )}
+
+        <Pressable onPress={handleReset} style={styles.resetLink}>
+          <Text style={[styles.resetText, { color: gradient[0] }]}>{t('dashboard.zuruecksetzen')}</Text>
+        </Pressable>
+      </ScrollView>
+
+      <View style={[styles.footer, { backgroundColor: colors.bg }]}>
+        <Pressable
+          onPress={handleSave}
+          disabled={isSaving}
+          style={[styles.saveButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}
+        >
+          {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveText}>{t('allgemein.speichern')}</Text>}
+        </Pressable>
+      </View>
+    </View>
   );
 }
 
@@ -284,13 +250,16 @@ const styles = StyleSheet.create({
   title: { fontSize: 22, fontWeight: '800', marginTop: 8, marginBottom: 6 },
   lead: { fontSize: 14, lineHeight: 20, marginBottom: 18 },
   errorText: { fontSize: 14, marginBottom: 12 },
-  row: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10,
+  row: { paddingVertical: 10, paddingHorizontal: 12, marginBottom: 8 },
+  rowTop: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
+  rowText: { flex: 1, fontSize: 15, fontWeight: '600', marginRight: 8 },
+  // Vier eindeutige Knoepfe statt einer Geste - jeder mindestens 44pt
+  // hoch, deutlich groesser als die urspruenglichen kleinen Pfeile.
+  moveRow: { flexDirection: 'row', gap: 4 },
+  moveButton: {
+    flex: 1, height: 44, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: 8,
   },
-  // Grosszuegiger Ziehgriff - mindestens 44pt Kantenlaenge, die uebliche
-  // Mindestgroesse fuer Touch-Ziele.
-  dragHandle: { width: 44, height: ROW_HEIGHT - 8, alignItems: 'center', justifyContent: 'center' },
-  rowText: { flex: 1, fontSize: 15, fontWeight: '600', marginLeft: 2 },
   resetLink: { alignSelf: 'center', marginTop: 12, minHeight: 44, justifyContent: 'center' },
   resetText: { fontSize: 14, fontWeight: '700' },
   footer: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16 },
