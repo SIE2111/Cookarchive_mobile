@@ -91,6 +91,15 @@ const BRUTZEL_TIP_KEYS: string[] = [
 ];
 
 const GENERIC_TIP_COUNT = 5;
+// Eigener, kleiner Pool NUR fuer den letzten Schritt ohne eigenen KI-Tipp
+// und ohne Technik-Tag: die 5 allgemeinen Tipps oben drehen sich um
+// Vorbereitung und aktives Kochen (Pfanne vorheizen, Schneidebrett
+// wischen, ...) - keiner passt zu einem Servier-/Abschlussschritt. Ohne
+// diese Sonderbehandlung landete der letzte Schritt haargenau auf
+// demselben Tipp wie der erste (Index % 5 ist bei 5 Schritten Abstand
+// identisch), sichtbar z.B. bei jedem 6-Schritte-Rezept: "Mise en
+// Place" bei Schritt 1 UND Schritt 6.
+const GENERIC_CLOSING_TIP_COUNT = 3;
 
 interface TechniqueVideoInfo {
   keyword: string;
@@ -525,13 +534,16 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
   // sonst ein allgemeiner. Die Reihenfolge ist Absicht: Der schrittgenaue
   // Hinweis ist der einzige, der wirklich hilft - die anderen sind
   // Rueckfall, falls die KI nicht erreichbar war.
+  const istLetzterSchritt = currentIndex === derivedSteps.length - 1;
   const brutzelTip = currentStep
     ? (stepTips[currentStep.order] ??
        (currentStep.technique_tag
          ? (BRUTZEL_TIP_KEYS.includes(currentStep.technique_tag)
              ? t(`kochen.tipp.${currentStep.technique_tag}`)
              : t('kochen.technikAufmerksamkeit'))
-         : t(`kochen.tippAllgemein.${(currentIndex % GENERIC_TIP_COUNT) + 1}`)))
+         : istLetzterSchritt
+           ? t(`kochen.tippAbschluss.${(derivedSteps.length % GENERIC_CLOSING_TIP_COUNT) + 1}`)
+           : t(`kochen.tippAllgemein.${(currentIndex % GENERIC_TIP_COUNT) + 1}`)))
     : '';
   brutzelTipRef.current = brutzelTip;
 
