@@ -46,6 +46,9 @@ interface RecipeDetail {
   protein_g: number | null;
   fat_g: number | null;
   carbs_g: number | null;
+  // 'private' | 'shared_household' | 'public_pool' - fuer den Anfangszustand
+  // des Pool-Knopfs (siehe PublishToPoolButton initialPublished).
+  visibility: string;
 }
 
 const SOURCE_LABELS: Record<string, string> = {
