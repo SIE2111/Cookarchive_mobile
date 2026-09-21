@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, RefreshControl, Image } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, RefreshControl, Image, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
@@ -54,6 +54,12 @@ export default function DashboardScreen({ navigation }: Props) {
   const [profileDisplayName, setProfileDisplayName] = useState<string | null>(null);
   const [showGreeting, setShowGreeting] = useState(false);
   const [greetingMitVideo, setGreetingMitVideo] = useState(true);
+  // Kategorien-Reihenfolge/Ausblendungen aus dem Profil (siehe
+  // ManageCategoriesScreen). null = noch nicht geladen, dann greift
+  // vorlaeufig die reine Haeufigkeitssortierung, bis die Antwort da ist -
+  // sonst wuerde die Zeile kurz aufblitzen und dann springen.
+  const [categoryOrder, setCategoryOrder] = useState<string[] | null>(null);
+  const [hiddenCategories, setHiddenCategories] = useState<string[]>([]);
 
   // Derselbe Name wie im Profil editierbar (tbl_users.display_name ueber
   // /preferences/) - vorher las die Begruessung stattdessen aus den
@@ -61,9 +67,14 @@ export default function DashboardScreen({ navigation }: Props) {
   // eine Aenderung im Profil nie mitbekam.
   const loadDisplayName = useCallback(() => {
     api
-      .get<{ display_name: string | null; show_greeting_animation: boolean; show_brutzel: boolean }>('/preferences/')
+      .get<{
+        display_name: string | null; show_greeting_animation: boolean; show_brutzel: boolean;
+        category_order: string[] | null; hidden_categories: string[] | null;
+      }>('/preferences/')
       .then((prefs) => {
         setProfileDisplayName(prefs.display_name);
+        setCategoryOrder(prefs.category_order ?? []);
+        setHiddenCategories(prefs.hidden_categories ?? []);
         // Auch show_brutzel pruefen: Wer Brutzel ganz abgeschaltet hat,
         // soll ihn nicht ausgerechnet beim Oeffnen der App ueber den
         // Bildschirm laufen sehen.
@@ -169,10 +180,49 @@ export default function DashboardScreen({ navigation }: Props) {
   const categories = useMemo(() => {
     const counts = new Map<string, number>();
     recipes.forEach((r) => (r.tags ?? []).forEach((t) => counts.set(t, (counts.get(t) ?? 0) + 1)));
-    return Array.from(counts.entries())
+
+    const versteckt = new Set(hiddenCategories);
+    // Erst die Tags, fuer die der Nutzer eine Reihenfolge festgelegt hat
+    // (siehe ManageCategoriesScreen), in genau dieser Reihenfolge - nur
+    // wenn sie ueberhaupt noch vorkommen und nicht ausgeblendet sind.
+    // Danach alles Uebrige, das (noch) keine feste Position hat, nach
+    // Haeufigkeit - so taucht eine frisch importierte Kategorie sofort
+    // auf, statt auf eine manuelle Einsortierung warten zu muessen.
+    const eingeordnet = new Set(categoryOrder ?? []);
+    const feste_reihenfolge = (categoryOrder ?? []).filter((tag) => counts.has(tag) && !versteckt.has(tag));
+    const rest = Array.from(counts.entries())
+      .filter(([tag]) => !eingeordnet.has(tag) && !versteckt.has(tag))
       .sort((a, b) => b[1] - a[1])
       .map(([tag]) => tag);
-  }, [recipes]);
+    return [...feste_reihenfolge, ...rest];
+  }, [recipes, categoryOrder, hiddenCategories]);
+
+  // Eine Kategorie per Fingerdruck-halten ausblenden - reversibel, siehe
+  // ManageCategoriesScreen zum Zuruecksetzen. Optimistisch im lokalen
+  // State, damit der Chip sofort verschwindet statt erst nach der
+  // Serverantwort.
+  const handleHideCategory = useCallback((tag: string) => {
+    Alert.alert(
+      t('dashboard.kategorieAusblendenFrage'),
+      t('dashboard.kategorieAusblendenText', { kategorie: tag }),
+      [
+        { text: t('allgemein.abbrechen'), style: 'cancel' },
+        {
+          text: t('dashboard.ausblenden'),
+          onPress: () => {
+            setHiddenCategories((vorher) => {
+              const neu = vorher.includes(tag) ? vorher : [...vorher, tag];
+              api.patch('/preferences/', { hidden_categories: neu }).catch(() => {
+                // Naechster Fokuswechsel laedt den echten Stand nach -
+                // kein Alarm noetig fuer ein rein kosmetisches Ausblenden.
+              });
+              return neu;
+            });
+          },
+        },
+      ],
+    );
+  }, [t]);
 
   const recentlyCooked = useMemo(
     () =>
@@ -289,7 +339,16 @@ export default function DashboardScreen({ navigation }: Props) {
 
       {/* Kategorien - aus den tatsaechlich vorkommenden Tags abgeleitet, plus
           eine feste Lieblingsgerichte-Kachel, immer sichtbar */}
-      <Text style={[styles.sectionLabel, { color: colors.text }]}>{t('dashboard.kategorien')}</Text>
+      <View style={styles.categoriesHeaderRow}>
+        <Text style={[styles.sectionLabel, { color: colors.text }]}>{t('dashboard.kategorien')}</Text>
+        <Pressable
+          onPress={() => navigation.navigate('ManageCategories')}
+          hitSlop={8}
+          accessibilityLabel={t('dashboard.kategorienVerwalten')}
+        >
+          <MaterialCommunityIcons name="tune-variant" size={18} color={colors.muted} />
+        </Pressable>
+      </View>
       <View
         style={[
           styles.categoriesClip,
@@ -309,6 +368,7 @@ export default function DashboardScreen({ navigation }: Props) {
             <Pressable
               key={tag}
               onPress={() => navigation.navigate('Rezepte', { filterTag: tag })}
+              onLongPress={() => handleHideCategory(tag)}
               style={[styles.categoryChip, { backgroundColor: colors.card, borderRadius: radius.sm }]}
             >
               <Text style={[styles.categoryText, { color: colors.text }]}>{tag}</Text>
@@ -392,6 +452,7 @@ const styles = StyleSheet.create({
   sectionLabel: { fontSize: 15, fontWeight: '700', marginBottom: 8 },
   categoriesClip: { marginBottom: 6 },
   categoriesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  categoriesHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingRight: 4 },
   categoryChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 8 },
   categoryText: { fontSize: 12, fontWeight: '600' },
   categoriesToggle: { alignSelf: 'flex-start', marginBottom: 14, paddingVertical: 4 },
