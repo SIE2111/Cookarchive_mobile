@@ -162,7 +162,11 @@
     "ausblenden": "Ausblenden",
     "kategorienZuruecksetzenFrage": "Zurücksetzen?",
     "kategorienZuruecksetzenText": "Alle Kategorien werden wieder eingeblendet, die Reihenfolge richtet sich danach wieder nur nach Häufigkeit.",
-    "zuruecksetzen": "Zurücksetzen"
+    "zuruecksetzen": "Zurücksetzen",
+    "anDenAnfang": "An den Anfang",
+    "nachOben": "Nach oben",
+    "nachUnten": "Nach unten",
+    "ansEnde": "Ans Ende"
   },
   "profil": {
     "name": "NAME",
