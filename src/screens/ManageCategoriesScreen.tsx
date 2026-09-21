@@ -71,11 +71,17 @@ export default function ManageCategoriesScreen({ navigation }: any) {
       recipes.forEach((r) => (r.tags ?? []).forEach((tg) => counts.set(tg, (counts.get(tg) ?? 0) + 1)));
 
       const gespeicherteReihenfolge = (prefs.category_order ?? []).filter((tg) => counts.has(tg));
-      const rest = Array.from(counts.keys())
-        .filter((tg) => !gespeicherteReihenfolge.includes(tg))
-        .sort((a, b) => (counts.get(b) ?? 0) - (counts.get(a) ?? 0));
+      // Dieselbe Standard-Regel wie im Dashboard (siehe dort): "Einfach"
+      // und "Klassiker" zuerst, falls vorhanden, danach alphabetisch -
+      // nur fuer Tags, die der Nutzer noch nicht selbst einsortiert hat.
+      const restKandidaten = Array.from(counts.keys()).filter((tg) => !gespeicherteReihenfolge.includes(tg));
+      const STANDARD_ZUERST = ['Einfach', 'Klassiker'];
+      const vorrang = STANDARD_ZUERST.filter((tg) => restKandidaten.includes(tg));
+      const alphabetisch = restKandidaten
+        .filter((tg) => !STANDARD_ZUERST.includes(tg))
+        .sort((a, b) => a.localeCompare(b, 'de'));
 
-      setOrder([...gespeicherteReihenfolge, ...rest]);
+      setOrder([...gespeicherteReihenfolge, ...vorrang, ...alphabetisch]);
       setHidden(new Set(prefs.hidden_categories ?? []));
       setAllTags(Array.from(counts.keys()));
     } catch (err) {
