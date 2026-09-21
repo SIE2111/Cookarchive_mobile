@@ -40,6 +40,9 @@ interface RecipeSummary {
   folder_id: string | null;
   source_type: string;
   is_favorite: boolean;
+  // Nur gesetzt, wenn ein ANDERES Haushaltsmitglied das Rezept angelegt
+  // hat (siehe Backend _mit_ersteller_namen).
+  owner_display_name?: string | null;
 }
 
 const SOURCE_ICONS: Record<string, keyof typeof MaterialCommunityIcons.glyphMap> = {
@@ -373,6 +376,9 @@ export default function RecipesScreen({ navigation, route }: Props) {
                   size={12}
                   color={colors.muted}
                 />
+                {item.owner_display_name && (
+                  <MaterialCommunityIcons name="account-multiple-outline" size={12} color={colors.muted} />
+                )}
                 {item.is_favorite && <MaterialCommunityIcons name="heart" size={12} color={gradient[0]} />}
               </View>
               {item.tags && item.tags.length > 0 && (
