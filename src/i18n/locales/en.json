@@ -153,7 +153,16 @@
     "zuletztZubereitet": "Cooked recently",
     "rezept": "Recipe",
     "nichtGeladen": "Could not be loaded",
-    "favoriten": "Favourites"
+    "favoriten": "Favourites",
+    "kategorienVerwalten": "Manage categories",
+    "kategorienVerwaltenText": "Adjust the order with the arrows, use the switch to hide individual categories from the home screen.",
+    "kategorienKeine": "No categories yet - they come from the tags on your recipes.",
+    "kategorieAusblendenFrage": "Hide category?",
+    "kategorieAusblendenText": "\"{kategorie}\" will no longer appear on the home screen. You can bring it back anytime under \"Manage categories\".",
+    "ausblenden": "Hide",
+    "kategorienZuruecksetzenFrage": "Reset?",
+    "kategorienZuruecksetzenText": "All categories will be shown again, and the order will go back to being based on frequency only.",
+    "zuruecksetzen": "Reset"
   },
   "profil": {
     "name": "NAME",
