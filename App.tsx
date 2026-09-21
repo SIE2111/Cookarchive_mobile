@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider } from './src/theme/ThemeContext';
 import { AuthProvider } from './src/context/AuthContext';
@@ -31,16 +32,22 @@ export default function App() {
 
   if (!spracheBereit) return null;
 
+  // GestureHandlerRootView so nah wie moeglich an der Wurzel - Pflicht
+  // fuer react-native-gesture-handler (siehe ManageCategoriesScreen, wo
+  // es fuer echtes Ziehen zum Umsortieren genutzt wird), sonst schlagen
+  // Gesten mit einer Fehlermeldung fehl statt einfach nichts zu tun.
   return (
-    <SafeAreaProvider>
-      <ThemeProvider>
-        <AuthProvider>
-          <ServerSyncProvider>
-            <StatusBar style="auto" />
-            <AppNavigator />
-          </ServerSyncProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <ServerSyncProvider>
+              <StatusBar style="auto" />
+              <AppNavigator />
+            </ServerSyncProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
