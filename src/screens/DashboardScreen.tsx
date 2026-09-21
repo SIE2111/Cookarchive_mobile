@@ -185,16 +185,22 @@ export default function DashboardScreen({ navigation }: Props) {
     // Erst die Tags, fuer die der Nutzer eine Reihenfolge festgelegt hat
     // (siehe ManageCategoriesScreen), in genau dieser Reihenfolge - nur
     // wenn sie ueberhaupt noch vorkommen und nicht ausgeblendet sind.
-    // Danach alles Uebrige, das (noch) keine feste Position hat, nach
-    // Haeufigkeit - so taucht eine frisch importierte Kategorie sofort
-    // auf, statt auf eine manuelle Einsortierung warten zu muessen.
     const eingeordnet = new Set(categoryOrder ?? []);
     const feste_reihenfolge = (categoryOrder ?? []).filter((tag) => counts.has(tag) && !versteckt.has(tag));
-    const rest = Array.from(counts.entries())
-      .filter(([tag]) => !eingeordnet.has(tag) && !versteckt.has(tag))
-      .sort((a, b) => b[1] - a[1])
-      .map(([tag]) => tag);
-    return [...feste_reihenfolge, ...rest];
+
+    // Alles Uebrige, das (noch) keine feste Position hat: zuerst "Einfach"
+    // und "Klassiker", falls vorhanden (Standard-Vorgabe), danach der Rest
+    // alphabetisch - nicht mehr nach Haeufigkeit. Eine frisch importierte
+    // Kategorie taucht dadurch trotzdem sofort auf, nur eben eingeordnet
+    // statt nach vorne gedraengt.
+    const restKandidaten = Array.from(counts.keys()).filter((tag) => !eingeordnet.has(tag) && !versteckt.has(tag));
+    const STANDARD_ZUERST = ['Einfach', 'Klassiker'];
+    const vorrang = STANDARD_ZUERST.filter((tag) => restKandidaten.includes(tag));
+    const alphabetisch = restKandidaten
+      .filter((tag) => !STANDARD_ZUERST.includes(tag))
+      .sort((a, b) => a.localeCompare(b, 'de'));
+
+    return [...feste_reihenfolge, ...vorrang, ...alphabetisch];
   }, [recipes, categoryOrder, hiddenCategories]);
 
   // Eine Kategorie per Fingerdruck-halten ausblenden - reversibel, siehe
