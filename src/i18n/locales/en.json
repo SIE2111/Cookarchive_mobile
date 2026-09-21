@@ -162,7 +162,11 @@
     "ausblenden": "Hide",
     "kategorienZuruecksetzenFrage": "Reset?",
     "kategorienZuruecksetzenText": "All categories will be shown again, and the order will go back to being based on frequency only.",
-    "zuruecksetzen": "Reset"
+    "zuruecksetzen": "Reset",
+    "anDenAnfang": "Move to top",
+    "nachOben": "Move up",
+    "nachUnten": "Move down",
+    "ansEnde": "Move to bottom"
   },
   "profil": {
     "name": "NAME",
