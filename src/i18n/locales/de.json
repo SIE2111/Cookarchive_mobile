@@ -153,7 +153,16 @@
     "zuletztZubereitet": "Zuletzt zubereitet",
     "rezept": "Rezept",
     "nichtGeladen": "Konnte nicht geladen werden",
-    "favoriten": "Favoriten"
+    "favoriten": "Favoriten",
+    "kategorienVerwalten": "Kategorien verwalten",
+    "kategorienVerwaltenText": "Reihenfolge mit den Pfeilen anpassen, mit dem Schalter einzelne Kategorien aus der Startseite ausblenden.",
+    "kategorienKeine": "Noch keine Kategorien - sie entstehen aus den Tags deiner Rezepte.",
+    "kategorieAusblendenFrage": "Kategorie ausblenden?",
+    "kategorieAusblendenText": "„{kategorie}“ erscheint danach nicht mehr auf der Startseite. Über „Kategorien verwalten“ lässt sie sich jederzeit wieder einblenden.",
+    "ausblenden": "Ausblenden",
+    "kategorienZuruecksetzenFrage": "Zurücksetzen?",
+    "kategorienZuruecksetzenText": "Alle Kategorien werden wieder eingeblendet, die Reihenfolge richtet sich danach wieder nur nach Häufigkeit.",
+    "zuruecksetzen": "Zurücksetzen"
   },
   "profil": {
     "name": "NAME",
