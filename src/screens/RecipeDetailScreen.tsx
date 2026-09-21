@@ -49,6 +49,9 @@ interface RecipeDetail {
   // 'private' | 'shared_household' | 'public_pool' - fuer den Anfangszustand
   // des Pool-Knopfs (siehe PublishToPoolButton initialPublished).
   visibility: string;
+  // Nur gesetzt, wenn ein ANDERES Haushaltsmitglied das Rezept angelegt
+  // hat (siehe Backend _mit_ersteller_namen).
+  owner_display_name?: string | null;
 }
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -690,6 +693,14 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
       <Text style={[styles.sourceHint, { color: colors.muted }]}>
         {SOURCE_LABELS[recipe.source_type] ?? recipe.source_type}
       </Text>
+      {/* Nur bei einem ANDEREN Haushaltsmitglied gesetzt (siehe Backend
+          _mit_ersteller_namen) - dieselbe Kennzeichnungs-Zeile wie oben,
+          fuer die Haushalts-Herkunft statt der Erfassungsart. */}
+      {recipe.owner_display_name && (
+        <Text style={[styles.sourceHint, { color: colors.muted }]}>
+          {t('detail.vonHaushaltsmitglied', { name: recipe.owner_display_name })}
+        </Text>
+      )}
 
       <View style={[styles.servingsCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
         <Text style={[styles.servingsLabel, { color: colors.muted }]}>{t('detail.portionen')}</Text>
