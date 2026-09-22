@@ -9,6 +9,7 @@ import { useUebersetzung } from '../i18n';
 import TranslationBanner from './TranslationBanner';
 import { api, ApiError } from '../api/client';
 import { mitStufenHinweis } from '../utils/stufenHinweis';
+import { zutatenImSchritt } from '../utils/schrittZutaten';
 import { schritteInhaltGeaendert, pickStepsForLevel, feldFuerStufe, FORTGESCHRITTEN_MIN_SCHRITTE, HaubenLevel, RecipeStep, StufenFeld } from '../utils/stepLevels';
 import { scheduleTimerNotification, cancelTimerNotification, setupNotificationChannel } from '../utils/notifications';
 import BrutzelAvatar from './BrutzelAvatar';
@@ -507,6 +508,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
     steps: RecipeStep[];
     steps_anfaenger?: RecipeStep[] | null;
     steps_profi?: RecipeStep[] | null;
+    ingredients?: { name: string }[];
   } | null>(null);
   const [zeigeUebersetzung, setZeigeUebersetzung] = useState(true);
   const [uebersetztGerade, setUebersetztGerade] = useState(false);
@@ -520,6 +522,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
       const res = await api.post<{
         title: string; steps: RecipeStep[];
         steps_anfaenger?: RecipeStep[] | null; steps_profi?: RecipeStep[] | null;
+        ingredients?: { name: string }[];
       }>(`/ai/translate/${recipe.id}?locale=${sprache}`, {});
       setUebersetzung(res);
       setZeigeUebersetzung(true);
@@ -552,6 +555,24 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
 
   const derivedSteps = uebersetzteSchritte() ?? (recipe ? pickStepsForLevel(recipe, level) : []);
   const currentStep = derivedSteps[currentIndex];
+
+  // Zutaten, die in diesem Schritt vorkommen - von der App selbst im
+  // Schritttext gesucht (siehe utils/schrittZutaten.ts). Bei der
+  // Uebersetzung mit den uebersetzten Namen, die Mengen bleiben die des
+  // Originals; passt die Liste nicht Zeile fuer Zeile, lieber nichts zeigen.
+  const zutatenNamen: { name: string }[] | null = !recipe
+    ? null
+    : zeigtUebersetzung
+      ? uebersetzung?.ingredients && uebersetzung.ingredients.length === recipe.ingredients.length
+        ? uebersetzung.ingredients
+        : null
+      : recipe.ingredients;
+  const schrittZutaten = currentStep && zutatenNamen
+    ? zutatenImSchritt(currentStep.text, zutatenNamen, zeigtUebersetzung ? sprache : quellsprache).map((index) => ({
+        index,
+        name: zutatenNamen[index].name,
+      }))
+    : [];
 
   // KI-Tipp zu genau diesem Schritt, sonst der eingebaute Technik-Tipp,
   // sonst ein allgemeiner. Die Reihenfolge ist Absicht: Der schrittgenaue
@@ -1088,6 +1109,21 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
         </Pressable>
       </View>
 
+      {schrittZutaten.length > 0 && (
+        <View style={[styles.schrittZutaten, { backgroundColor: colors.card, borderRadius: radius.sm }]}>
+          <Text style={[styles.schrittZutatenTitel, { color: colors.muted }]}>{t('kochen.fuerDiesenSchritt')}</Text>
+          {schrittZutaten.map(({ index, name }) => {
+            const ing = recipe.ingredients[index];
+            return (
+              <Text key={index} style={[styles.ingredientLine, { color: colors.text, fontSize: largeText ? 16 : 14 }]}>
+                {ing.amount ? `${mengeUmgerechnet(ing.amount)} ${ing.unit ?? ''} ` : ''}
+                {name}
+              </Text>
+            );
+          })}
+        </View>
+      )}
+
       {currentStep.technique_tag && (
         <View style={[styles.techniqueBadge, { backgroundColor: colors.card, borderRadius: radius.sm }]}>
           <Text style={[styles.techniqueText, { color: colors.muted }]}>
@@ -1384,6 +1420,8 @@ const styles = StyleSheet.create({
   ingredientsToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12, marginBottom: 4 },
   ingredientsToggleText: { fontSize: 12.5, fontWeight: '600' },
   ingredientsList: { padding: 12, marginBottom: 16 },
+  schrittZutaten: { paddingHorizontal: 12, paddingVertical: 10, marginBottom: 10, gap: 2 },
+  schrittZutatenTitel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 2 },
   ingredientLine: { fontSize: 12.5, lineHeight: 20 },
   ingredientRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 4 },
   stepIndicator: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginBottom: 10 },
