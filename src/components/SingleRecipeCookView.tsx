@@ -8,7 +8,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
 import TranslationBanner from './TranslationBanner';
 import { api, ApiError } from '../api/client';
-import { pickStepsForLevel, HaubenLevel, RecipeStep } from '../utils/stepLevels';
+import { pickStepsForLevel, feldFuerStufe, FORTGESCHRITTEN_MIN_SCHRITTE, HaubenLevel, RecipeStep, StufenFeld } from '../utils/stepLevels';
 import { scheduleTimerNotification, cancelTimerNotification, setupNotificationChannel } from '../utils/notifications';
 import BrutzelAvatar from './BrutzelAvatar';
 
@@ -26,6 +26,7 @@ interface RecipeForCooking {
   steps: RecipeStep[];
   steps_anfaenger?: RecipeStep[] | null;
   steps_profi?: RecipeStep[] | null;
+  steps_fortgeschritten?: RecipeStep[] | null;
   locale?: string | null;
   available_translations?: string[];
 }
@@ -191,7 +192,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
   // Abfrage), da Notiz ein eigenes Feld ist, hier geht es um die
   // eigentlichen Zutaten/Schritt-Daten.
   const saveRecipeChangeWithScope = (
-    updatedFields: { ingredients?: Ingredient[]; steps?: RecipeStep[] },
+    updatedFields: { ingredients?: Ingredient[] } & Partial<Record<StufenFeld, RecipeStep[]>>,
     applyLocally: () => void,
     setSaving: (v: boolean) => void,
     onDone: () => void,
@@ -451,10 +452,14 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
   // dieser Stufe geladen wurde) und noch keine generierte Variante
   // vorliegt, jetzt beim Backend anfordern (generiert + cacht dort einmalig,
   // siehe POST /ai/adapt-steps/{id}) und ins lokale Rezept einmischen.
-  // Fortgeschritten braucht das nie, das ist immer die Basisfassung.
+  // Fortgeschritten braucht das nur bei kurzen Originalen (weniger als
+  // FORTGESCHRITTEN_MIN_SCHRITTE) - laengere Rezepte sind so, wie sie
+  // erfasst wurden, schon die Fortgeschritten-Fassung.
   useEffect(() => {
-    if (!recipe || level === 'fortgeschritten') return;
-    const cachedField = level === 'anfaenger' ? 'steps_anfaenger' : 'steps_profi';
+    if (!recipe) return;
+    const cachedField: StufenFeld =
+      level === 'anfaenger' ? 'steps_anfaenger' : level === 'profi' ? 'steps_profi' : 'steps_fortgeschritten';
+    if (level === 'fortgeschritten' && recipe.steps.length >= FORTGESCHRITTEN_MIN_SCHRITTE) return;
     const alreadyCached = recipe[cachedField] && recipe[cachedField]!.length > 0;
     if (alreadyCached) return;
 
@@ -642,14 +647,16 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
 
   const handleSaveStepText = () => {
     if (!recipe || !stepTextDraft.trim()) return;
-    // Wie bei der Notiz: immer auf die Original-Schrittliste anwenden, daher
-    // nur im Anfaenger-Modus bearbeitbar (siehe Button-Disabled-Zustand).
-    const updatedSteps = recipe.steps.map((s) =>
+    // Wie bei der Notiz: in die Liste der gerade angezeigten Stufe. Vorher
+    // aenderte der Stift (nur auf Anfaenger-Stufe sichtbar) den Schritt mit
+    // derselben Nummer in der Grundfassung - also einen anderen Schritt.
+    const feld = feldFuerStufe(recipe, level);
+    const updatedSteps = (recipe[feld] ?? []).map((s) =>
       s.order === currentStep.order ? { ...s, text: stepTextDraft.trim() } : s,
     );
     saveRecipeChangeWithScope(
-      { steps: updatedSteps },
-      () => setRecipe({ ...recipe, steps: updatedSteps }),
+      { [feld]: updatedSteps },
+      () => setRecipe({ ...recipe, [feld]: updatedSteps }),
       setIsSavingStepText,
       () => setIsStepTextModalOpen(false),
     );
@@ -657,15 +664,17 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
 
   const handleDeleteStep = () => {
     if (!recipe) return;
-    if (recipe.steps.length <= 1) {
+    const feld = feldFuerStufe(recipe, level);
+    const liste = recipe[feld] ?? [];
+    if (liste.length <= 1) {
       Alert.alert(t('detail.nichtMoeglich'), t('detail.mindestensEinSchritt'));
       return;
     }
-    const updatedSteps = recipe.steps.filter((s) => s.order !== currentStep.order);
+    const updatedSteps = liste.filter((s) => s.order !== currentStep.order);
     saveRecipeChangeWithScope(
-      { steps: updatedSteps },
+      { [feld]: updatedSteps },
       () => {
-        setRecipe({ ...recipe, steps: updatedSteps });
+        setRecipe({ ...recipe, [feld]: updatedSteps });
         // Wurde der letzte Schritt geloescht, auf den jetzt letzten
         // verbleibenden zurueckspringen statt ins Leere zu zeigen.
         setCurrentIndex((prev) => Math.min(prev, updatedSteps.length - 1));
@@ -724,13 +733,8 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
     // in die Basisfassung geschrieben: Auf Anfaenger- oder Profi-Stufe
     // meint dieselbe Schrittnummer dort etwas anderes, die Notiz landete
     // am falschen Schritt oder nirgends.
-    const feld =
-      level === 'anfaenger' && recipe.steps_anfaenger?.length
-        ? 'steps_anfaenger'
-        : level === 'profi' && recipe.steps_profi?.length
-          ? 'steps_profi'
-          : 'steps';
-    const liste = (feld === 'steps' ? recipe.steps : recipe[feld]) ?? [];
+    const feld = feldFuerStufe(recipe, level);
+    const liste = recipe[feld] ?? [];
     const updatedSteps = liste.map((st) =>
       st.order === currentStep.order ? { ...st, user_note: noteDraft.trim() || null } : st,
     );
@@ -1048,7 +1052,11 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
           <ActivityIndicator size="small" color={colors.muted} />
           <Text style={{ color: colors.muted, fontSize: 11 }}>
-            {level === 'anfaenger' ? t('kochen.umstellungAnfaenger') : t('kochen.umstellungProfi')}
+            {level === 'anfaenger'
+              ? t('kochen.umstellungAnfaenger')
+              : level === 'profi'
+                ? t('kochen.umstellungProfi')
+                : t('kochen.umstellungAllgemein')}
           </Text>
         </View>
       )}
@@ -1059,7 +1067,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
         {/* Bearbeiten gilt der Originalfassung. Waehrend die Uebersetzung
             angezeigt wird, waere der Stift eine Falle - man aenderte einen
             Text, der so gar nicht dasteht. */}
-        {level === 'anfaenger' && !zeigtUebersetzung && (
+        {!zeigtUebersetzung && (
           <Pressable onPress={handleOpenStepTextModal} style={[styles.speakButton, { backgroundColor: colors.card }]}>
             <MaterialCommunityIcons name="pencil-outline" size={15} color={colors.text} />
           </Pressable>

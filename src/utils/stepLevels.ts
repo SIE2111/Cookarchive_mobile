@@ -20,7 +20,12 @@ export type HaubenLevel = 'anfaenger' | 'fortgeschritten' | 'profi';
  * und aktualisiert dann.
  */
 export function pickStepsForLevel(
-  recipe: { steps: RecipeStep[]; steps_anfaenger?: RecipeStep[] | null; steps_profi?: RecipeStep[] | null },
+  recipe: {
+    steps: RecipeStep[];
+    steps_anfaenger?: RecipeStep[] | null;
+    steps_profi?: RecipeStep[] | null;
+    steps_fortgeschritten?: RecipeStep[] | null;
+  },
   level: HaubenLevel,
 ): RecipeStep[] {
   if (level === 'anfaenger' && recipe.steps_anfaenger && recipe.steps_anfaenger.length > 0) {
@@ -29,5 +34,38 @@ export function pickStepsForLevel(
   if (level === 'profi' && recipe.steps_profi && recipe.steps_profi.length > 0) {
     return recipe.steps_profi;
   }
+  if (level === 'fortgeschritten' && recipe.steps_fortgeschritten && recipe.steps_fortgeschritten.length > 0) {
+    return recipe.steps_fortgeschritten;
+  }
   return recipe.steps;
+}
+
+/**
+ * Ab wie vielen Original-Schritten die Fortgeschritten-Stufe das Original
+ * selbst ist (siehe fortgeschritten_ziel im Backend): Kuerzere Rezepte
+ * bekommen eine auf 6 Schritte aufgeteilte Fassung, zwei weniger als die
+ * Anfaenger-Stufe mit mindestens 8.
+ */
+export const FORTGESCHRITTEN_MIN_SCHRITTE = 6;
+
+export type StufenFeld = 'steps' | 'steps_anfaenger' | 'steps_fortgeschritten' | 'steps_profi';
+
+/**
+ * Das Feld, dessen Liste auf dieser Stufe gerade ANGEZEIGT wird - dieselbe
+ * Auswahl wie pickStepsForLevel. Aenderungen an einem Schritt (Text,
+ * Notiz, Loeschen) gehoeren in genau diese Liste, sonst traefen sie den
+ * Schritt mit derselben Nummer in einer anderen Fassung.
+ */
+export function feldFuerStufe(
+  recipe: {
+    steps_anfaenger?: RecipeStep[] | null;
+    steps_profi?: RecipeStep[] | null;
+    steps_fortgeschritten?: RecipeStep[] | null;
+  },
+  level: HaubenLevel,
+): StufenFeld {
+  if (level === 'anfaenger' && recipe.steps_anfaenger?.length) return 'steps_anfaenger';
+  if (level === 'profi' && recipe.steps_profi?.length) return 'steps_profi';
+  if (level === 'fortgeschritten' && recipe.steps_fortgeschritten?.length) return 'steps_fortgeschritten';
+  return 'steps';
 }
