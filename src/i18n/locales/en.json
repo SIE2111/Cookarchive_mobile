@@ -301,7 +301,8 @@
     "fremdesRezeptText": "\"{titel}\" belongs to another member of your household. Deleting it removes it for them too – without notice and without any way to get it back.",
     "trotzdemLoeschen": "Delete anyway",
     "ganzesRezept": "Whole recipe",
-    "ganzesRezeptText": "The amounts apply to the whole recipe, e.g. a cake or a casserole."
+    "ganzesRezeptText": "The amounts apply to the whole recipe, e.g. a cake or a casserole.",
+    "loeschenTextHaushalt": "\"{titel}\" was added by {name}. It will be deleted permanently for the whole household, including for {name}. This cannot be undone."
   },
   "kochen": {
     "tipp": {

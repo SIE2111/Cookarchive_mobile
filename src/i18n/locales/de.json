@@ -301,7 +301,8 @@
     "fremdesRezeptText": "„{titel}\" gehört einem anderen Haushaltsmitglied. Beim Löschen verschwindet es auch bei ihm – ohne Hinweis und ohne Möglichkeit, es zurückzuholen.",
     "trotzdemLoeschen": "Trotzdem löschen",
     "ganzesRezept": "Ganzes Rezept",
-    "ganzesRezeptText": "Die Mengen gelten für das ganze Rezept, z. B. eine Torte oder eine Auflaufform."
+    "ganzesRezeptText": "Die Mengen gelten für das ganze Rezept, z. B. eine Torte oder eine Auflaufform.",
+    "loeschenTextHaushalt": "„{titel}“ hat {name} angelegt. Es wird für den ganzen Haushalt dauerhaft gelöscht, auch bei {name}. Das kann nicht rückgängig gemacht werden."
   },
   "kochen": {
     "tipp": {
