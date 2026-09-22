@@ -1115,20 +1115,21 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
       </View>
       )}
 
+      {/* Notizen auf allen drei Stufen: handleSaveNote schreibt die Notiz
+          in die Schrittliste der gerade gewaehlten Stufe. Frueher war der
+          Knopf nur auf Anfaenger-Stufe sichtbar - ein Rest aus der Zeit,
+          als Notizen nur in der Basisfassung gespeichert wurden. */}
       {currentStep.user_note ? (
-        <Pressable
-          onPress={level === 'anfaenger' ? handleOpenNoteModal : undefined}
-          style={[styles.noteCard, { opacity: level === 'anfaenger' ? 1 : 0.85 }]}
-        >
-          <Text style={styles.noteLabel}>📌 Deine Notiz {level === 'anfaenger' ? '(antippen zum Bearbeiten)' : ''}</Text>
+        <Pressable onPress={handleOpenNoteModal} style={styles.noteCard}>
+          <Text style={styles.noteLabel}>📌 {t('kochen.deineNotizBearbeiten')}</Text>
           <Text style={styles.noteText}>{currentStep.user_note}</Text>
         </Pressable>
-      ) : level === 'anfaenger' ? (
+      ) : (
         <Pressable onPress={handleOpenNoteModal} style={[styles.addNoteButton, { borderColor: colors.muted, borderRadius: radius.sm }]}>
           <MaterialCommunityIcons name="note-plus-outline" size={14} color={colors.muted} />
           <Text style={[styles.addNoteText, { color: colors.muted }]}>{t('kochen.notizHinzufuegen')}</Text>
         </Pressable>
-      ) : null}
+      )}
 
       {isTimerRunningElsewhere && (
         <View style={[styles.timerElsewhereBanner, { backgroundColor: colors.card, borderRadius: radius.sm }]}>
