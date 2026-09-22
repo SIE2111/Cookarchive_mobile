@@ -313,7 +313,18 @@
     "haushaltNurIchKnopf": "Nur für mich",
     "haushaltFremdTitel": "Aus dem Haushalt nehmen?",
     "haushaltFremdText": "{name} hat das Rezept angelegt und behält es. Du und die anderen im Haushalt seht es dann nicht mehr. {name} kann es jederzeit wieder teilen.",
-    "haushaltFremdKnopf": "Herausnehmen"
+    "haushaltFremdKnopf": "Herausnehmen",
+    "einarbeiten": "Ins Rezept einarbeiten",
+    "einarbeitenLaeuft": "Brutzel arbeitet die Vorschläge ein …",
+    "einarbeitenTitel": "So sähe das Rezept aus",
+    "einarbeitenHinweis": "Nichts ist gespeichert. Du kannst das Ergebnis erst ansehen und dann entscheiden.",
+    "einarbeitenGeaendert": "Das hat sich geändert",
+    "einarbeitenZutaten": "Zutaten",
+    "einarbeitenSchritte": "Zubereitung",
+    "einarbeitenSpeichern": "Rezept so übernehmen",
+    "einarbeitenVerwerfen": "Verwerfen",
+    "einarbeitenFehler": "Die Vorschläge konnten nicht eingearbeitet werden.",
+    "alsNotizMerken": "{anzahl} als Notiz merken"
   },
   "kochen": {
     "tipp": {

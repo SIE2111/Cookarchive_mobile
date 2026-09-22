@@ -227,6 +227,58 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
     }
   };
 
+  // Vorschlaege wirklich ins Rezept einarbeiten (statt sie nur als Notiz
+  // darunterzuschreiben): Das Backend liefert das ueberarbeitete Rezept
+  // zurueck, OHNE es zu speichern - hier zeigen wir es zuerst an, der
+  // Nutzer entscheidet.
+  const [isEinarbeiten, setIsEinarbeiten] = useState(false);
+  const [entwurf, setEntwurf] = useState<
+    { ingredients: Ingredient[]; steps: Step[]; changes: string[] } | null
+  >(null);
+
+  const handleEinarbeiten = async () => {
+    if (!reviewSuggestions || selectedSuggestionIndices.length === 0) return;
+    setIsEinarbeiten(true);
+    try {
+      const res = await api.post<{ ingredients: Ingredient[]; steps: Step[]; changes: string[] }>(
+        `/ai/apply-suggestions/${recipeId}`,
+        { suggestions: selectedSuggestionIndices.map((i) => reviewSuggestions[i]) },
+      );
+      setEntwurf(res);
+    } catch (err) {
+      Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('detail.einarbeitenFehler'));
+    } finally {
+      setIsEinarbeiten(false);
+    }
+  };
+
+  const handleEntwurfSpeichern = () => {
+    if (!entwurf || !recipe) return;
+    // Wie bei jeder Schrittaenderung: erst warnen, wenn an den
+    // Stufenfassungen Notizen haengen - die gehen dabei verloren.
+    mitStufenHinweis(recipe, recipe.steps, entwurf.steps, t, async () => {
+      setIsApplyingSuggestions(true);
+      try {
+        const updated = await api.patch<RecipeDetail>(`/recipes/${recipeId}`, {
+          ingredients: entwurf.ingredients,
+          steps: entwurf.steps,
+        });
+        setRecipe((prev) => ({
+          ...updated,
+          owner_display_name: prev?.owner_display_name ?? updated.owner_display_name,
+          household_active: prev?.household_active ?? updated.household_active,
+        }));
+        setEntwurf(null);
+        setReviewSuggestions(null);
+        setSelectedSuggestionIndices([]);
+      } catch (err) {
+        Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('detail.nichtUebernommen'));
+      } finally {
+        setIsApplyingSuggestions(false);
+      }
+    });
+  };
+
   const toggleSuggestionSelect = (index: number) => {
     setSelectedSuggestionIndices((prev) =>
       prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index],
@@ -971,19 +1023,38 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
               );
             })}
             <Pressable
-              onPress={handleApplySuggestions}
-              disabled={selectedSuggestionIndices.length === 0 || isApplyingSuggestions}
+              onPress={handleEinarbeiten}
+              disabled={selectedSuggestionIndices.length === 0 || isEinarbeiten}
               style={[
                 styles.reviewButton,
                 { backgroundColor: gradient[0], borderRadius: radius.sm, opacity: selectedSuggestionIndices.length === 0 ? 0.5 : 1, marginTop: 4 },
               ]}
             >
-              {isApplyingSuggestions ? (
+              {isEinarbeiten ? (
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
-                <Text style={styles.reviewButtonText}>
+                <Text style={styles.reviewButtonText}>{t('detail.einarbeiten')}</Text>
+              )}
+            </Pressable>
+            {isEinarbeiten && (
+              <Text style={{ color: colors.muted, fontSize: 11, textAlign: 'center', marginTop: 6 }}>
+                {t('detail.einarbeitenLaeuft')}
+              </Text>
+            )}
+            <Pressable
+              onPress={handleApplySuggestions}
+              disabled={selectedSuggestionIndices.length === 0 || isApplyingSuggestions}
+              style={[
+                styles.secondaryReviewButton,
+                { borderColor: gradient[0], borderRadius: radius.sm, opacity: selectedSuggestionIndices.length === 0 ? 0.5 : 1 },
+              ]}
+            >
+              {isApplyingSuggestions && !entwurf ? (
+                <ActivityIndicator color={gradient[0]} size="small" />
+              ) : (
+                <Text style={[styles.secondaryReviewButtonText, { color: gradient[0] }]}>
                   {selectedSuggestionIndices.length > 0
-                    ? t('detail.anzahlUebernehmen', { anzahl: selectedSuggestionIndices.length })
+                    ? t('detail.alsNotizMerken', { anzahl: selectedSuggestionIndices.length })
                     : t('detail.auswaehlenZumUebernehmen')}
                 </Text>
               )}
@@ -1073,6 +1144,63 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
       </View>
       </View>
     </ScrollView>
+
+    {/* Vorschau des ueberarbeiteten Rezepts - gespeichert wird erst auf
+        ausdruecklichen Knopfdruck, siehe handleEntwurfSpeichern. */}
+    <Modal visible={!!entwurf} animationType="slide" onRequestClose={() => setEntwurf(null)}>
+      <View style={[styles.pickerContainer, { backgroundColor: colors.bg }]}>
+        <View style={styles.pickerHeader}>
+          <Text style={[styles.pickerTitle, { color: colors.text }]}>{t('detail.einarbeitenTitel')}</Text>
+          <Pressable onPress={() => setEntwurf(null)} hitSlop={10}>
+            <MaterialCommunityIcons name="close" size={24} color={colors.muted} />
+          </Pressable>
+        </View>
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 30 }}>
+          <Text style={{ color: colors.muted, fontSize: 12, marginBottom: 14 }}>{t('detail.einarbeitenHinweis')}</Text>
+
+          {!!entwurf?.changes.length && (
+            <View style={[styles.noteCard, { borderRadius: radius.sm, marginBottom: 16, marginTop: 0 }]}>
+              <Text style={styles.noteLabel}>{t('detail.einarbeitenGeaendert')}</Text>
+              {entwurf.changes.map((c, i) => (
+                <Text key={i} style={[styles.noteText, { color: colors.text }]}>{'\u2022 ' + c}</Text>
+              ))}
+            </View>
+          )}
+
+          <Text style={[styles.sidesTitle, { color: colors.text, marginBottom: 6 }]}>{t('detail.einarbeitenZutaten')}</Text>
+          {entwurf?.ingredients.map((z, i) => (
+            <Text key={i} style={{ color: colors.text, fontSize: 14, marginBottom: 3 }}>
+              {z.amount ? `${z.amount} ${z.unit ?? ''} ` : ''}{z.name}
+            </Text>
+          ))}
+
+          <Text style={[styles.sidesTitle, { color: colors.text, marginTop: 18, marginBottom: 6 }]}>{t('detail.einarbeitenSchritte')}</Text>
+          {entwurf?.steps.map((st, i) => (
+            <Text key={i} style={{ color: colors.text, fontSize: 14, lineHeight: 21, marginBottom: 8 }}>
+              {`${st.order}. ${st.text}`}
+            </Text>
+          ))}
+
+          <Pressable
+            onPress={handleEntwurfSpeichern}
+            disabled={isApplyingSuggestions}
+            style={[styles.reviewButton, { backgroundColor: gradient[0], borderRadius: radius.sm, marginTop: 20 }]}
+          >
+            {isApplyingSuggestions ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Text style={styles.reviewButtonText}>{t('detail.einarbeitenSpeichern')}</Text>
+            )}
+          </Pressable>
+          <Pressable
+            onPress={() => setEntwurf(null)}
+            style={[styles.secondaryReviewButton, { borderColor: gradient[0], borderRadius: radius.sm }]}
+          >
+            <Text style={[styles.secondaryReviewButtonText, { color: gradient[0] }]}>{t('detail.einarbeitenVerwerfen')}</Text>
+          </Pressable>
+        </ScrollView>
+      </View>
+    </Modal>
 
     <Modal visible={isPickerOpen} animationType="slide" onRequestClose={() => setIsPickerOpen(false)}>
       <View style={[styles.pickerContainer, { backgroundColor: colors.bg }]}>

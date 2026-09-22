@@ -313,7 +313,18 @@
     "haushaltNurIchKnopf": "Only for me",
     "haushaltFremdTitel": "Remove from household?",
     "haushaltFremdText": "{name} created this recipe and keeps it. You and the others in your household will no longer see it. {name} can share it again at any time.",
-    "haushaltFremdKnopf": "Remove"
+    "haushaltFremdKnopf": "Remove",
+    "einarbeiten": "Apply to recipe",
+    "einarbeitenLaeuft": "Brutzel is applying the suggestions …",
+    "einarbeitenTitel": "How the recipe would look",
+    "einarbeitenHinweis": "Nothing is saved yet. Take a look first, then decide.",
+    "einarbeitenGeaendert": "What changed",
+    "einarbeitenZutaten": "Ingredients",
+    "einarbeitenSchritte": "Preparation",
+    "einarbeitenSpeichern": "Save recipe like this",
+    "einarbeitenVerwerfen": "Discard",
+    "einarbeitenFehler": "The suggestions could not be applied.",
+    "alsNotizMerken": "Keep {anzahl} as a note"
   },
   "kochen": {
     "tipp": {
