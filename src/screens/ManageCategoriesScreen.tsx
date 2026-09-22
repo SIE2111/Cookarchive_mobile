@@ -1,6 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, Switch, Alert, Animated } from 'react-native';
-import { PanGestureHandler, ScrollView, State } from 'react-native-gesture-handler';
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, Switch, Alert, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
@@ -8,27 +7,15 @@ import { useUebersetzung } from '../i18n';
 import { api, ApiError } from '../api/client';
 
 /**
- * Verwaltung der Kategorien-Zeile im Dashboard: Reihenfolge per Ziehen
- * festlegen und einzelne Kategorien ein-/ausblenden.
+ * Verwaltung der Kategorien-Zeile im Dashboard: Reihenfolge mit Pfeil-
+ * Knoepfen festlegen und einzelne Kategorien ein-/ausblenden.
  *
- * ZWEITER ANLAUF beim Ziehen. Die erste Fassung hatte kleine Pfeile
- * (zu fummelig), die zweite ein reines PanResponder-Drag - das sah in
- * der Theorie richtig aus, scheiterte aber am bekannten Konflikt
- * zwischen PanResponder und der umgebenden ScrollView: beide reagieren
- * auf senkrechte Fingerbewegung, und PanResponder hat im JS-Responder-
- * System keine zuverlaessige Moeglichkeit, sich gegen eine native
- * ScrollView durchzusetzen (die Geste "gewinnt" oft die ScrollView statt
- * der gezogenen Zeile - fuehlt sich dann an, als wuerde gar nichts
- * passieren, oder es scrollt einfach nur die Liste).
- *
- * Diese Fassung nutzt stattdessen react-native-gesture-handler: in
- * Expo Go fest eingebaut (React Navigation selbst nutzt es intern fuer
- * Screen-Uebergaenge), erkennt Gesten auf dem nativen Thread und kann
- * sich darum sauber gegen die eigene, ebenfalls von dieser Bibliothek
- * stammende ScrollView (Import unten von 'react-native-gesture-handler',
- * NICHT von 'react-native') abgrenzen. Voraussetzung: GestureHandlerRootView
- * einmal nahe der App-Wurzel (siehe App.tsx) - ohne die schlagen Gesten
- * mit einer Fehlermeldung fehl statt nichts zu tun.
+ * Pfeile statt Ziehen (22.09.2026): Die Zieh-Variante mit
+ * react-native-gesture-handler (siehe Git-Historie, Commit 62678ae) hob
+ * die Karte im installierten Build nur an, bewegte sie aber nicht. Pfeile
+ * sind reines JavaScript, funktionieren per EAS Update ohne neuen Build
+ * und sind fuer viele Nutzer einfacher als Ziehen. Das Ziehen kann beim
+ * naechsten regulaeren Build wieder aus der Historie geholt werden.
  */
 
 const ROW_HEIGHT = 60;
@@ -46,19 +33,6 @@ export default function ManageCategoriesScreen({ navigation }: any) {
   const [allTags, setAllTags] = useState<string[]>([]);
   const [order, setOrder] = useState<string[]>([]);
   const [hidden, setHidden] = useState<Set<string>>(new Set());
-
-  const [draggingTag, setDraggingTag] = useState<string | null>(null);
-  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
-  const dragStartIndexRef = useRef(0);
-  const dragY = useRef(new Animated.Value(0)).current;
-  // Ueberlebt die ganze Geste, anders als lokale Variablen im Render -
-  // ein Wert pro Tag, wird beim ersten Bedarf angelegt und danach nur
-  // noch wiederverwendet (Map bleibt ueber Rerenders hinweg bestehen).
-  const rowOffsets = useRef<Map<string, Animated.Value>>(new Map()).current;
-  const offsetFuer = (tag: string) => {
-    if (!rowOffsets.has(tag)) rowOffsets.set(tag, new Animated.Value(0));
-    return rowOffsets.get(tag)!;
-  };
 
   const load = useCallback(async () => {
     try {
@@ -94,44 +68,15 @@ export default function ManageCategoriesScreen({ navigation }: any) {
     load();
   }, [load]);
 
-  // Waehrend des Ziehens: alle NICHT gezogenen Zeilen animiert zur Seite
-  // ruecken, wenn sie zwischen Start- und aktueller Zielposition liegen.
-  useEffect(() => {
-    order.forEach((tag, index) => {
-      if (tag === draggingTag) return;
-      let ziel = 0;
-      if (draggingTag != null && hoverIndex != null) {
-        const start = dragStartIndexRef.current;
-        if (start < hoverIndex && index > start && index <= hoverIndex) ziel = -ROW_HEIGHT;
-        else if (start > hoverIndex && index >= hoverIndex && index < start) ziel = ROW_HEIGHT;
-      }
-      Animated.timing(offsetFuer(tag), { toValue: ziel, duration: 150, useNativeDriver: true }).start();
+  const verschiebe = (von: number, nach: number) => {
+    setOrder((vorher) => {
+      if (nach < 0 || nach >= vorher.length) return vorher;
+      const neu = [...vorher];
+      const [element] = neu.splice(von, 1);
+      neu.splice(nach, 0, element);
+      return neu;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [order, draggingTag, hoverIndex]);
-
-  const commitDrag = (aktuellerHoverIndex: number | null) => {
-    const von = dragStartIndexRef.current;
-    const nach = aktuellerHoverIndex ?? von;
-    if (von !== nach) {
-      setOrder((vorher) => {
-        const neu = [...vorher];
-        const [element] = neu.splice(von, 1);
-        neu.splice(nach, 0, element);
-        return neu;
-      });
-    }
-    dragY.setValue(0);
-    setDraggingTag(null);
-    setHoverIndex(null);
   };
-
-  // hoverIndex per Ref zusaetzlich zum State fuehren: der State-Wert kann
-  // im onHandlerStateChange-Callback (der bei ENDED sofort commitDrag
-  // aufruft) noch den Stand VOR dem letzten Move-Event zeigen, weil
-  // React State-Updates asynchron sind. Die Ref ist immer aktuell.
-  const hoverIndexRef = useRef<number | null>(null);
-  useEffect(() => { hoverIndexRef.current = hoverIndex; }, [hoverIndex]);
 
   const toggleHidden = (tag: string) => {
     setHidden((vorher) => {
@@ -189,58 +134,41 @@ export default function ManageCategoriesScreen({ navigation }: any) {
           </Pressable>
         </View>
 
-        <ScrollView contentContainerStyle={styles.content} scrollEnabled={draggingTag == null}>
+        <ScrollView contentContainerStyle={styles.content}>
           <Text style={[styles.title, { color: colors.text }]}>{t('dashboard.kategorienVerwalten')}</Text>
           <Text style={[styles.lead, { color: colors.muted }]}>{t('dashboard.kategorienVerwaltenText')}</Text>
 
           {error && <Text style={[styles.errorText, { color: '#C0392B' }]}>{error}</Text>}
 
-          <View style={{ height: order.length * ROW_HEIGHT }}>
+          <View>
             {order.map((tag, index) => {
-              const istGezogen = tag === draggingTag;
-              const translateY = istGezogen
-                ? Animated.add(new Animated.Value(index * ROW_HEIGHT), dragY)
-                : Animated.add(new Animated.Value(index * ROW_HEIGHT), offsetFuer(tag));
+              const istErste = index === 0;
+              const istLetzte = index === order.length - 1;
               return (
-                <Animated.View
+                <View
                   key={tag}
-                  style={[
-                    styles.row,
-                    { backgroundColor: colors.card, borderRadius: radius.sm },
-                    { position: 'absolute', left: 0, right: 0, height: ROW_HEIGHT - 8 },
-                    { transform: [{ translateY }] },
-                    istGezogen && { zIndex: 10, elevation: 6, shadowOpacity: 0.18, shadowRadius: 8, shadowOffset: { width: 0, height: 3 } },
-                  ]}
+                  style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.sm }]}
                 >
-                  <PanGestureHandler
-                    activeOffsetY={[-6, 6]}
-                    failOffsetX={[-20, 20]}
-                    onHandlerStateChange={(evt) => {
-                      const { state } = evt.nativeEvent;
-                      if (state === State.BEGAN) {
-                        dragStartIndexRef.current = index;
-                        dragY.setValue(0);
-                        setDraggingTag(tag);
-                        setHoverIndex(index);
-                      } else if (state === State.END || state === State.CANCELLED || state === State.FAILED) {
-                        commitDrag(hoverIndexRef.current);
-                      }
-                    }}
-                    onGestureEvent={Animated.event(
-                      [{ nativeEvent: { translationY: dragY } }],
-                      {
-                        useNativeDriver: true,
-                        listener: (evt: any) => {
-                          const rohesZiel = index + Math.round(evt.nativeEvent.translationY / ROW_HEIGHT);
-                          setHoverIndex(Math.max(0, Math.min(order.length - 1, rohesZiel)));
-                        },
-                      },
-                    )}
+                  <Pressable
+                    onPress={() => verschiebe(index, index - 1)}
+                    disabled={istErste}
+                    style={styles.pfeil}
+                    hitSlop={2}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${tag} ${t('dashboard.nachOben')}`}
                   >
-                    <View style={styles.dragHandle} hitSlop={4}>
-                      <MaterialCommunityIcons name="drag-horizontal-variant" size={22} color={colors.muted} />
-                    </View>
-                  </PanGestureHandler>
+                    <MaterialCommunityIcons name="chevron-up" size={26} color={istErste ? colors.cardBorder : colors.text} />
+                  </Pressable>
+                  <Pressable
+                    onPress={() => verschiebe(index, index + 1)}
+                    disabled={istLetzte}
+                    style={styles.pfeil}
+                    hitSlop={2}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${tag} ${t('dashboard.nachUnten')}`}
+                  >
+                    <MaterialCommunityIcons name="chevron-down" size={26} color={istLetzte ? colors.cardBorder : colors.text} />
+                  </Pressable>
                   <Text
                     style={[styles.rowText, { color: hidden.has(tag) ? colors.muted : colors.text }]}
                     numberOfLines={1}
@@ -253,7 +181,7 @@ export default function ManageCategoriesScreen({ navigation }: any) {
                     trackColor={{ false: '#E7E1D4', true: gradient[0] }}
                     thumbColor="#fff"
                   />
-                </Animated.View>
+                </View>
               );
             })}
           </View>
@@ -291,12 +219,12 @@ const styles = StyleSheet.create({
   lead: { fontSize: 14, lineHeight: 20, marginBottom: 18 },
   errorText: { fontSize: 14, marginBottom: 12 },
   row: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10,
+    flexDirection: 'row', alignItems: 'center', paddingLeft: 4, paddingRight: 10,
+    height: ROW_HEIGHT - 8, marginBottom: 8,
   },
-  // Grosszuegiger Ziehgriff - mindestens 44pt Kantenlaenge, die uebliche
-  // Mindestgroesse fuer Touch-Ziele.
-  dragHandle: { width: 44, height: ROW_HEIGHT - 8, alignItems: 'center', justifyContent: 'center' },
-  rowText: { flex: 1, fontSize: 15, fontWeight: '600', marginLeft: 2 },
+  // Pfeil-Knoepfe mit 44pt Hoehe, der ueblichen Mindestgroesse fuer Touch-Ziele.
+  pfeil: { width: 40, height: 44, alignItems: 'center', justifyContent: 'center' },
+  rowText: { flex: 1, fontSize: 15, fontWeight: '600', marginLeft: 6 },
   resetLink: { alignSelf: 'center', marginTop: 12, minHeight: 44, justifyContent: 'center' },
   resetText: { fontSize: 14, fontWeight: '700' },
   footer: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16 },
