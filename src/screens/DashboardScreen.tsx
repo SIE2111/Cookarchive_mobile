@@ -6,7 +6,6 @@ import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
 import ScanFab from '../components/ScanFab';
 import IncomingSharesCard from '../components/IncomingSharesCard';
-import PublishToPoolButton from '../components/PublishToPoolButton';
 import BrutzelGreetingOverlay from '../components/BrutzelGreetingOverlay';
 import { useAuth } from '../context/AuthContext';
 import { api, ApiError } from '../api/client';
@@ -31,6 +30,7 @@ interface RecipeSummary {
   cover_image_url: string | null;
   created_at: string;
   last_cooked_at: string | null;
+  is_favorite?: boolean;
 }
 
 
@@ -235,6 +235,22 @@ export default function DashboardScreen({ navigation }: Props) {
     );
   }, [t]);
 
+  // Favorit direkt aus "Zuletzt zubereitet" setzen - frueher sass hier das
+  // Pool-Symbol. Wer etwas gerade gekocht hat, entscheidet eher, ob er es
+  // wieder kochen will, als ob es die Welt sehen soll.
+  const toggleFavorit = async (id: string) => {
+    const vorher = recipes.find((r) => r.id === id);
+    if (!vorher) return;
+    const neu = !vorher.is_favorite;
+    setRecipes((liste) => liste.map((r) => (r.id === id ? { ...r, is_favorite: neu } : r)));
+    try {
+      await api.patch(`/recipes/${id}`, { is_favorite: neu });
+    } catch (err) {
+      setRecipes((liste) => liste.map((r) => (r.id === id ? { ...r, is_favorite: !neu } : r)));
+      Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('detail.nichtGespeichert'));
+    }
+  };
+
   const recentlyCooked = useMemo(
     () =>
       recipes
@@ -424,7 +440,18 @@ export default function DashboardScreen({ navigation }: Props) {
                   {r.prep_time_minutes ? ` · ${r.prep_time_minutes} Min.` : ''}
                 </Text>
               </View>
-              <PublishToPoolButton recipeId={r.id} recipeTitle={r.title} size={17} />
+              <Pressable
+                onPress={() => toggleFavorit(r.id)}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel={t('dashboard.favoriten')}
+              >
+                <MaterialCommunityIcons
+                  name={r.is_favorite ? 'heart' : 'heart-outline'}
+                  size={19}
+                  color={r.is_favorite ? gradient[0] : colors.muted}
+                />
+              </Pressable>
             </Pressable>
           ))}
         </View>
