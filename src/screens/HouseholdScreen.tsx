@@ -5,6 +5,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
 import { api, ApiError } from '../api/client';
 import { useLayout } from '../utils/layout';
+import { useAuth } from '../context/AuthContext';
 
 interface Member {
   user_id: string;
@@ -33,8 +34,14 @@ export default function HouseholdScreen() {
   const { colors, gradient, radius } = useTheme();
   const { inhaltsBreite } = useLayout();
   const { t } = useUebersetzung();
+  const { session } = useAuth();
   const [household, setHousehold] = useState<Household | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
+  // Nur der Owner darf umbenennen (siehe Backend PATCH /households/,
+  // dieselbe Regel wie beim Einladen/Entfernen von Mitgliedern).
+  const [bearbeiteName, setBearbeiteName] = useState(false);
+  const [nameEntwurf, setNameEntwurf] = useState('');
+  const [speichertName, setSpeichertName] = useState(false);
 
   const [newHouseholdName, setNewHouseholdName] = useState('');
   const [joinCode, setJoinCode] = useState('');
@@ -68,6 +75,24 @@ export default function HouseholdScreen() {
       Alert.alert(t('haushalt.anlegenFehlgeschlagen'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
     } finally {
       setIsBusy(false);
+    }
+  };
+
+  const handleRenameHousehold = async () => {
+    const neuerName = nameEntwurf.trim();
+    if (!neuerName || neuerName === household?.name) {
+      setBearbeiteName(false);
+      return;
+    }
+    setSpeichertName(true);
+    try {
+      const aktualisiert = await api.patch<Household>('/households/', { name: neuerName });
+      setHousehold(aktualisiert);
+      setBearbeiteName(false);
+    } catch (err) {
+      Alert.alert(t('haushalt.umbenennenFehlgeschlagen'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
+    } finally {
+      setSpeichertName(false);
     }
   };
 
@@ -269,10 +294,47 @@ export default function HouseholdScreen() {
       contentContainerStyle={[styles.scrollContent, inhaltsBreite]}
       keyboardShouldPersistTaps="handled"
     >
-      <Text style={[styles.householdName, { color: colors.text }]}>{household.name}</Text>
+      {(() => {
+        const binOwner = household.members.some(
+          (m) => m.user_id === session?.user?.id && m.role === 'owner',
+        );
+        if (!binOwner) {
+          return <Text style={[styles.householdName, { color: colors.text }]}>{household.name}</Text>;
+        }
+        if (bearbeiteName) {
+          return (
+            <View style={styles.nameEditRow}>
+              <TextInput
+                value={nameEntwurf}
+                onChangeText={setNameEntwurf}
+                autoFocus
+                style={[styles.nameInput, { color: colors.text, borderColor: colors.cardBorder }]}
+              />
+              <Pressable onPress={handleRenameHousehold} disabled={speichertName} hitSlop={8}>
+                {speichertName ? (
+                  <ActivityIndicator color={gradient[0]} />
+                ) : (
+                  <MaterialCommunityIcons name="check" size={24} color={gradient[0]} />
+                )}
+              </Pressable>
+              <Pressable onPress={() => setBearbeiteName(false)} hitSlop={8}>
+                <MaterialCommunityIcons name="close" size={24} color={colors.muted} />
+              </Pressable>
+            </View>
+          );
+        }
+        return (
+          <Pressable
+            onPress={() => { setNameEntwurf(household.name); setBearbeiteName(true); }}
+            style={styles.nameEditRow}
+          >
+            <Text style={[styles.householdName, { color: colors.text }]}>{household.name}</Text>
+            <MaterialCommunityIcons name="pencil-outline" size={18} color={colors.muted} />
+          </Pressable>
+        );
+      })()}
       <Text style={[styles.hint, { color: colors.muted, marginTop: 14 }]}>
-        Alle Mitglieder sehen dieselben Rezepte, dieselbe Einkaufsliste und denselben Wochenplan.
-        Ändern und löschen kann ein Rezept nur, wer es angelegt hat.
+        {t('haushalt.beschreibung')}
       </Text>
 
       <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 20 }]}>MITGLIEDER</Text>
@@ -386,6 +448,8 @@ const styles = StyleSheet.create({
   secondaryButton: { height: 44, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   secondaryButtonText: { fontWeight: '700', fontSize: 13 },
   householdName: { fontSize: 18, fontWeight: '700' },
+  nameEditRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  nameInput: { fontSize: 18, fontWeight: '700', borderBottomWidth: 1, flex: 1, paddingVertical: 2 },
   memberRow: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, marginBottom: 7 },
   memberText: { flex: 1, fontSize: 11.5 },
   roleTag: { fontSize: 10.5, fontWeight: '600' },
