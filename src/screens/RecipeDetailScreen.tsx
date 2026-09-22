@@ -9,6 +9,7 @@ import TranslationBanner from '../components/TranslationBanner';
 import PublishToPoolButton from '../components/PublishToPoolButton';
 import ShareRecipeButton from '../components/ShareRecipeButton';
 import { api, ApiError } from '../api/client';
+import { mitStufenHinweis } from '../utils/stufenHinweis';
 import BrutzelAvatar from '../components/BrutzelAvatar';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/AppNavigator';
@@ -35,6 +36,9 @@ interface RecipeDetail {
   prep_time_minutes: number | null;
   ingredients: Ingredient[];
   steps: Step[];
+  steps_anfaenger?: Step[] | null;
+  steps_profi?: Step[] | null;
+  steps_fortgeschritten?: Step[] | null;
   personal_note: string | null;
   cover_image_url: string | null;
   source_type: string;
@@ -343,7 +347,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
         { text: t('detail.nurDiesmal'), onPress: () => { applySessionOnly(); onDone(); } },
         {
           text: t('detail.dauerhaftImRezept'),
-          onPress: async () => {
+          onPress: () => mitStufenHinweis(recipe, recipe?.steps ?? [], updatedFields.steps, t, async () => {
             setSaving(true);
             try {
               const updated = await api.patch<RecipeDetail>(`/recipes/${recipeId}`, updatedFields);
@@ -355,7 +359,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
             } finally {
               setSaving(false);
             }
-          },
+          }),
         },
       ],
     );

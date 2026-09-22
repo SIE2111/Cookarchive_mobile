@@ -302,7 +302,10 @@
     "trotzdemLoeschen": "Delete anyway",
     "ganzesRezept": "Whole recipe",
     "ganzesRezeptText": "The amounts apply to the whole recipe, e.g. a cake or a casserole.",
-    "loeschenTextHaushalt": "\"{titel}\" was added by {name}. It will be deleted permanently for the whole household, including for {name}. This cannot be undone."
+    "loeschenTextHaushalt": "\"{titel}\" was added by {name}. It will be deleted permanently for the whole household, including for {name}. This cannot be undone.",
+    "stufenNotizenTitel": "Notes in the levels",
+    "stufenNotizenText": "The steps are changing. The beginner, advanced and pro versions will be recreated the next time you cook, and the notes in them will be lost. Notes in your original stay.",
+    "trotzdemSpeichern": "Save anyway"
   },
   "kochen": {
     "tipp": {

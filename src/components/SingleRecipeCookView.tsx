@@ -8,7 +8,8 @@ import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
 import TranslationBanner from './TranslationBanner';
 import { api, ApiError } from '../api/client';
-import { pickStepsForLevel, feldFuerStufe, FORTGESCHRITTEN_MIN_SCHRITTE, HaubenLevel, RecipeStep, StufenFeld } from '../utils/stepLevels';
+import { mitStufenHinweis } from '../utils/stufenHinweis';
+import { schritteInhaltGeaendert, pickStepsForLevel, feldFuerStufe, FORTGESCHRITTEN_MIN_SCHRITTE, HaubenLevel, RecipeStep, StufenFeld } from '../utils/stepLevels';
 import { scheduleTimerNotification, cancelTimerNotification, setupNotificationChannel } from '../utils/notifications';
 import BrutzelAvatar from './BrutzelAvatar';
 
@@ -199,7 +200,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
   ) => {
     Keyboard.dismiss();
     Alert.alert(
-      'Änderung speichern',
+      t('detail.aenderungSpeichern'),
       t('detail.aenderungFrage'),
       [
         { text: t('allgemein.abbrechen'), style: 'cancel' },
@@ -212,18 +213,28 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
         },
         {
           text: t('detail.dauerhaftImRezept'),
-          onPress: async () => {
+          onPress: () => mitStufenHinweis(recipe, recipe?.steps ?? [], updatedFields.steps, t, async () => {
             setSaving(true);
+            // Aendert sich das Original inhaltlich, verwirft das Backend die
+            // Stufenfassungen - lokal genauso, sonst zeigte der Koch-Modus
+            // bis zum naechsten Laden noch die alten.
+            const verwirftStufen =
+              !!updatedFields.steps && !!recipe && schritteInhaltGeaendert(recipe.steps, updatedFields.steps);
             try {
               await api.patch(`/recipes/${recipeId}`, updatedFields);
               applyLocally();
+              if (verwirftStufen) {
+                setRecipe((prev) =>
+                  prev ? { ...prev, steps_anfaenger: null, steps_profi: null, steps_fortgeschritten: null } : prev,
+                );
+              }
               onDone();
             } catch (err) {
               Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('detail.nichtGespeichert'));
             } finally {
               setSaving(false);
             }
-          },
+          }),
         },
       ],
     );

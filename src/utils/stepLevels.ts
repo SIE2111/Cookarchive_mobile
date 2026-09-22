@@ -69,3 +69,34 @@ export function feldFuerStufe(
   if (level === 'fortgeschritten' && recipe.steps_fortgeschritten?.length) return 'steps_fortgeschritten';
   return 'steps';
 }
+
+type MitStufen = {
+  steps_anfaenger?: RecipeStep[] | null;
+  steps_profi?: RecipeStep[] | null;
+  steps_fortgeschritten?: RecipeStep[] | null;
+};
+
+/** Traegt eine der erzeugten Stufenfassungen eine Notiz? */
+export function hatStufenNotizen(recipe: MitStufen | null | undefined): boolean {
+  if (!recipe) return false;
+  return [recipe.steps_anfaenger, recipe.steps_profi, recipe.steps_fortgeschritten].some(
+    (liste) => !!liste?.some((s) => !!s.user_note?.trim()),
+  );
+}
+
+/**
+ * Dieselbe Pruefung wie _schritt_inhalt im Backend: Aendert sich Text,
+ * Reihenfolge oder Timer, verwirft das Backend beim Speichern die
+ * Stufenfassungen. Notizen zaehlen nicht als Aenderung.
+ */
+export function schritteInhaltGeaendert(
+  alt: { order?: number; text: string; timer_seconds?: number | null }[],
+  neu: { order?: number; text: string; timer_seconds?: number | null }[],
+): boolean {
+  const norm = (l: typeof alt) =>
+    [...l]
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+      .map((s) => `${s.text.trim()}\u0000${s.timer_seconds || ''}`)
+      .join('\u0001');
+  return norm(alt) !== norm(neu);
+}

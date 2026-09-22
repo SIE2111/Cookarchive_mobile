@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { mitStufenHinweis } from '../utils/stufenHinweis';
+import { RecipeStep } from '../utils/stepLevels';
 import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert, ActivityIndicator, Image } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -21,6 +23,12 @@ interface IngredientDraft {
 
 interface StepDraft {
   text: string;
+  // Was ausser dem Text am Schritt haengt. Wurde beim Bearbeiten frueher
+  // nicht mitgefuehrt - jedes Speichern loeschte Timer, Technik-Video und
+  // Notizen aller Schritte, auch wenn man nur den Ordner aenderte.
+  timer_seconds?: number | null;
+  technique_tag?: string | null;
+  user_note?: string | null;
 }
 
 export default function ManualRecipeScreen({ navigation, route }: Props) {
@@ -34,6 +42,13 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [ingredients, setIngredients] = useState<IngredientDraft[]>([{ name: '', amount: '', unit: '' }]);
   const [steps, setSteps] = useState<StepDraft[]>([{ text: '' }]);
+  // Das Rezept, wie es geladen wurde - fuer den Vergleich beim Speichern.
+  const geladenRef = useRef<{
+    steps: RecipeStep[];
+    steps_anfaenger?: RecipeStep[] | null;
+    steps_profi?: RecipeStep[] | null;
+    steps_fortgeschritten?: RecipeStep[] | null;
+  } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [localImageUri, setLocalImageUri] = useState<string | null>(null);
   // Bereits gespeichertes Titelbild (Edit-Modus) - wird nur dann neu
@@ -90,10 +105,14 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
         folder_id: string | null;
         tags: string[] | null;
         ingredients: { name: string; amount: number | null; unit: string | null }[];
-        steps: { order: number; text: string }[];
+        steps: RecipeStep[];
+        steps_anfaenger?: RecipeStep[] | null;
+        steps_profi?: RecipeStep[] | null;
+        steps_fortgeschritten?: RecipeStep[] | null;
         cover_image_url: string | null;
       }>(`/recipes/${editingRecipeId}`)
       .then((existing) => {
+        geladenRef.current = existing;
         setTitle(existing.title);
         setServings(existing.servings != null ? String(existing.servings) : '');
         setSelectedFolderId(existing.folder_id);
@@ -113,7 +132,12 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
         );
         setSteps(
           (existing.steps ?? []).length > 0
-            ? [...(existing.steps ?? [])].sort((a, b) => a.order - b.order).map((s) => ({ text: s.text }))
+            ? [...(existing.steps ?? [])].sort((a, b) => a.order - b.order).map((s) => ({
+                text: s.text,
+                timer_seconds: s.timer_seconds ?? null,
+                technique_tag: s.technique_tag ?? null,
+                user_note: s.user_note ?? null,
+              }))
             : [{ text: '' }],
         );
         setExistingCoverUrl(existing.cover_image_url);
@@ -271,10 +295,10 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
   };
 
   const updateStep = (index: number, value: string) => {
-    setSteps((prev) => prev.map((step, i) => (i === index ? { text: value } : step)));
+    setSteps((prev) => prev.map((step, i) => (i === index ? { ...step, text: value } : step)));
   };
 
-  const handleSave = async () => {
+  const handleSave = async (stufenBestaetigt = false) => {
     if (!title.trim()) {
       Alert.alert(t('erfassen.titelFehlt'), t('erfassen.bitteName'));
       return;
@@ -288,10 +312,24 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
       }));
     const cleanSteps = steps
       .filter((s) => s.text.trim())
-      .map((s, i) => ({ order: i + 1, text: s.text.trim() }));
+      .map((s, i) => ({
+        order: i + 1,
+        text: s.text.trim(),
+        timer_seconds: s.timer_seconds ?? null,
+        technique_tag: s.technique_tag ?? null,
+        user_note: s.user_note ?? null,
+      }));
 
     if (cleanSteps.length === 0) {
       Alert.alert(t('erfassen.zubereitungFehlt'), t('erfassen.bitteEinSchritt'));
+      return;
+    }
+
+    // Aendern sich die Schritte und haengen Notizen an den Stufenfassungen,
+    // erst nachfragen - das Backend verwirft die Fassungen beim Speichern.
+    if (editingRecipeId && !stufenBestaetigt) {
+      const geladen = geladenRef.current;
+      mitStufenHinweis(geladen, geladen?.steps ?? [], cleanSteps, t, () => handleSave(true));
       return;
     }
 
@@ -545,7 +583,7 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
           {t('erfassen.bildLaeuftNoch')}
         </Text>
       )}
-      <Pressable onPress={handleSave} disabled={isSaving || isGeneratingImage} style={[styles.saveButton, { backgroundColor: gradient[0], borderRadius: radius.md, opacity: isGeneratingImage ? 0.5 : 1 }]}>
+      <Pressable onPress={() => handleSave()} disabled={isSaving || isGeneratingImage} style={[styles.saveButton, { backgroundColor: gradient[0], borderRadius: radius.md, opacity: isGeneratingImage ? 0.5 : 1 }]}>
         {isSaving ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <ActivityIndicator color="#fff" />

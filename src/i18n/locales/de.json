@@ -302,7 +302,10 @@
     "trotzdemLoeschen": "Trotzdem löschen",
     "ganzesRezept": "Ganzes Rezept",
     "ganzesRezeptText": "Die Mengen gelten für das ganze Rezept, z. B. eine Torte oder eine Auflaufform.",
-    "loeschenTextHaushalt": "„{titel}“ hat {name} angelegt. Es wird für den ganzen Haushalt dauerhaft gelöscht, auch bei {name}. Das kann nicht rückgängig gemacht werden."
+    "loeschenTextHaushalt": "„{titel}“ hat {name} angelegt. Es wird für den ganzen Haushalt dauerhaft gelöscht, auch bei {name}. Das kann nicht rückgängig gemacht werden.",
+    "stufenNotizenTitel": "Notizen in den Stufen",
+    "stufenNotizenText": "Die Schritte ändern sich. Anfänger-, Fortgeschritten- und Profi-Fassung werden beim nächsten Kochen neu erstellt, die Notizen darin gehen dabei verloren. Notizen in deinem Original bleiben erhalten.",
+    "trotzdemSpeichern": "Trotzdem speichern"
   },
   "kochen": {
     "tipp": {
