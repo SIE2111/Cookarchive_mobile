@@ -57,6 +57,8 @@ interface RecipeDetail {
   // steuert, ob der Löschen-Knopf angezeigt wird (nur die Person, die es
   // angelegt hat, darf löschen, siehe Auftrag Punkt 6).
   owner_display_name: string | null;
+  shared_with_household?: boolean;
+  household_active?: boolean | null;
 }
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -351,7 +353,15 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
             setSaving(true);
             try {
               const updated = await api.patch<RecipeDetail>(`/recipes/${recipeId}`, updatedFields);
-              setRecipe(updated);
+              // Ersteller-Name und Haushalt-Status liefert nur der Einzelabruf,
+              // die Antwort aufs Speichern nicht - sonst verschwaende nach dem
+              // Speichern das Haushalt-Symbol, und die Loeschfrage hielte ein
+              // fremdes Rezept fuer ein eigenes.
+              setRecipe((prev) => ({
+                ...updated,
+                owner_display_name: prev?.owner_display_name ?? updated.owner_display_name,
+                household_active: prev?.household_active ?? updated.household_active,
+              }));
               applyLocally();
               onDone();
             } catch (err) {
@@ -589,6 +599,55 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
     }
   };
 
+  // Haushalt-Kennzeichen: Nur geteilte Rezepte sehen die anderen im
+  // Haushalt. Wer ein fremdes Rezept nicht bei sich haben will, nimmt es
+  // hier heraus, statt es fuer alle zu loeschen - der Ersteller behaelt es.
+  const [isSavingHaushalt, setIsSavingHaushalt] = useState(false);
+  const speichereHaushalt = async (neu: boolean, danach?: () => void) => {
+    if (!recipe) return;
+    const previous = recipe;
+    setRecipe({ ...recipe, shared_with_household: neu });
+    setIsSavingHaushalt(true);
+    try {
+      await api.patch(`/recipes/${recipeId}`, { shared_with_household: neu });
+      danach?.();
+    } catch (err) {
+      setRecipe(previous);
+      Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('detail.nichtGespeichert'));
+    } finally {
+      setIsSavingHaushalt(false);
+    }
+  };
+  const handleToggleHaushalt = () => {
+    if (!recipe || isSavingHaushalt) return;
+    const geteilt = recipe.shared_with_household !== false;
+    if (!geteilt) {
+      speichereHaushalt(true);
+      return;
+    }
+    if (recipe.owner_display_name) {
+      // Fremdes Rezept: Danach ist es fuer mich unsichtbar, also zurueck.
+      Alert.alert(
+        t('detail.haushaltFremdTitel'),
+        t('detail.haushaltFremdText', { name: recipe.owner_display_name }),
+        [
+          { text: t('allgemein.abbrechen'), style: 'cancel' },
+          {
+            text: t('detail.haushaltFremdKnopf'),
+            style: 'destructive',
+            onPress: () => speichereHaushalt(false, () => navigation.goBack()),
+          },
+        ],
+      );
+      return;
+    }
+    Alert.alert(t('detail.haushaltNurIchTitel'), t('detail.haushaltNurIchText'), [
+      { text: t('allgemein.abbrechen'), style: 'cancel' },
+      { text: t('detail.haushaltNurIchKnopf'), onPress: () => speichereHaushalt(false) },
+    ]);
+  };
+  const zeigeHaushaltSymbol = !!recipe?.household_active && recipe?.source_type !== 'starter_pack';
+
   const handleDelete = () => {
     if (!recipe) return;
     Alert.alert(
@@ -652,6 +711,23 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
             gerade gekocht hat, entscheidet hier, ob es andere sehen
             sollen. */}
         <ShareRecipeButton recipeId={recipe.id} recipeTitle={recipe.title} size={23} style={{ paddingLeft: 8 }} />
+        {zeigeHaushaltSymbol && (
+          <Pressable
+            onPress={handleToggleHaushalt}
+            disabled={isSavingHaushalt}
+            hitSlop={10}
+            style={{ paddingLeft: 8 }}
+            accessibilityLabel={
+              recipe.shared_with_household !== false ? t('detail.haushaltGeteilt') : t('detail.haushaltNurDu')
+            }
+          >
+            <MaterialCommunityIcons
+              name={recipe.shared_with_household !== false ? 'home-account' : 'home-off-outline'}
+              size={25}
+              color={recipe.shared_with_household !== false ? gradient[0] : colors.muted}
+            />
+          </Pressable>
+        )}
         <PublishToPoolButton recipeId={recipe.id} recipeTitle={recipe.title} size={24} style={{ paddingLeft: 8 }} initialPublished={recipe.visibility === 'public_pool'} />
         <Pressable onPress={handleToggleFavorite} disabled={isSavingFavorite} hitSlop={10} style={{ paddingLeft: 8 }}>
           <MaterialCommunityIcons

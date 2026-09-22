@@ -305,7 +305,15 @@
     "loeschenTextHaushalt": "\"{titel}\" was added by {name}. It will be deleted permanently for the whole household, including for {name}. This cannot be undone.",
     "stufenNotizenTitel": "Notes in the levels",
     "stufenNotizenText": "The steps are changing. The beginner, advanced and pro versions will be recreated the next time you cook, and the notes in them will be lost. Notes in your original stay.",
-    "trotzdemSpeichern": "Save anyway"
+    "trotzdemSpeichern": "Save anyway",
+    "haushaltGeteilt": "Shared with household",
+    "haushaltNurDu": "Only for you",
+    "haushaltNurIchTitel": "Only for you?",
+    "haushaltNurIchText": "The others in your household will no longer see this recipe. You can share it again at any time.",
+    "haushaltNurIchKnopf": "Only for me",
+    "haushaltFremdTitel": "Remove from household?",
+    "haushaltFremdText": "{name} created this recipe and keeps it. You and the others in your household will no longer see it. {name} can share it again at any time.",
+    "haushaltFremdKnopf": "Remove"
   },
   "kochen": {
     "tipp": {
