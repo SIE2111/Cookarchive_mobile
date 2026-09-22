@@ -21,6 +21,7 @@
         "NSCameraUsageDescription": "Mein Kochbuch braucht Kamerazugriff, um Kochbuchseiten oder Rezeptzettel zu fotografieren und automatisch zu erfassen.",
         "NSPhotoLibraryUsageDescription": "Mein Kochbuch braucht Zugriff auf deine Fotos, um Rezeptbilder auszuwählen oder Kochbuchseiten aus der Galerie zu erfassen.",
         "UIBackgroundModes": [
+          "audio",
           "audio"
         ],
         "ITSAppUsesNonExemptEncryption": false
@@ -31,7 +32,12 @@
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_MEDIA_IMAGES",
-        "android.permission.POST_NOTIFICATIONS"
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.RECORD_AUDIO"
       ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -57,7 +63,9 @@
           "photosPermission": "Mein Kochbuch braucht Zugriff auf deine Fotos, um Rezeptbilder oder Kochbuchseiten auszuwählen.",
           "cameraPermission": "Mein Kochbuch braucht Kamerazugriff, um Kochbuchseiten oder Rezeptzettel zu fotografieren."
         }
-      ]
+      ],
+      "expo-localization",
+      "expo-sharing"
     ],
     "extra": {
       "eas": {
@@ -69,6 +77,12 @@
       "translucent": false,
       "barStyle": "light-content",
       "backgroundColor": "#131419"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/43a2cb13-0013-40f7-81b2-d3c57d791bfd"
     }
   }
 }
