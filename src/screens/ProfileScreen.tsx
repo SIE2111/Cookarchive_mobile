@@ -44,8 +44,8 @@ type PreferenceKey = 'show_brutzel' | 'large_text' | 'auto_read_steps' | 'server
 // die Modi - welcher Drittanbieter verbunden ist, steht im Speicherort-
 // Screen selbst; hier wuerde es die Zeile ueberfrachten.
 const HILFE_URL = 'https://www.homearchive.at/meinkochbuch/hilfe';
-const AGB_URL = 'https://www.homearchive.at/meinkochbuch/agb';
-const DATENSCHUTZ_URL = 'https://www.homearchive.at/meinkochbuch/datenschutz';
+const AGB_URL = 'https://www.homearchive.at/agb';
+const DATENSCHUTZ_URL = 'https://www.homearchive.at/datenschutz';
 
 // Schluessel statt fertiger Texte: Die Tabellen stehen auf Modulebene und
 // werden einmal beim Laden ausgewertet - ein dort eingesetzter Text waere

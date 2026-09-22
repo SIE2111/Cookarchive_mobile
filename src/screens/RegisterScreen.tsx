@@ -12,8 +12,8 @@ import type { AuthStackParamList } from '../navigation/AppNavigator';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
-const AGB_URL = 'https://www.homearchive.at/meinkochbuch/agb';
-const DATENSCHUTZ_URL = 'https://www.homearchive.at/meinkochbuch/datenschutz';
+const AGB_URL = 'https://www.homearchive.at/agb';
+const DATENSCHUTZ_URL = 'https://www.homearchive.at/datenschutz';
 
 export default function RegisterScreen({ navigation }: Props) {
   const { colors, gradient, radius } = useTheme();
