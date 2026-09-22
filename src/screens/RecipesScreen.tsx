@@ -18,7 +18,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
 import ScanFab from '../components/ScanFab';
-import PublishToPoolButton from '../components/PublishToPoolButton';
 import { api, ApiError } from '../api/client';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -73,6 +72,19 @@ export default function RecipesScreen({ navigation, route }: Props) {
   const { istTablet, inhaltsBreiteZweispaltig } = useLayout();
   const { t } = useUebersetzung();
   const [recipes, setRecipes] = useState<RecipeSummary[]>([]);
+
+  const toggleFavorit = async (id: string) => {
+    const vorher = recipes.find((r) => r.id === id);
+    if (!vorher) return;
+    const neu = !vorher.is_favorite;
+    setRecipes((liste) => liste.map((r) => (r.id === id ? { ...r, is_favorite: neu } : r)));
+    try {
+      await api.patch(`/recipes/${id}`, { is_favorite: neu });
+    } catch (err) {
+      setRecipes((liste) => liste.map((r) => (r.id === id ? { ...r, is_favorite: !neu } : r)));
+      Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('rezepte.nichtGeladen'));
+    }
+  };
   const [folders, setFolders] = useState<FolderSummary[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
@@ -420,7 +432,6 @@ export default function RecipesScreen({ navigation, route }: Props) {
                   size={12}
                   color={colors.muted}
                 />
-                {item.is_favorite && <MaterialCommunityIcons name="heart" size={12} color={gradient[0]} />}
               </View>
               {item.tags && item.tags.length > 0 && (
                 <Text style={[styles.recipeTags, { color: colors.muted }]}>{item.tags.join(' · ')}</Text>
@@ -431,7 +442,23 @@ export default function RecipesScreen({ navigation, route }: Props) {
                 </Text>
               )}
             </View>
-            <PublishToPoolButton recipeId={item.id} recipeTitle={item.title} />
+            {/* Rechts das Herz: Favorit direkt aus der Liste setzen. Hier
+                stand das Pool-Symbol - beim Durchblättern ist aber viel
+                haeufiger gefragt, ob man ein Rezept wieder kochen will, als
+                ob man es veroeffentlicht. Das geht weiter in der Rezeptansicht. */}
+            <Pressable
+              onPress={() => toggleFavorit(item.id)}
+              hitSlop={10}
+              accessibilityRole="button"
+              accessibilityLabel={t('dashboard.favoriten')}
+              style={{ paddingHorizontal: 4 }}
+            >
+              <MaterialCommunityIcons
+                name={item.is_favorite ? 'heart' : 'heart-outline'}
+                size={20}
+                color={item.is_favorite ? gradient[0] : colors.muted}
+              />
+            </Pressable>
           </Pressable>
         )}
       />

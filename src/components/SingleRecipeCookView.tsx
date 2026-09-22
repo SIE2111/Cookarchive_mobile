@@ -269,11 +269,26 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
       });
   }, []);
 
+  // Erzeugt das Backend fuer diese Stufe gerade noch eine eigene
+  // Schrittfassung? Dann sind die Tipps noch nicht zu holen: Sie wuerden
+  // zur alten, kuerzeren Liste entstehen und danach beim falschen Schritt
+  // stehen ("nach 50 Minuten pruefen" neben "Backofen vorheizen").
+  const stufenFeldJetzt: StufenFeld =
+    level === 'anfaenger' ? 'steps_anfaenger' : level === 'profi' ? 'steps_profi' : 'steps_fortgeschritten';
+  const brauchtAnpassung =
+    !!recipe &&
+    !recipe[stufenFeldJetzt]?.length &&
+    !(level === 'fortgeschritten' && recipe.steps.length >= FORTGESCHRITTEN_MIN_SCHRITTE);
+  // Scheitert die Anpassung (KI aus, kein Netz), gilt die Basisfassung -
+  // dann passen Tipps dazu und duerfen geholt werden.
+  const [anpassungFehlgeschlagen, setAnpassungFehlgeschlagen] = useState<string | null>(null);
+  const stufeBereit = !!recipe && (!brauchtAnpassung || anpassungFehlgeschlagen === level);
+
   // Brutzels Tipps zum Rezept holen. Nur wenn Brutzel ueberhaupt
   // eingeschaltet ist - sonst waere es ein KI-Aufruf fuer etwas, das
   // niemand zu sehen bekommt.
   useEffect(() => {
-    if (!showBrutzel || !recipe) return;
+    if (!showBrutzel || !recipe || !stufeBereit) return;
     // Die Stufe gehoert in die Anfrage: Die Schrittliste ist je Stufe eine
     // andere, und damit auch die Tipps. Ohne sie stand nach dem Umschalten
     // der Tipp zu Schritt 5 der einen Fassung neben Schritt 5 der anderen.
@@ -296,7 +311,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
       })
       .finally(() => setTippsLaden(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showBrutzel, recipeId, !!recipe, level]);
+  }, [showBrutzel, recipeId, !!recipe, level, stufeBereit]);
 
   // Eigene Stimme fuer Brutzel: eine ANDERE deutsche Stimme als die, die
   // die Schritte vorliest. So ist ohne Hinsehen klar, ob gerade das Rezept
@@ -487,6 +502,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
         // Generierung fehlgeschlagen (z.B. kein OPENAI_API_KEY) - kein
         // Alert noetig, pickStepsForLevel faellt automatisch auf die
         // Basisfassung zurueck, das Kochen bleibt trotzdem moeglich.
+        if (!cancelled) setAnpassungFehlgeschlagen(level);
       })
       .finally(() => {
         if (!cancelled) setIsAdaptingSteps(false);
