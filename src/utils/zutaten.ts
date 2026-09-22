@@ -27,17 +27,38 @@ export interface ZerlegteZutat {
 // (nach Kleinschreibung und ohne Punkt am Ende).
 const EINHEITEN = [
   'g', 'kg', 'mg', 'ml', 'l', 'dl', 'cl',
-  // dag = Dekagramm, in oesterreichischen Rezepten gebraeuchlich
-  'dag', 'deka',
+  // dag/dkg = Dekagramm, in oesterreichischen Rezepten gebraeuchlich
+  'dag', 'dkg', 'deka', 'dekagramm',
+  'gramm', 'kilo', 'kilogramm', 'liter', 'milliliter',
   'el', 'tl', 'kl', 'msp', 'prise', 'prisen',
+  'eßl', 'essl', 'eßlöffel', 'esslöffel', 'teelöffel', 'kaffeelöffel', 'messerspitze',
   'stk', 'stück', 'stueck', 'st',
-  'pck', 'pkg', 'packung', 'päckchen', 'paeckchen', 'pkt',
+  'p', 'pk', 'pck', 'pkg', 'packung', 'päckchen', 'paeckchen', 'pkt', 'päckl', 'packerl',
   'dose', 'dosen', 'glas', 'gläser', 'glaeser',
   'bund', 'zehe', 'zehen', 'blatt', 'blätter', 'blaetter',
   'scheibe', 'scheiben', 'tasse', 'tassen', 'becher',
   'tropfen', 'schuss', 'handvoll', 'kopf', 'stange', 'stangen',
   'cup', 'cups', 'tbsp', 'tsp', 'oz', 'lb',
 ];
+
+// Ausgeschriebene und abgekuerzte Schreibweisen auf eine gemeinsame Form
+// bringen, damit die Einkaufsliste "3 Eßl" und "2 EL" zusammenzaehlt.
+// Alles, was hier nicht steht, bleibt so, wie es auf der Vorlage stand.
+const EINHEIT_NORMAL: Record<string, string> = {
+  gramm: 'g', kilo: 'kg', kilogramm: 'kg', liter: 'l', milliliter: 'ml',
+  dekagramm: 'dag', deka: 'dag',
+  el: 'EL', 'eßl': 'EL', essl: 'EL', 'eßlöffel': 'EL', 'esslöffel': 'EL',
+  tl: 'TL', 'teelöffel': 'TL', kl: 'KL', 'kaffeelöffel': 'KL',
+  msp: 'Msp.', messerspitze: 'Msp.',
+  p: 'Pkg.', pk: 'Pkg.', pck: 'Pkg.', pkg: 'Pkg.', pkt: 'Pkg.', packung: 'Pkg.',
+  'päckchen': 'Pkg.', paeckchen: 'Pkg.', 'päckl': 'Pkg.', packerl: 'Pkg.',
+};
+
+/** Einheit in ihre gemeinsame Schreibweise bringen (siehe EINHEIT_NORMAL). */
+export function einheitNormalisieren(einheit: string): string {
+  const schluessel = einheit.toLowerCase().replace(/\.$/, '');
+  return EINHEIT_NORMAL[schluessel] ?? einheit.replace(/\.$/, '');
+}
 
 /** "1/2" und "1,5" ebenso wie "1.5" und "1 1/2". */
 function zahlLesen(text: string): { wert: number; rest: string } | null {
@@ -85,7 +106,7 @@ export function zutatZerlegen(zeile: string): ZerlegteZutat {
     const name = woerter.slice(1).join(' ').trim();
     // "500 g" ohne Zutat waere unbrauchbar - dann lieber alles im Namen.
     if (!name) return { name: text, amount: null, unit: null };
-    return { name, amount: zahl.wert, unit: woerter[0].replace(/\.$/, '') };
+    return { name, amount: zahl.wert, unit: einheitNormalisieren(woerter[0]) };
   }
 
   // Zahl ohne Einheit: "3 Zwiebeln", "4 Eier".
