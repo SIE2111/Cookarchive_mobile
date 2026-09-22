@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, Switch, Alert, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
@@ -68,15 +68,41 @@ export default function ManageCategoriesScreen({ navigation }: any) {
     load();
   }, [load]);
 
+  // Die verschobene Zeile soll unter dem Finger bleiben: Nach jedem
+  // Pfeil-Tipp scrollt die Liste um genau eine Zeile mit, so kann man auf
+  // derselben Stelle weitertippen. Wo die Liste nicht weiter scrollen kann
+  // (ganz oben/unten, oder sie passt ganz auf den Schirm), hilft die
+  // farbige Umrandung, die Zeile wiederzufinden.
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollY = useRef(0);
+  const inhaltsHoehe = useRef(0);
+  const sichtHoehe = useRef(0);
+  const ausstehendesScrollen = useRef<number | null>(null);
+  const [zuletztVerschoben, setZuletztVerschoben] = useState<string | null>(null);
+
   const verschiebe = (von: number, nach: number) => {
+    if (nach < 0 || nach >= order.length) return;
+    setZuletztVerschoben(order[von]);
+    ausstehendesScrollen.current = (nach - von) * ROW_HEIGHT;
     setOrder((vorher) => {
-      if (nach < 0 || nach >= vorher.length) return vorher;
       const neu = [...vorher];
       const [element] = neu.splice(von, 1);
       neu.splice(nach, 0, element);
       return neu;
     });
   };
+
+  // Erst scrollen, wenn die Zeilen schon getauscht sind - sonst springt
+  // die Liste kurz, bevor sich die Reihenfolge aendert.
+  useLayoutEffect(() => {
+    const delta = ausstehendesScrollen.current;
+    if (delta === null) return;
+    ausstehendesScrollen.current = null;
+    const maxY = Math.max(0, inhaltsHoehe.current - sichtHoehe.current);
+    const ziel = Math.min(maxY, Math.max(0, scrollY.current + delta));
+    scrollY.current = ziel;
+    scrollRef.current?.scrollTo({ y: ziel, animated: false });
+  }, [order]);
 
   const toggleHidden = (tag: string) => {
     setHidden((vorher) => {
@@ -134,7 +160,20 @@ export default function ManageCategoriesScreen({ navigation }: any) {
           </Pressable>
         </View>
 
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView
+          ref={scrollRef}
+          contentContainerStyle={styles.content}
+          scrollEventThrottle={16}
+          onScroll={(e) => {
+            scrollY.current = e.nativeEvent.contentOffset.y;
+          }}
+          onContentSizeChange={(_, h) => {
+            inhaltsHoehe.current = h;
+          }}
+          onLayout={(e) => {
+            sichtHoehe.current = e.nativeEvent.layout.height;
+          }}
+        >
           <Text style={[styles.title, { color: colors.text }]}>{t('dashboard.kategorienVerwalten')}</Text>
           <Text style={[styles.lead, { color: colors.muted }]}>{t('dashboard.kategorienVerwaltenText')}</Text>
 
@@ -147,7 +186,11 @@ export default function ManageCategoriesScreen({ navigation }: any) {
               return (
                 <View
                   key={tag}
-                  style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.sm }]}
+                  style={[
+                    styles.row,
+                    { backgroundColor: colors.card, borderRadius: radius.sm },
+                    tag === zuletztVerschoben && { borderWidth: 2, borderColor: gradient[0] },
+                  ]}
                 >
                   <Pressable
                     onPress={() => verschiebe(index, index - 1)}
