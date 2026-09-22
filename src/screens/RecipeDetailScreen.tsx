@@ -543,7 +543,10 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
       });
   }, []);
 
-  const angezeigtePortionen = portionen ?? recipe?.servings ?? null;
+  // Portionen = 0 heisst: Rezept ohne Portionen (z. B. Torte, Auflauf).
+  // Dann gibt es keinen Regler, die Mengen gelten fuer das ganze Rezept.
+  const ohnePortionen = recipe?.servings === 0;
+  const angezeigtePortionen = ohnePortionen ? null : (portionen ?? recipe?.servings ?? null);
 
   // Anzeige-Mengen fuer die aktuelle Portionenzahl. currentIngredients
   // selbst bleibt die gespeicherte Fassung - Bearbeiten und Speichern
@@ -677,6 +680,12 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
         {recipe.owner_display_name ? ` · ${t('rezepte.vonMitglied', { name: recipe.owner_display_name })}` : ''}
       </Text>
 
+      {ohnePortionen ? (
+        <View style={[styles.servingsCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
+          <Text style={[styles.servingsLabel, { color: colors.muted, marginBottom: 4 }]}>{t('detail.ganzesRezept')}</Text>
+          <Text style={{ color: colors.muted, fontSize: 13, textAlign: 'center' }}>{t('detail.ganzesRezeptText')}</Text>
+        </View>
+      ) : (
       <View style={[styles.servingsCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>
         <Text style={[styles.servingsLabel, { color: colors.muted }]}>{t('detail.portionen')}</Text>
         <View style={styles.servingsControlRow}>
@@ -696,6 +705,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
           </Pressable>
         </View>
       </View>
+      )}
 
       {recipe.equipment && recipe.equipment.length > 0 && (
         <View style={[styles.equipmentCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>

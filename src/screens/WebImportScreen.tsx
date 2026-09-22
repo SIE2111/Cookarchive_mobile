@@ -145,7 +145,8 @@ export default function WebImportScreen({ navigation, route }: Props) {
       // Portionen wurden bisher vollstaendig verworfen - das Rezept kam
       // ohne sie in die Sammlung, und das Umrechnen der Mengen ging
       // damit gar nicht.
-      if (result.servings && result.servings > 0) {
+      // 0 = Rezept ohne Portionen (z. B. Torte, Auflaufform).
+      if (result.servings != null && result.servings >= 0) {
         setServings(String(result.servings));
         setPortionenUnklar(false);
       } else {
@@ -195,7 +196,8 @@ export default function WebImportScreen({ navigation, route }: Props) {
       Alert.alert(t('erfassen.titelFehlt'), t('erfassen.bitteName'));
       return;
     }
-    if (!servings.trim() || Number(servings) <= 0) {
+    const portionenZahl = Number(servings);
+    if (!servings.trim() || !Number.isInteger(portionenZahl) || portionenZahl < 0) {
       Alert.alert(t('erfassen.portionenFehlen'), t('erfassen.portionenFehlenText'));
       return;
     }
@@ -346,6 +348,9 @@ export default function WebImportScreen({ navigation, route }: Props) {
         value={servings}
         onChangeText={setServings}
       />
+      <Text style={{ color: colors.muted, fontSize: 12, lineHeight: 17, marginTop: 6 }}>
+        {t('erfassen.portionenNullHinweis')}
+      </Text>
       {portionenUnklar && !servings.trim() && (
         <View style={{ marginTop: 6 }}>
           <Text style={{ color: '#B45309', fontSize: 12.5, fontWeight: '600' }}>

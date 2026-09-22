@@ -299,7 +299,9 @@
     "loeschenText": "\"{titel}\" will be deleted permanently. This cannot be undone.",
     "fremdesRezept": "Someone else's recipe",
     "fremdesRezeptText": "\"{titel}\" belongs to another member of your household. Deleting it removes it for them too – without notice and without any way to get it back.",
-    "trotzdemLoeschen": "Delete anyway"
+    "trotzdemLoeschen": "Delete anyway",
+    "ganzesRezept": "Whole recipe",
+    "ganzesRezeptText": "The amounts apply to the whole recipe, e.g. a cake or a casserole."
   },
   "kochen": {
     "tipp": {
@@ -458,7 +460,8 @@
     "portionenUnklar": "Your source did not state a number of servings.",
     "portionenBitteEintragen": "Please enter how many servings this recipe is for – every amount depends on it.",
     "portionenFehlen": "Servings missing",
-    "portionenFehlenText": "Please enter a number of servings. Without it the amounts cannot be scaled later."
+    "portionenFehlenText": "Please enter the number of servings, or 0 if the recipe has no servings (e.g. a cake).",
+    "portionenNullHinweis": "0 = no servings, e.g. a cake or casserole. The amounts then apply to the whole recipe."
   },
   "haushalt": {
     "nichtGeladen": "The household could not be loaded",

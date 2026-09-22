@@ -153,7 +153,9 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
       // Portionen aus der Vorlage uebernehmen - bisher blieb die
       // Voreinstellung aus dem Profil stehen, auch wenn auf dem Blatt
       // "fuer 1 Portion" stand.
-      if (typedResult.servings && typedResult.servings > 0) {
+      // 0 = Rezept ohne Portionen (z. B. Torte, Auflaufform): Die Mengen
+      // gelten fuer das ganze Rezept und werden nicht umgerechnet.
+      if (typedResult.servings != null && typedResult.servings >= 0) {
         setServings(String(typedResult.servings));
         setPortionenUnklar(false);
       } else {
@@ -214,7 +216,8 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
       Alert.alert(t('erfassen.titelFehlt'), t('erfassen.bitteName'));
       return;
     }
-    if (!servings.trim() || Number(servings) <= 0) {
+    const portionenZahl = Number(servings);
+    if (!servings.trim() || !Number.isInteger(portionenZahl) || portionenZahl < 0) {
       Alert.alert(t('erfassen.portionenFehlen'), t('erfassen.portionenFehlenText'));
       return;
     }
@@ -439,6 +442,9 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
         value={servings}
         onChangeText={(v) => { setServings(v); }}
       />
+      <Text style={{ color: colors.muted, fontSize: 12, lineHeight: 17, marginTop: 6 }}>
+        {t('erfassen.portionenNullHinweis')}
+      </Text>
       {portionenUnklar && !servings.trim() && (
         <View style={{ marginTop: 6 }}>
           <Text style={{ color: '#B45309', fontSize: 12.5, fontWeight: '600' }}>

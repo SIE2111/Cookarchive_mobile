@@ -299,7 +299,9 @@
     "loeschenText": "„{titel}\" wird dauerhaft gelöscht. Das kann nicht rückgängig gemacht werden.",
     "fremdesRezept": "Rezept eines anderen",
     "fremdesRezeptText": "„{titel}\" gehört einem anderen Haushaltsmitglied. Beim Löschen verschwindet es auch bei ihm – ohne Hinweis und ohne Möglichkeit, es zurückzuholen.",
-    "trotzdemLoeschen": "Trotzdem löschen"
+    "trotzdemLoeschen": "Trotzdem löschen",
+    "ganzesRezept": "Ganzes Rezept",
+    "ganzesRezeptText": "Die Mengen gelten für das ganze Rezept, z. B. eine Torte oder eine Auflaufform."
   },
   "kochen": {
     "tipp": {
@@ -458,7 +460,8 @@
     "portionenUnklar": "Auf der Vorlage stand keine Portionenzahl.",
     "portionenBitteEintragen": "Bitte trag ein, für wie viele Portionen das Rezept gedacht ist – davon hängen alle Mengen ab.",
     "portionenFehlen": "Portionen fehlen",
-    "portionenFehlenText": "Bitte eine Portionenzahl eintragen. Ohne sie lassen sich die Mengen später nicht umrechnen."
+    "portionenFehlenText": "Bitte eine Portionenzahl eintragen – oder 0, wenn das Rezept keine Portionen hat (z. B. eine Torte).",
+    "portionenNullHinweis": "0 = ohne Portionen, z. B. Torte oder Auflauf. Die Mengen gelten dann für das ganze Rezept."
   },
   "haushalt": {
     "nichtGeladen": "Haushalt konnte nicht geladen werden",

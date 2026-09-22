@@ -428,6 +428,9 @@ export default function ManualRecipeScreen({ navigation, route }: Props) {
         value={servings}
         onChangeText={setServings}
       />
+      <Text style={{ color: colors.muted, fontSize: 12, lineHeight: 17, marginTop: 6 }}>
+        {t('erfassen.portionenNullHinweis')}
+      </Text>
 
       <Text style={[styles.label, { color: colors.muted, marginTop: 16 }]}>{t('erfassen.kategorien')}</Text>
       <CategoryPicker selected={selectedTags} onChange={setSelectedTags} />
