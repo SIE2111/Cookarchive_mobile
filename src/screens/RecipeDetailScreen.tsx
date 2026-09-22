@@ -652,9 +652,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
     if (!recipe) return;
     Alert.alert(
       t('detail.rezeptLoeschen'),
-      recipe.owner_display_name
-        ? t('detail.loeschenTextHaushalt', { titel: recipe.title, name: recipe.owner_display_name })
-        : t('detail.loeschenText', { titel: recipe.title }),
+      t('detail.loeschenText', { titel: recipe.title }),
       [
         { text: t('allgemein.abbrechen'), style: 'cancel' },
         {
@@ -745,11 +743,13 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
           <Pressable onPress={() => navigation.navigate('ManualRecipe', { recipeId: recipe.id })} hitSlop={8}>
             <MaterialCommunityIcons name="pencil-outline" size={22} color="#16A34A" />
           </Pressable>
-          {/* Loeschen duerfen alle im Haushalt (Entscheidung 22.09.2026),
-              bei fremden Rezepten mit eigener Rueckfrage, siehe handleDelete. */}
-          <Pressable onPress={handleDelete} hitSlop={8}>
-            <MaterialCommunityIcons name="trash-can-outline" size={22} color="#DC2626" />
-          </Pressable>
+          {/* Loeschen nur beim eigenen Rezept. Ein fremdes nimmt man ueber
+              das Haus-Symbol aus dem Haushalt, der Ersteller behaelt es. */}
+          {!recipe.owner_display_name && (
+            <Pressable onPress={handleDelete} hitSlop={8}>
+              <MaterialCommunityIcons name="trash-can-outline" size={22} color="#DC2626" />
+            </Pressable>
+          )}
         </View>
       </View>
 
