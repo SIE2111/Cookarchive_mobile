@@ -451,40 +451,6 @@ export default function ProfileScreen({ navigation }: Props) {
       </Pressable>
 
       <Pressable
-        onPress={() => navigation.getParent()?.navigate('StorageSettings')}
-        style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}
-      >
-        <MaterialCommunityIcons name="cloud-outline" size={20} color={colors.muted} style={styles.rowIcon} />
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.rowTitle, { color: colors.text }]}>{t('profil.speicherort')}</Text>
-          {/* Zeigt den AKTUELL gewaehlten Ort statt einer Aufzaehlung aller
-              moeglichen. Vorher stand hier immer derselbe Text - eine
-              Aenderung im Speicherort-Screen blieb danach unsichtbar, man
-              musste erneut hineinnavigieren, um sie zu sehen. */}
-          <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
-            {prefs.storage_mode && STORAGE_MODE_LABELS[prefs.storage_mode]
-              ? t(STORAGE_MODE_LABELS[prefs.storage_mode])
-              : t('profil.nochNichtGewaehlt')}
-          </Text>
-        </View>
-        <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>
-      </Pressable>
-
-      <Pressable
-        onPress={() => navigation.getParent()?.navigate('LanguageSettings')}
-        style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md, marginTop: 8 }]}
-      >
-        <MaterialCommunityIcons name="translate" size={20} color={colors.muted} style={styles.rowIcon} />
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.rowTitle, { color: colors.text }]}>{t('profil.sprache')}</Text>
-          <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
-            {t('profil.spracheSub')}
-          </Text>
-        </View>
-        <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>
-      </Pressable>
-
-      <Pressable
         onPress={() => navigation.getParent()?.navigate('StarterPacks')}
         style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md, marginTop: 8 }]}
       >
@@ -531,6 +497,40 @@ export default function ProfileScreen({ navigation }: Props) {
         </View>
         <Switch value={prefs.ai_enabled} onValueChange={(v) => handleToggle('ai_enabled', v)} />
       </View>
+
+      <Pressable
+        onPress={() => navigation.getParent()?.navigate('StorageSettings')}
+        style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md, marginTop: 8 }]}
+      >
+        <MaterialCommunityIcons name="cloud-outline" size={20} color={colors.muted} style={styles.rowIcon} />
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.rowTitle, { color: colors.text }]}>{t('profil.speicherort')}</Text>
+          {/* Zeigt den AKTUELL gewaehlten Ort statt einer Aufzaehlung aller
+              moeglichen. Vorher stand hier immer derselbe Text - eine
+              Aenderung im Speicherort-Screen blieb danach unsichtbar, man
+              musste erneut hineinnavigieren, um sie zu sehen. */}
+          <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
+            {prefs.storage_mode && STORAGE_MODE_LABELS[prefs.storage_mode]
+              ? t(STORAGE_MODE_LABELS[prefs.storage_mode])
+              : t('profil.nochNichtGewaehlt')}
+          </Text>
+        </View>
+        <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>
+      </Pressable>
+
+      <Pressable
+        onPress={() => navigation.getParent()?.navigate('LanguageSettings')}
+        style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md, marginTop: 8 }]}
+      >
+        <MaterialCommunityIcons name="translate" size={20} color={colors.muted} style={styles.rowIcon} />
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.rowTitle, { color: colors.text }]}>{t('profil.sprache')}</Text>
+          <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
+            {t('profil.spracheSub')}
+          </Text>
+        </View>
+        <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>
+      </Pressable>
 
       <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 26 }]}>{t('profil.hilfe')}</Text>
       <Pressable

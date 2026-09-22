@@ -7,11 +7,17 @@ const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:8
 class ApiError extends Error {
   status: number;
   detail: string;
+  // Manche Endpunkte liefern statt eines reinen Textes ein Objekt als
+  // "detail" (z.B. POST /pool/{id}/fork bei 409: {message, local_recipe_id}) -
+  // hier unveraendert mitgereicht, damit der Aufrufer bei Bedarf darauf
+  // zugreifen kann, waehrend .detail selbst immer ein lesbarer String bleibt.
+  data?: unknown;
 
-  constructor(status: number, detail: string) {
+  constructor(status: number, detail: string, data?: unknown) {
     super(detail);
     this.status = status;
     this.detail = detail;
+    this.data = data;
   }
 }
 
@@ -35,13 +41,21 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
 
   if (!response.ok) {
     let detail = `HTTP ${response.status}`;
+    let data: unknown;
     try {
       const body = await response.json();
-      detail = body.detail ?? detail;
+      // FastAPI liefert detail meist als String, manchmal aber bewusst als
+      // Objekt (siehe ApiError.data) - .detail bleibt dann trotzdem lesbar.
+      if (typeof body.detail === 'string') {
+        detail = body.detail;
+      } else if (body.detail && typeof body.detail === 'object') {
+        detail = body.detail.message ?? detail;
+        data = body.detail;
+      }
     } catch {
       // Antwort war kein JSON - Standardmeldung behalten
     }
-    throw new ApiError(response.status, detail);
+    throw new ApiError(response.status, detail, data);
   }
 
   if (response.status === 204) {

@@ -49,6 +49,10 @@ interface RecipeDetail {
   // 'private' | 'shared_household' | 'public_pool' - fuer den Anfangszustand
   // des Pool-Knopfs (siehe PublishToPoolButton initialPublished).
   visibility: string;
+  // Nur gesetzt, wenn das Rezept einem ANDEREN Haushaltsmitglied gehört -
+  // steuert, ob der Löschen-Knopf angezeigt wird (nur die Person, die es
+  // angelegt hat, darf löschen, siehe Auftrag Punkt 6).
+  owner_display_name: string | null;
 }
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -593,31 +597,6 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
               await api.delete(`/recipes/${recipeId}`);
               navigation.goBack();
             } catch (err) {
-              // 409 heisst: Das Rezept gehoert jemand anderem im
-              // Haushalt. Kein Fehler, sondern eine Rueckfrage - loeschen
-              // darf man es, aber die Folge ist eine andere als beim
-              // eigenen Rezept.
-              if (err instanceof ApiError && err.status === 409) {
-                Alert.alert(t('detail.fremdesRezept'), t('detail.fremdesRezeptText'), [
-                  { text: t('allgemein.abbrechen'), style: 'cancel' },
-                  {
-                    text: t('detail.trotzdemLoeschen'),
-                    style: 'destructive',
-                    onPress: async () => {
-                      try {
-                        await api.delete(`/recipes/${recipeId}?bestaetigt_fremd=true`);
-                        navigation.goBack();
-                      } catch (zweiter) {
-                        Alert.alert(
-                          t('profil.loeschenFehlgeschlagen'),
-                          zweiter instanceof ApiError ? zweiter.detail : t('profil.unbekannterFehler'),
-                        );
-                      }
-                    },
-                  },
-                ]);
-                return;
-              }
               Alert.alert(t('profil.loeschenFehlgeschlagen'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
             }
           },
@@ -681,14 +660,21 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
           <Pressable onPress={() => navigation.navigate('ManualRecipe', { recipeId: recipe.id })} hitSlop={8}>
             <MaterialCommunityIcons name="pencil-outline" size={22} color="#16A34A" />
           </Pressable>
-          <Pressable onPress={handleDelete} hitSlop={8}>
-            <MaterialCommunityIcons name="trash-can-outline" size={22} color="#DC2626" />
-          </Pressable>
+          {/* Löschen nur durch die Person, die das Rezept angelegt hat -
+              bei einem fremden Haushalts-Rezept (owner_display_name
+              gesetzt) fehlt der Knopf komplett statt einen Fehler zu
+              zeigen (Auftrag Punkt 6). */}
+          {!recipe.owner_display_name && (
+            <Pressable onPress={handleDelete} hitSlop={8}>
+              <MaterialCommunityIcons name="trash-can-outline" size={22} color="#DC2626" />
+            </Pressable>
+          )}
         </View>
       </View>
 
       <Text style={[styles.sourceHint, { color: colors.muted }]}>
         {SOURCE_LABELS[recipe.source_type] ?? recipe.source_type}
+        {recipe.owner_display_name ? ` · ${t('rezepte.vonMitglied', { name: recipe.owner_display_name })}` : ''}
       </Text>
 
       <View style={[styles.servingsCard, { backgroundColor: colors.card, borderRadius: radius.md }]}>

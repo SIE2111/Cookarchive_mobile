@@ -3,7 +3,7 @@ import { View, Text, Pressable, StyleSheet, Animated, Image } from 'react-native
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import * as Speech from 'expo-speech';
-import { SPEECH_LANGUAGE, BRUTZEL_PITCH, BRUTZEL_RATE, brutzelStimme } from '../utils/speech';
+import { SPEECH_LANGUAGE } from '../utils/speech';
 import { useTheme } from '../theme/ThemeContext';
 import MarkenZeile from './MarkenZeile';
 import { useUebersetzung } from '../i18n';
@@ -15,6 +15,10 @@ interface Props {
   // Bildschirm samt Standbild, Gruss und Knopf trotzdem stehen - nur Video
   // und Sprachausgabe entfallen. Vorher verschwand die ganze Begruessung.
   mitVideo?: boolean;
+  // Profil-Schalter "Schritte automatisch vorlesen" - die Begruessung wird
+  // NUR dann gesprochen, wenn er an ist (siehe Auftrag Punkt 3). Ohne
+  // eigenen Wert wird nicht gesprochen, nicht geraten.
+  sprechen?: boolean;
 }
 
 
@@ -23,10 +27,12 @@ interface Props {
  * Animation") - nutzt dasselbe echte Brutzel-Video wie die Guten-Appetit-
  * Feier am Ende (siehe CookingFinishedCelebration.tsx), nicht mehr eine
  * reine Bounce-Animation mit dem statischen Bild. Liest den
- * Begruessungstext zusaetzlich vor - mit derselben Stimme und Tonlage wie
- * ueberall sonst, siehe brutzelStimme() in utils/speech.ts.
+ * Begruessungstext zusaetzlich vor - mit der neutralen Vorlese-Stimme
+ * (nicht Brutzels eigener), und nur wenn "Schritte automatisch vorlesen"
+ * an ist. Brutzels eigene Stimme bleibt den Tipp-Karten im Koch-Modus
+ * vorbehalten (siehe Auftrag Punkt 3).
  */
-export default function BrutzelGreetingOverlay({ name, onDismiss, mitVideo = true }: Props) {
+export default function BrutzelGreetingOverlay({ name, onDismiss, mitVideo = true, sprechen = false }: Props) {
   const { colors, gradient, radius } = useTheme();
   const insets = useSafeAreaInsets();
   const { t } = useUebersetzung();
@@ -48,28 +54,13 @@ export default function BrutzelGreetingOverlay({ name, onDismiss, mitVideo = tru
     // Textbloecke erscheinen jetzt gemeinsam.
     Animated.timing(textOpacity, { toValue: 1, duration: 500, useNativeDriver: true }).start();
 
-    if (!mitVideo) {
-      return () => {
-        Speech.stop();
-      };
+    if (!sprechen) {
+      return;
     }
 
-    // Gleiche Stimme und gleiche Tonlage wie ueberall sonst: Vorher suchte
-    // dieser Bildschirm selbst nach Namen und setzte pitch fest auf 0.8 -
-    // Brutzel klang beim Start deutlich brummiger als im Koch-Modus, obwohl
-    // es dieselbe Figur ist.
-    brutzelStimme()
-      .then((voice) => {
-        Speech.speak(greetingText, {
-          language: SPEECH_LANGUAGE,
-          voice,
-          pitch: BRUTZEL_PITCH,
-          rate: BRUTZEL_RATE,
-        });
-      })
-      .catch(() => {
-        Speech.speak(greetingText, { language: SPEECH_LANGUAGE, pitch: BRUTZEL_PITCH, rate: BRUTZEL_RATE });
-      });
+    // Neutrale Stimme (kein voice/pitch/rate) statt Brutzels eigener -
+    // die ist den Tipp-Karten vorbehalten (siehe Auftrag Punkt 3).
+    Speech.speak(greetingText, { language: SPEECH_LANGUAGE });
 
     return () => {
       Speech.stop();

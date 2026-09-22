@@ -65,6 +65,7 @@
   "rezepte": {
     "suchen": "Rezept oder Zutat suchen…",
     "nurFavoriten": "Nur Favoriten",
+    "nurMeineRezepte": "Nur meine Rezepte",
     "neuesteZuerst": "Neueste zuerst",
     "aeltesteZuerst": "Älteste zuerst",
     "alphabetisch": "A–Z",
@@ -83,7 +84,9 @@
     "keineFavoriten": "Noch keine Favoriten markiert.",
     "keineMitTag": "Keine Rezepte mit \"{tag}\" gefunden.",
     "ordnerLeer": "Dieser Ordner ist noch leer.",
-    "nochKeine": "Noch keine Rezepte – leg dein erstes über den Button unten an."
+    "nochKeine": "Noch keine Rezepte – leg dein erstes über den Button unten an.",
+    "keineEigenen": "Noch keine eigenen Rezepte – importierte, unveränderte Starter-Rezepte werden hier ausgeblendet.",
+    "vonMitglied": "Von {name}"
   },
   "starter": {
     "titel": "Starter-Rezepte",
@@ -228,7 +231,7 @@
     "brutzelAnimation": "Brutzel-Animation",
     "brutzelAnimationSub": "Bewegte Auftritte: Begrüßung und Fertigstellung. Aus = Brutzel bleibt, steht aber still",
     "serverSync": "Server-Sync",
-    "serverSyncSub": "Nötig für den Community-Pool",
+    "serverSyncSub": "Nötig für Haushalt und Community-Pool",
     "speicherLokal": "Nur lokal – bleibt auf diesem Gerät",
     "speicherNas": "NAS",
     "speicherEigeneCloud": "Eigene Cloud",
@@ -654,7 +657,9 @@
     "ausPoolEntferntText": "„{titel}“ ist nicht mehr im Community-Pool.",
     "ausPoolEntfernenFehlgeschlagen": "Konnte nicht zurückgezogen werden",
     "bereitsUebernommen": "Bereits übernommen",
-    "vonDir": "Von dir"
+    "vonDir": "Von dir",
+    "uebernommenHaken": "Übernommen ✓",
+    "inSammlungOeffnen": "In deiner Sammlung öffnen"
   },
   "uebersetzung": {
     "angebotTitel": "Dieses Rezept ist auf {sprache} verfasst.",

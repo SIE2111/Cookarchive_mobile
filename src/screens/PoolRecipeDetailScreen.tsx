@@ -4,7 +4,6 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
 import { api, ApiError } from '../api/client';
-import { askWhatNext } from '../utils/afterRecipeSaved';
 import type { HaubenLevel } from '../utils/stepLevels';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/AppNavigator';
@@ -65,6 +64,12 @@ export default function PoolRecipeDetailScreen({ route, navigation }: Props) {
   const [isForking, setIsForking] = useState(false);
   const [isUnpublishing, setIsUnpublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Gerade JETZT in dieser Sitzung uebernommen - fuer "Übernommen ✓" mit
+  // Zielordner-Hinweis, ohne Dialog (Auftrag Punkt 12). justForked statt
+  // nur den Ordnernamen zu pruefen, weil der Ordnername null sein kann
+  // (Fallback-Ordner unbekannt) und das trotzdem ein Erfolg ist.
+  const [justForked, setJustForked] = useState(false);
+  const [justForkedFolder, setJustForkedFolder] = useState<string | null>(null);
 
   const load = async (wantedLevel: HaubenLevel) => {
     try {
@@ -99,13 +104,46 @@ export default function PoolRecipeDetailScreen({ route, navigation }: Props) {
     setIsSwitchingLevel(false);
   };
 
+  // Ohne Dialog (Auftrag Punkt 12): bei Erfolg wird der Knopf direkt hier
+  // zu "Übernommen ✓" mit Zielordner-Hinweis; ein 409 (schon uebernommen)
+  // oeffnet die vorhandene Kopie direkt.
   const handleFork = async () => {
     if (!recipe) return;
     setIsForking(true);
     try {
-      const result = await api.post<{ local_recipe_id: string }>(`/pool/${recipe.id}/fork`);
-      askWhatNext(navigation, { id: result.local_recipe_id, title: recipe.title });
+      const result = await api.post<{ local_recipe_id: string; folder_name?: string }>(`/pool/${recipe.id}/fork`);
+      setJustForked(true);
+      setJustForkedFolder(result.folder_name ?? null);
+      setRecipe((prev) => (prev ? { ...prev, already_forked: true } : prev));
     } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        const localRecipeId = (err.data as { local_recipe_id?: string } | undefined)?.local_recipe_id;
+        if (localRecipeId) {
+          navigation.replace('RecipeDetail', { recipeId: localRecipeId, title: recipe.title });
+          return;
+        }
+      }
+      Alert.alert(t('sonstiges.uebernehmenFehlgeschlagen'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
+    } finally {
+      setIsForking(false);
+    }
+  };
+
+  const handleOpenExisting = async () => {
+    if (!recipe) return;
+    setIsForking(true);
+    try {
+      await api.post(`/pool/${recipe.id}/fork`);
+      // Sollte hier eigentlich nie ohne Fehler durchgehen (already_forked
+      // ist ja schon true) - zur Sicherheit trotzdem kein Absturz.
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        const localRecipeId = (err.data as { local_recipe_id?: string } | undefined)?.local_recipe_id;
+        if (localRecipeId) {
+          navigation.replace('RecipeDetail', { recipeId: localRecipeId, title: recipe.title });
+          return;
+        }
+      }
       Alert.alert(t('sonstiges.uebernehmenFehlgeschlagen'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
     } finally {
       setIsForking(false);
@@ -203,10 +241,24 @@ export default function PoolRecipeDetailScreen({ route, navigation }: Props) {
             <Text style={[styles.forkButtonText, { color: '#C0392B' }]}>{t('sonstiges.ausPoolNehmen')}</Text>
           )}
         </Pressable>
-      ) : recipe.already_forked ? (
+      ) : justForked ? (
         <View style={[styles.forkButton, styles.disabledButton, { borderRadius: radius.md }]}>
-          <Text style={[styles.forkButtonText, { color: colors.muted }]}>{t('sonstiges.bereitsUebernommen')}</Text>
+          <Text style={[styles.forkButtonText, { color: '#16A34A' }]}>
+            {t('sonstiges.uebernommenHaken')}{justForkedFolder ? ` – ${justForkedFolder}` : ''}
+          </Text>
         </View>
+      ) : recipe.already_forked ? (
+        <Pressable
+          onPress={handleOpenExisting}
+          disabled={isForking}
+          style={[styles.forkButton, styles.disabledButton, { borderRadius: radius.md }]}
+        >
+          {isForking ? (
+            <ActivityIndicator color={colors.muted} />
+          ) : (
+            <Text style={[styles.forkButtonText, { color: gradient[0] }]}>{t('sonstiges.inSammlungOeffnen')}</Text>
+          )}
+        </Pressable>
       ) : (
         <Pressable
           onPress={handleFork}

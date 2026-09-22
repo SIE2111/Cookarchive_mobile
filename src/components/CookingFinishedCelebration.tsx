@@ -3,6 +3,8 @@ import { View, Text, Pressable, StyleSheet, Animated, Share, Linking, Platform, 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { VideoView, useVideoPlayer } from 'expo-video';
+import * as Speech from 'expo-speech';
+import { SPEECH_LANGUAGE } from '../utils/speech';
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
 import BrutzelAvatar from './BrutzelAvatar';
@@ -56,6 +58,11 @@ export default function CookingFinishedCelebration({ recipeTitle, onDone }: Prop
   // abgeschalteter Animation nicht sehen will.
   const [prefsLoaded, setPrefsLoaded] = useState(false);
   const [showPromo, setShowPromo] = useState(false);
+  // "Schritte automatisch vorlesen" - der Abschluss ("Guten Appetit! ...
+  // ist fertig.") wird nur gesprochen, wenn dieser Schalter an ist, und
+  // mit der neutralen Stimme, nicht Brutzels eigener (Auftrag Punkt 3).
+  const [autoReadSteps, setAutoReadSteps] = useState(false);
+  const hasSpokenRef = React.useRef(false);
   const textOpacity = React.useRef(new Animated.Value(0)).current;
 
   const reviewUrl = Platform.OS === 'ios' ? IOS_REVIEW_URL : ANDROID_REVIEW_URL;
@@ -80,10 +87,11 @@ export default function CookingFinishedCelebration({ recipeTitle, onDone }: Prop
 
   useEffect(() => {
     api
-      .get<{ show_brutzel: boolean; show_greeting_animation: boolean }>('/preferences/')
+      .get<{ show_brutzel: boolean; show_greeting_animation: boolean; auto_read_steps: boolean }>('/preferences/')
       .then((prefs) => {
         setShowBrutzel(prefs.show_brutzel);
         setAnimated(prefs.show_greeting_animation);
+        setAutoReadSteps(prefs.auto_read_steps);
       })
       .catch(() => {
         // Nicht erreichbar: bei den Standardwerten bleiben, der Abschluss
@@ -91,6 +99,25 @@ export default function CookingFinishedCelebration({ recipeTitle, onDone }: Prop
       })
       .finally(() => setPrefsLoaded(true));
   }, []);
+
+  // Spricht "Guten Appetit! ... ist fertig." genau einmal, sobald der Text
+  // erscheint - mit neutraler Stimme (kein voice/pitch/rate), nicht
+  // Brutzels eigener, und nur bei eingeschaltetem "Schritte automatisch
+  // vorlesen". hasSpokenRef verhindert ein zweites Mal bei Re-Renders.
+  useEffect(() => {
+    if (!showText || !autoReadSteps || hasSpokenRef.current) return;
+    hasSpokenRef.current = true;
+    // Hardcodierter deutscher Text statt der lokalisierten Anzeige (die
+    // ein Emoji enthaelt) - gleiche Konvention wie BrutzelGreetingOverlay:
+    // die Sprachausgabe ist geraeteweit Deutsch, unabhaengig von der
+    // gewaehlten UI-Sprache.
+    const text = recipeTitle ? `Guten Appetit! ${recipeTitle} ist fertig.` : 'Guten Appetit!';
+    Speech.speak(text, { language: SPEECH_LANGUAGE });
+    return () => {
+      Speech.stop();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showText, autoReadSteps]);
 
   const player = useVideoPlayer(require('../../assets/brutzel-celebration.mp4'), (p) => {
     p.loop = false;

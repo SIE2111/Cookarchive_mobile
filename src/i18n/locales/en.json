@@ -65,6 +65,7 @@
   "rezepte": {
     "suchen": "Search recipes or ingredients…",
     "nurFavoriten": "Favourites only",
+    "nurMeineRezepte": "Only my recipes",
     "neuesteZuerst": "Newest first",
     "aeltesteZuerst": "Oldest first",
     "alphabetisch": "A–Z",
@@ -83,7 +84,9 @@
     "keineFavoriten": "No favourites marked yet.",
     "keineMitTag": "No recipes found with \"{tag}\".",
     "ordnerLeer": "This folder is still empty.",
-    "nochKeine": "No recipes yet – add your first one with the button below."
+    "nochKeine": "No recipes yet – add your first one with the button below.",
+    "keineEigenen": "No recipes of your own yet – imported, unchanged starter recipes are hidden here.",
+    "vonMitglied": "From {name}"
   },
   "starter": {
     "titel": "Starter recipes",
@@ -228,7 +231,7 @@
     "brutzelAnimation": "Brutzel animation",
     "brutzelAnimationSub": "Moving appearances: greeting and celebration. Off = Brutzel stays, but holds still",
     "serverSync": "Server sync",
-    "serverSyncSub": "Required for the community pool",
+    "serverSyncSub": "Required for household and Community Pool",
     "speicherLokal": "On this device only",
     "speicherNas": "NAS",
     "speicherEigeneCloud": "Own cloud",
@@ -654,7 +657,9 @@
     "ausPoolEntferntText": "\"{titel}\" is no longer in the community pool.",
     "ausPoolEntfernenFehlgeschlagen": "Couldn't withdraw it",
     "bereitsUebernommen": "Already added",
-    "vonDir": "From you"
+    "vonDir": "From you",
+    "uebernommenHaken": "Added ✓",
+    "inSammlungOeffnen": "Open in your collection"
   },
   "uebersetzung": {
     "angebotTitel": "This recipe is written in {sprache}.",

@@ -7,7 +7,6 @@ import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
 import { api, ApiError } from '../api/client';
 import ScanFab from '../components/ScanFab';
-import { askWhatNext } from '../utils/afterRecipeSaved';
 import type { MainStackParamList } from '../navigation/AppNavigator';
 import { useLayout } from '../utils/layout';
 
@@ -24,6 +23,15 @@ interface PublicRecipeSummary {
   // Uebernehmen-Knopf entfaellt dann - eine Kopie waere ein Duplikat.
   is_own?: boolean;
   already_forked?: boolean;
+}
+
+interface ForkFeedback {
+  // Gerade JETZT in dieser Sitzung uebernommen - zeigt kurz den
+  // Zielordner an ("Übernommen ✓"). Bei already_forked aus dem GET
+  // (aus einer frueheren Sitzung) fehlt das und der Knopf zeigt
+  // stattdessen direkt den Öffnen-Link (siehe Auftrag Punkt 12).
+  folderName?: string | null;
+  localRecipeId?: string;
 }
 
 /**
@@ -44,6 +52,7 @@ export default function CommunityPoolScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [forkingId, setForkingId] = useState<string | null>(null);
+  const [forkFeedback, setForkFeedback] = useState<Record<string, ForkFeedback>>({});
 
   const load = React.useCallback(async () => {
     try {
@@ -76,14 +85,28 @@ export default function CommunityPoolScreen() {
     setIsRefreshing(false);
   };
 
+  // Deckt zwei Faelle ab (Auftrag Punkt 12), beide ohne Dialog:
+  //  - noch nicht uebernommen: Uebernahme, Knopf wird "Übernommen ✓" mit
+  //    Hinweis auf den Zielordner, bleibt auf der Liste stehen.
+  //  - schon uebernommen (already_forked): derselbe Aufruf liefert 409 mit
+  //    local_recipe_id - direkt in die eigene Sammlung oeffnen, statt
+  //    erneut anzufragen, welche id das eigentlich ist.
   const handleFork = async (recipe: PublicRecipeSummary) => {
     setForkingId(recipe.id);
     try {
-      const result = await api.post<{ status: string; local_recipe_id: string }>(`/pool/${recipe.id}/fork`);
-      // Gleicher Abschluss wie bei KI, Foto und Web-Import: ansehen,
-      // gleich kochen oder fertig - siehe utils/afterRecipeSaved.
-      askWhatNext(navigation, { id: result.local_recipe_id, title: recipe.title });
+      const result = await api.post<{ status: string; local_recipe_id: string; folder_name?: string }>(
+        `/pool/${recipe.id}/fork`,
+      );
+      setForkFeedback((prev) => ({ ...prev, [recipe.id]: { folderName: result.folder_name ?? null } }));
+      setRecipes((prev) => prev.map((r) => (r.id === recipe.id ? { ...r, already_forked: true } : r)));
     } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        const localRecipeId = (err.data as { local_recipe_id?: string } | undefined)?.local_recipe_id;
+        if (localRecipeId) {
+          navigation.navigate('RecipeDetail', { recipeId: localRecipeId, title: recipe.title });
+          return;
+        }
+      }
       Alert.alert(t('sonstiges.uebernehmenFehlgeschlagen'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
     } finally {
       setForkingId(null);
@@ -150,9 +173,9 @@ export default function CommunityPoolScreen() {
                 <MaterialCommunityIcons name="silverware-fork-knife" size={18} color={colors.muted} />
               </View>
             )}
-            <View style={{ flex: 1 }}>
+            <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={[styles.title, { color: colors.text }]} numberOfLines={2}>{item.title}</Text>
-              <Text style={[styles.meta, { color: colors.muted }]}>
+              <Text style={[styles.meta, { color: colors.muted }]} numberOfLines={1}>
                 {[
                   item.prep_time_minutes ? `${item.prep_time_minutes} Min.` : null,
                   item.servings ? `${item.servings} Port.` : null,
@@ -163,28 +186,62 @@ export default function CommunityPoolScreen() {
                   .join(' · ')}
               </Text>
             </View>
-            {item.is_own || item.already_forked ? (
-              // Statt des Knopfes ein Hinweis: Eine leere Stelle wuerde wie
-              // ein Fehler wirken, und der Nutzer soll sehen, WARUM hier
-              // nichts zu tun ist.
-              <View style={[styles.forkButton, styles.statusBox]}>
-                <Text style={[styles.besitzText, { color: colors.muted }]} numberOfLines={2}>
-                  {item.is_own ? t('sonstiges.vonDir') : t('sonstiges.bereitsUebernommen')}
-                </Text>
-              </View>
-            ) : (
-              <Pressable
-                onPress={() => handleFork(item)}
-                disabled={forkingId === item.id}
-                style={[styles.forkButton, styles.statusBox, { backgroundColor: gradient[0], borderRadius: radius.sm }]}
-              >
-                {forkingId === item.id ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={styles.forkButtonText}>Übernehmen</Text>
-                )}
-              </Pressable>
-            )}
+            {(() => {
+              if (item.is_own) {
+                return (
+                  <View style={[styles.forkButton, styles.statusBox]}>
+                    <Text style={[styles.besitzText, { color: colors.muted }]} numberOfLines={2}>{t('sonstiges.vonDir')}</Text>
+                  </View>
+                );
+              }
+              const feedback = forkFeedback[item.id];
+              if (feedback) {
+                // Gerade jetzt uebernommen - kein Dialog, der Knopf zeigt
+                // direkt den Zielordner (Auftrag Punkt 12).
+                return (
+                  <View style={[styles.forkButton, styles.statusBox]}>
+                    <Text style={[styles.besitzText, { color: '#16A34A' }]} numberOfLines={2}>
+                      {t('sonstiges.uebernommenHaken')}
+                    </Text>
+                    {feedback.folderName && (
+                      <Text style={[styles.folderHintText, { color: colors.muted }]} numberOfLines={2}>
+                        {feedback.folderName}
+                      </Text>
+                    )}
+                  </View>
+                );
+              }
+              if (item.already_forked) {
+                return (
+                  <Pressable
+                    onPress={() => handleFork(item)}
+                    disabled={forkingId === item.id}
+                    style={[styles.forkButton, styles.statusBox]}
+                  >
+                    {forkingId === item.id ? (
+                      <ActivityIndicator color={colors.muted} size="small" />
+                    ) : (
+                      <Text style={[styles.besitzText, { color: gradient[0] }]} numberOfLines={2}>
+                        {t('sonstiges.inSammlungOeffnen')}
+                      </Text>
+                    )}
+                  </Pressable>
+                );
+              }
+              return (
+                <Pressable
+                  onPress={() => handleFork(item)}
+                  disabled={forkingId === item.id}
+                  style={[styles.forkButton, styles.statusBox, { backgroundColor: gradient[0], borderRadius: radius.sm }]}
+                >
+                  {forkingId === item.id ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text style={styles.forkButtonText} numberOfLines={2}>Übernehmen</Text>
+                  )}
+                </Pressable>
+              );
+            })()}
           </Pressable>
         )}
       />
@@ -196,20 +253,25 @@ export default function CommunityPoolScreen() {
 const styles = StyleSheet.create({
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   thumb: { width: 54, height: 54, marginRight: 12 },
-  // Feste Breite fuer die rechte Spalte (Knopf oder Status-Hinweis):
-  // React Native schrumpft Geschwister in einer Reihe NICHT automatisch
-  // wie im Web (flexShrink ist dort standardmaessig 0). Ohne diese Grenze
-  // beanspruchte "Bereits uebernommen" seine volle Textbreite und drueckte
-  // die Titel-Spalte daneben bis auf einzelne Woerter zusammen.
-  statusBox: { width: 92, alignItems: 'center', justifyContent: 'center' },
+  // Feste Breite fuer die rechte Spalte (Knopf oder Status-Hinweis),
+  // flexShrink:0 explizit statt sich nur auf die feste Breite zu
+  // verlassen - React Native schrumpft Geschwister in einer Reihe NICHT
+  // automatisch wie im Web. textAlign:right, damit ein zweizeiliger
+  // Status (z.B. Ordnername) nicht mittig, sondern zur Titel-Spalte hin
+  // ausgerichtet steht.
+  statusBox: { width: 92, flexShrink: 0, alignItems: 'center', justifyContent: 'center' },
   thumbEmpty: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(128,128,128,0.15)' },
   header: { fontSize: 19, fontWeight: '700', marginBottom: 4 },
   headerSub: { fontSize: 11.5, lineHeight: 17, marginBottom: 16 },
-  card: { flexDirection: 'row', alignItems: 'center', padding: 14, marginBottom: 9 },
+  // alignItems:'flex-start' statt 'center': bei einem zweizeiligen Titel
+  // sollen Thumbnail und Status-Spalte oben ausgerichtet bleiben, statt
+  // sich an der Zeilenmitte zu orientieren.
+  card: { flexDirection: 'row', alignItems: 'flex-start', padding: 14, marginBottom: 9 },
   karteInSpalte: { flex: 1 },
-  title: { fontSize: 14, fontWeight: '700', flexShrink: 1 },
+  title: { fontSize: 14, fontWeight: '700', flex: 1, minWidth: 0 },
   meta: { fontSize: 10.5, marginTop: 3 },
   forkButton: { paddingHorizontal: 14, paddingVertical: 9 },
-  forkButtonText: { color: '#fff', fontWeight: '700', fontSize: 11.5, textAlign: 'center' },
-  besitzText: { fontSize: 11, fontWeight: '600', textAlign: 'center' },
+  forkButtonText: { color: '#fff', fontWeight: '700', fontSize: 11.5, textAlign: 'right' },
+  besitzText: { fontSize: 11, fontWeight: '600', textAlign: 'right' },
+  folderHintText: { fontSize: 10, marginTop: 2, textAlign: 'right' },
 });

@@ -14,6 +14,7 @@ import {
   TextInput,
 } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
 import ScanFab from '../components/ScanFab';
@@ -40,7 +41,15 @@ interface RecipeSummary {
   folder_id: string | null;
   source_type: string;
   is_favorite: boolean;
+  is_modified: boolean;
+  // Nur gesetzt, wenn das Rezept einem ANDEREN Haushaltsmitglied gehört.
+  owner_display_name: string | null;
 }
+
+// Zustand des Schalters "Nur meine Rezepte" bleibt ueber App-Starts hinweg
+// erhalten, bis er umgestellt wird (siehe Auftrag Punkt 5) - anders als
+// favoritesOnly/sortOption, die bewusst bei jedem Start zuruecksetzen.
+const ONLY_MINE_KEY = 'rezepte_nur_meine';
 
 const SOURCE_ICONS: Record<string, keyof typeof MaterialCommunityIcons.glyphMap> = {
   manual: 'pencil-outline',
@@ -67,7 +76,22 @@ export default function RecipesScreen({ navigation, route }: Props) {
   const [folders, setFolders] = useState<FolderSummary[]>([]);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [onlyMine, setOnlyMine] = useState(false);
   const [sortOption, setSortOption] = useState<'newest' | 'oldest' | 'az'>('newest');
+
+  useEffect(() => {
+    AsyncStorage.getItem(ONLY_MINE_KEY)
+      .then((raw) => setOnlyMine(raw === '1'))
+      .catch(() => {});
+  }, []);
+
+  const handleToggleOnlyMine = () => {
+    setOnlyMine((prev) => {
+      const next = !prev;
+      AsyncStorage.setItem(ONLY_MINE_KEY, next ? '1' : '0').catch(() => {});
+      return next;
+    });
+  };
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -156,6 +180,14 @@ export default function RecipesScreen({ navigation, route }: Props) {
   if (favoritesOnly) {
     visibleRecipes = visibleRecipes.filter((r) => r.is_favorite);
   }
+  if (onlyMine) {
+    // Eigene Rezepte, aber ohne unveraenderte Starter-Pack-Importe -
+    // fremde Haushalts-Rezepte (owner_display_name gesetzt) sind ohnehin
+    // nie "meine" (siehe Auftrag Punkt 5).
+    visibleRecipes = visibleRecipes.filter(
+      (r) => !r.owner_display_name && !(r.source_type === 'starter_pack' && !r.is_modified),
+    );
+  }
 
   // Fuer die Kategorie-Auswahl direkt hier auf dem Screen - vorher konnte
   // man einen Kategorie-Filter nur ueber den Umweg der Dashboard-Kacheln
@@ -215,7 +247,7 @@ export default function RecipesScreen({ navigation, route }: Props) {
         </Pressable>
       )}
 
-      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12, flexGrow: 0, flexShrink: 0 }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, flexShrink: 0, marginBottom: 12 }} contentContainerStyle={{ flexDirection: 'row', gap: 8 }}>
         <Pressable
           onPress={() => setFavoritesOnly((prev) => !prev)}
           style={[
@@ -226,6 +258,19 @@ export default function RecipesScreen({ navigation, route }: Props) {
           <MaterialCommunityIcons name={favoritesOnly ? 'heart' : 'heart-outline'} size={14} color={favoritesOnly ? '#fff' : colors.text} />
           <Text style={{ color: favoritesOnly ? '#fff' : colors.text, fontSize: 12, fontWeight: '600', marginLeft: 5 }}>
             {t('rezepte.nurFavoriten')}
+          </Text>
+        </Pressable>
+
+        <Pressable
+          onPress={handleToggleOnlyMine}
+          style={[
+            styles.favoritesChip,
+            { backgroundColor: onlyMine ? gradient[0] : colors.card, borderRadius: radius.sm, marginBottom: 0 },
+          ]}
+        >
+          <MaterialCommunityIcons name={onlyMine ? 'account-check' : 'account-check-outline'} size={14} color={onlyMine ? '#fff' : colors.text} />
+          <Text style={{ color: onlyMine ? '#fff' : colors.text, fontSize: 12, fontWeight: '600', marginLeft: 5 }}>
+            {t('rezepte.nurMeineRezepte')}
           </Text>
         </Pressable>
 
@@ -244,7 +289,7 @@ export default function RecipesScreen({ navigation, route }: Props) {
             {sortOption === 'az' ? t('rezepte.az') : sortOption === 'newest' ? t('rezepte.neuesteZuerst') : t('rezepte.aeltesteZuerst')}
           </Text>
         </Pressable>
-      </View>
+      </ScrollView>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.folderBar} contentContainerStyle={{ gap: 8, alignItems: 'center' }}>
         <Pressable
@@ -347,11 +392,13 @@ export default function RecipesScreen({ navigation, route }: Props) {
                 ? t('rezepte.keineTreffer', { suche: searchText.trim() })
                 : favoritesOnly
                   ? t('rezepte.keineFavoriten')
-                  : filterTag
-                    ? t('rezepte.keineMitTag', { tag: filterTag })
-                    : selectedFolderId
-                      ? t('rezepte.ordnerLeer')
-                      : t('rezepte.nochKeine')}
+                  : onlyMine
+                    ? t('rezepte.keineEigenen')
+                    : filterTag
+                      ? t('rezepte.keineMitTag', { tag: filterTag })
+                      : selectedFolderId
+                        ? t('rezepte.ordnerLeer')
+                        : t('rezepte.nochKeine')}
             </Text>
           ) : null
         }
@@ -377,6 +424,11 @@ export default function RecipesScreen({ navigation, route }: Props) {
               </View>
               {item.tags && item.tags.length > 0 && (
                 <Text style={[styles.recipeTags, { color: colors.muted }]}>{item.tags.join(' · ')}</Text>
+              )}
+              {item.owner_display_name && (
+                <Text style={[styles.ownerHint, { color: colors.muted }]} numberOfLines={1}>
+                  {t('rezepte.vonMitglied', { name: item.owner_display_name })}
+                </Text>
               )}
             </View>
             <PublishToPoolButton recipeId={item.id} recipeTitle={item.title} />
@@ -448,6 +500,7 @@ const styles = StyleSheet.create({
   thumbnailPlaceholder: { width: 46, height: 46 },
   recipeTitle: { fontSize: 14, fontWeight: '700', flexShrink: 1 },
   recipeTags: { fontSize: 11, marginTop: 3 },
+  ownerHint: { fontSize: 10, marginTop: 2, fontStyle: 'italic' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 30 },
   modalCard: { padding: 20 },
   modalTitle: { fontSize: 16, fontWeight: '700', marginBottom: 14 },

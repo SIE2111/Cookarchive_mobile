@@ -54,6 +54,9 @@ export default function DashboardScreen({ navigation }: Props) {
   const [profileDisplayName, setProfileDisplayName] = useState<string | null>(null);
   const [showGreeting, setShowGreeting] = useState(false);
   const [greetingMitVideo, setGreetingMitVideo] = useState(true);
+  // "Schritte automatisch vorlesen" - steuert, ob die Begruessung
+  // gesprochen wird (Auftrag Punkt 3), unabhaengig von der Animation.
+  const [greetingSprechen, setGreetingSprechen] = useState(false);
   // Kategorien-Reihenfolge/Ausblendungen aus dem Profil (siehe
   // ManageCategoriesScreen). null = noch nicht geladen, dann greift
   // vorlaeufig die reine Haeufigkeitssortierung, bis die Antwort da ist -
@@ -69,7 +72,7 @@ export default function DashboardScreen({ navigation }: Props) {
     api
       .get<{
         display_name: string | null; show_greeting_animation: boolean; show_brutzel: boolean;
-        category_order: string[] | null; hidden_categories: string[] | null;
+        category_order: string[] | null; hidden_categories: string[] | null; auto_read_steps: boolean;
       }>('/preferences/')
       .then((prefs) => {
         setProfileDisplayName(prefs.display_name);
@@ -79,11 +82,13 @@ export default function DashboardScreen({ navigation }: Props) {
         // soll ihn nicht ausgerechnet beim Oeffnen der App ueber den
         // Bildschirm laufen sehen.
         // Nur noch show_brutzel entscheidet, OB die Begruessung kommt.
-        // show_greeting_animation entscheidet, ob sie sich bewegt und
-        // spricht - vorher schaltete er den ganzen Bildschirm ab.
+        // show_greeting_animation entscheidet, ob sie sich bewegt,
+        // auto_read_steps ob sie gesprochen wird (Auftrag Punkt 3) -
+        // vorher schaltete show_greeting_animation den ganzen Bildschirm ab.
         if (prefs.show_brutzel && !hasShownGreetingThisSession) {
           hasShownGreetingThisSession = true;
           setGreetingMitVideo(prefs.show_greeting_animation);
+          setGreetingSprechen(prefs.auto_read_steps);
           setShowGreeting(true);
         }
       })
@@ -426,7 +431,7 @@ export default function DashboardScreen({ navigation }: Props) {
       )}
     </ScrollView>
     <ScanFab />
-    {showGreeting && <BrutzelGreetingOverlay name={displayName} mitVideo={greetingMitVideo} onDismiss={() => setShowGreeting(false)} />}
+    {showGreeting && <BrutzelGreetingOverlay name={displayName} mitVideo={greetingMitVideo} sprechen={greetingSprechen} onDismiss={() => setShowGreeting(false)} />}
     </>
   );
 }

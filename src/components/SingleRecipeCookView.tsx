@@ -32,6 +32,13 @@ interface RecipeForCooking {
 
 const HAT_COUNT_TO_LEVEL: Record<number, HaubenLevel> = { 1: 'anfaenger', 2: 'fortgeschritten', 3: 'profi' };
 
+// Nur der erste Buchstabe gross, nicht jedes Wort (z.B. "zwiebel_schneiden"
+// -> "Zwiebel schneiden", nicht "Zwiebel Schneiden") - vorher erledigte das
+// textTransform: 'capitalize' in CSS, das aber JEDES Wort grossschreibt.
+function capitalizeFirst(text: string): string {
+  return text.length ? text.charAt(0).toUpperCase() + text.slice(1) : text;
+}
+
 function formatTime(totalSeconds: number): string {
   const m = Math.floor(totalSeconds / 60);
   const s = totalSeconds % 60;
@@ -1065,7 +1072,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
       {currentStep.technique_tag && (
         <View style={[styles.techniqueBadge, { backgroundColor: colors.card, borderRadius: radius.sm }]}>
           <Text style={[styles.techniqueText, { color: colors.muted }]}>
-            Technik: {currentStep.technique_tag.replace(/_/g, ' ')}
+            Technik: {capitalizeFirst(currentStep.technique_tag.replace(/_/g, ' '))}
           </Text>
         </View>
       )}
@@ -1368,7 +1375,7 @@ const styles = StyleSheet.create({
   stepText: { flex: 1, fontSize: 16, lineHeight: 24, fontWeight: '400' },
   speakButton: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
   techniqueBadge: { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 6, marginBottom: 10 },
-  techniqueText: { fontSize: 11, textTransform: 'capitalize' },
+  techniqueText: { fontSize: 11 },
   brutzelCard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, marginBottom: 10 },
   brutzelText: { flex: 1, fontSize: 12.5, lineHeight: 18, fontWeight: '600' },
   videoLink: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 },
