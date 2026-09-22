@@ -491,7 +491,9 @@
     "ausgetreten": "Joined, then left the household",
     "abgelaufen": "Expired",
     "einladungscode": "Invitation code (valid for 24 hours)",
-    "codeTeilen": "Share code"
+    "codeTeilen": "Share code",
+    "beschreibung": "All members see the same recipes, the same shopping list and the same weekly plan. Only whoever added a recipe can change it - anyone can delete it, with a confirmation for a recipe someone else added.",
+    "umbenennenFehlgeschlagen": "Renaming failed"
   },
   "wochenplan": {
     "nichtGeladen": "The weekly plan could not be loaded",
