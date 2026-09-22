@@ -491,7 +491,9 @@
     "ausgetreten": "War beigetreten, hat den Haushalt verlassen",
     "abgelaufen": "Abgelaufen",
     "einladungscode": "Einladungscode (24 Std. gültig)",
-    "codeTeilen": "Code teilen"
+    "codeTeilen": "Code teilen",
+    "beschreibung": "Alle Mitglieder sehen dieselben Rezepte, dieselbe Einkaufsliste und denselben Wochenplan. Ändern kann ein Rezept nur, wer es angelegt hat - löschen kann es jedes Mitglied, mit einer Rückfrage bei einem fremden Rezept.",
+    "umbenennenFehlgeschlagen": "Umbenennen fehlgeschlagen"
   },
   "wochenplan": {
     "nichtGeladen": "Wochenplan konnte nicht geladen werden",
