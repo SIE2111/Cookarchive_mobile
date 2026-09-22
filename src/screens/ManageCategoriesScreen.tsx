@@ -68,22 +68,45 @@ export default function ManageCategoriesScreen({ navigation }: any) {
     load();
   }, [load]);
 
-  // Die verschobene Zeile soll unter dem Finger bleiben: Nach jedem
-  // Pfeil-Tipp scrollt die Liste um genau eine Zeile mit, so kann man auf
-  // derselben Stelle weitertippen. Wo die Liste nicht weiter scrollen kann
-  // (ganz oben/unten, oder sie passt ganz auf den Schirm), hilft die
-  // farbige Umrandung, die Zeile wiederzufinden.
+  // Die verschobene Zeile bleibt am Bildschirm stehen, die anderen
+  // wandern: Nach jedem Pfeil-Tipp scrollt die Liste um genau eine Zeile
+  // mit, so tippt man auf derselben Stelle weiter. Reicht der Scrollweg
+  // nicht (ganz oben/unten, oder die Liste passt ganz auf den Schirm),
+  // bekommt die Liste dort Leerraum dazu - sonst liefe die Zeile gerade
+  // dann unter dem Finger weg.
   const scrollRef = useRef<ScrollView>(null);
   const scrollY = useRef(0);
   const inhaltsHoehe = useRef(0);
   const sichtHoehe = useRef(0);
   const ausstehendesScrollen = useRef<number | null>(null);
   const [zuletztVerschoben, setZuletztVerschoben] = useState<string | null>(null);
+  const [polsterOben, setPolsterOben] = useState(0);
+  const [polsterUnten, setPolsterUnten] = useState(0);
 
   const verschiebe = (von: number, nach: number) => {
     if (nach < 0 || nach >= order.length) return;
     setZuletztVerschoben(order[von]);
-    ausstehendesScrollen.current = (nach - von) * ROW_HEIGHT;
+    // Bildschirmposition der Zeile = Lage im Inhalt - Scrollstand. Die
+    // Zeile rutscht im Inhalt um delta (plus neuen Leerraum oben), also
+    // muss der Scrollstand um genau so viel mitgehen.
+    const delta = (nach - von) * ROW_HEIGHT;
+    let ziel = scrollY.current + delta;
+    let dazuOben = 0;
+    if (ziel < 0) {
+      dazuOben = -ziel;
+      ziel = 0;
+    }
+    const maxY = inhaltsHoehe.current + dazuOben - sichtHoehe.current;
+    const dazuUnten = ziel > maxY ? ziel - maxY : 0;
+    if (dazuOben) {
+      setPolsterOben((p) => p + dazuOben);
+      inhaltsHoehe.current += dazuOben;
+    }
+    if (dazuUnten) {
+      setPolsterUnten((p) => p + dazuUnten);
+      inhaltsHoehe.current += dazuUnten;
+    }
+    ausstehendesScrollen.current = ziel;
     setOrder((vorher) => {
       const neu = [...vorher];
       const [element] = neu.splice(von, 1);
@@ -95,14 +118,15 @@ export default function ManageCategoriesScreen({ navigation }: any) {
   // Erst scrollen, wenn die Zeilen schon getauscht sind - sonst springt
   // die Liste kurz, bevor sich die Reihenfolge aendert.
   useLayoutEffect(() => {
-    const delta = ausstehendesScrollen.current;
-    if (delta === null) return;
+    const ziel = ausstehendesScrollen.current;
+    if (ziel === null) return;
     ausstehendesScrollen.current = null;
-    const maxY = Math.max(0, inhaltsHoehe.current - sichtHoehe.current);
-    const ziel = Math.min(maxY, Math.max(0, scrollY.current + delta));
     scrollY.current = ziel;
     scrollRef.current?.scrollTo({ y: ziel, animated: false });
-  }, [order]);
+    // Android begrenzt auf die ALTE Inhaltshoehe, solange der neue
+    // Leerraum noch nicht vermessen ist - im naechsten Bild nochmal.
+    requestAnimationFrame(() => scrollRef.current?.scrollTo({ y: ziel, animated: false }));
+  }, [order, polsterOben, polsterUnten]);
 
   const toggleHidden = (tag: string) => {
     setHidden((vorher) => {
@@ -174,6 +198,7 @@ export default function ManageCategoriesScreen({ navigation }: any) {
             sichtHoehe.current = e.nativeEvent.layout.height;
           }}
         >
+          {polsterOben > 0 && <View style={{ height: polsterOben }} />}
           <Text style={[styles.title, { color: colors.text }]}>{t('dashboard.kategorienVerwalten')}</Text>
           <Text style={[styles.lead, { color: colors.muted }]}>{t('dashboard.kategorienVerwaltenText')}</Text>
 
@@ -236,6 +261,7 @@ export default function ManageCategoriesScreen({ navigation }: any) {
           <Pressable onPress={handleReset} style={styles.resetLink}>
             <Text style={[styles.resetText, { color: gradient[0] }]}>{t('dashboard.zuruecksetzen')}</Text>
           </Pressable>
+          {polsterUnten > 0 && <View style={{ height: polsterUnten }} />}
         </ScrollView>
 
         <View style={[styles.footer, { backgroundColor: colors.bg }]}>
