@@ -158,7 +158,7 @@
     "nichtGeladen": "Could not be loaded",
     "favoriten": "Favourites",
     "kategorienVerwalten": "Manage categories",
-    "kategorienVerwaltenText": "Adjust the order with the arrows, use the switch to hide individual categories from the home screen.",
+    "kategorienVerwaltenText": "Drag the handle to change the order, use the switch to hide individual categories from the home screen.",
     "kategorienKeine": "No categories yet - they come from the tags on your recipes.",
     "kategorieAusblendenFrage": "Hide category?",
     "kategorieAusblendenText": "\"{kategorie}\" will no longer appear on the home screen. You can bring it back anytime under \"Manage categories\".",

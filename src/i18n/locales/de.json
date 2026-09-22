@@ -158,7 +158,7 @@
     "nichtGeladen": "Konnte nicht geladen werden",
     "favoriten": "Favoriten",
     "kategorienVerwalten": "Kategorien verwalten",
-    "kategorienVerwaltenText": "Reihenfolge mit den Pfeilen anpassen, mit dem Schalter einzelne Kategorien aus der Startseite ausblenden.",
+    "kategorienVerwaltenText": "Reihenfolge durch Ziehen am Griff anpassen, mit dem Schalter einzelne Kategorien aus der Startseite ausblenden.",
     "kategorienKeine": "Noch keine Kategorien - sie entstehen aus den Tags deiner Rezepte.",
     "kategorieAusblendenFrage": "Kategorie ausblenden?",
     "kategorieAusblendenText": "„{kategorie}“ erscheint danach nicht mehr auf der Startseite. Über „Kategorien verwalten“ lässt sie sich jederzeit wieder einblenden.",

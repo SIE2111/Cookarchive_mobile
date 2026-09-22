@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, Switch, Alert, Animated } from 'react-native';
 import { PanGestureHandler, ScrollView, State } from 'react-native-gesture-handler';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
@@ -180,7 +181,7 @@ export default function ManageCategoriesScreen({ navigation }: any) {
   }
 
   return (
-      <View style={[styles.page, { backgroundColor: colors.bg }]}>
+      <SafeAreaView style={[styles.page, { backgroundColor: colors.bg }]} edges={['top']}>
         <View style={styles.topBar}>
           <Pressable onPress={() => navigation.goBack()} style={styles.backButton} hitSlop={8}>
             <MaterialCommunityIcons name="chevron-left" size={22} color={colors.text} />
@@ -225,11 +226,16 @@ export default function ManageCategoriesScreen({ navigation }: any) {
                         commitDrag(hoverIndexRef.current);
                       }
                     }}
-                    onGestureEvent={(evt) => {
-                      dragY.setValue(evt.nativeEvent.translationY);
-                      const rohesZiel = index + Math.round(evt.nativeEvent.translationY / ROW_HEIGHT);
-                      setHoverIndex(Math.max(0, Math.min(order.length - 1, rohesZiel)));
-                    }}
+                    onGestureEvent={Animated.event(
+                      [{ nativeEvent: { translationY: dragY } }],
+                      {
+                        useNativeDriver: true,
+                        listener: (evt: any) => {
+                          const rohesZiel = index + Math.round(evt.nativeEvent.translationY / ROW_HEIGHT);
+                          setHoverIndex(Math.max(0, Math.min(order.length - 1, rohesZiel)));
+                        },
+                      },
+                    )}
                   >
                     <View style={styles.dragHandle} hitSlop={4}>
                       <MaterialCommunityIcons name="drag-horizontal-variant" size={22} color={colors.muted} />
@@ -270,7 +276,7 @@ export default function ManageCategoriesScreen({ navigation }: any) {
             {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveText}>{t('allgemein.speichern')}</Text>}
           </Pressable>
         </View>
-      </View>
+      </SafeAreaView>
   );
 }
 
