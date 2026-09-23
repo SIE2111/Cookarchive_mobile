@@ -701,7 +701,8 @@
     "introEinkaufText": "Zutaten wandern mit einem Tipp auf die Einkaufsliste. Plane deine Woche und sieh auf einen Blick, was du brauchst.",
     "introHaushaltTitel": "Gemeinsam kochen",
     "introHaushaltText": "Bilde mit deinem Haushalt eine gemeinsame Sammlung, oder entdecke neue Rezepte im Community-Pool.",
-    "introLosGehts": "Los geht's"
+    "introLosGehts": "Los geht's",
+    "kurzeHilfe": "Kurze Hilfe zur App ansehen"
   },
   "uebersetzung": {
     "angebotTitel": "Dieses Rezept ist auf {sprache} verfasst.",

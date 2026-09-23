@@ -126,8 +126,8 @@ export default function OnboardingScreen({ navigation }: Props) {
               {Array.from({ length: option.hats }).map(() => '👨‍🍳').join('')}
             </Text>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.rowTitle, { color: colors.text }]}>{option.title}</Text>
-              <Text style={[styles.rowSubtitle, { color: colors.muted }]}>{option.subtitle}</Text>
+              <Text style={[styles.rowTitle, { color: colors.text }]}>{t(option.title)}</Text>
+              <Text style={[styles.rowSubtitle, { color: colors.muted }]}>{t(option.subtitle)}</Text>
             </View>
             {isSelected && <Text style={{ color: gradient[0], fontSize: 18 }}>✓</Text>}
           </Pressable>

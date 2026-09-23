@@ -1,11 +1,12 @@
-import React, { useEffect } from 'react';
-import { View, Text, Pressable, StyleSheet, Animated, Image } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, Pressable, StyleSheet, Animated, Image, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import * as Speech from 'expo-speech';
 import { SPEECH_LANGUAGE } from '../utils/speech';
 import { useTheme } from '../theme/ThemeContext';
 import MarkenZeile from './MarkenZeile';
+import BrutzelIntroScreens from './BrutzelIntroScreens';
 import { useUebersetzung } from '../i18n';
 
 interface Props {
@@ -41,6 +42,11 @@ export default function BrutzelGreetingOverlay({ name, onDismiss, mitVideo = tru
   const insets = useSafeAreaInsets();
   const { t } = useUebersetzung();
   const textOpacity = React.useRef(new Animated.Value(0)).current;
+  // Dieselbe kurze Einfuehrung wie bei der Registrierung (BrutzelIntroScreens)
+  // - hier ueber einen Knopf abrufbar statt einmalig erzwungen, fuer alle,
+  // die sie beim Anlegen des Kontos uebersprungen haben oder noch mal
+  // sehen wollen.
+  const [zeigeIntro, setZeigeIntro] = useState(false);
 
   const greetingText = `Hallo ${name}! Was möchtest du heute kochen?`;
 
@@ -101,7 +107,16 @@ export default function BrutzelGreetingOverlay({ name, onDismiss, mitVideo = tru
         <Pressable onPress={handleDismiss} style={[styles.doneButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}>
           <Text style={styles.doneButtonText}>{t('sonstiges.losGehts')}</Text>
         </Pressable>
+        <Pressable onPress={() => setZeigeIntro(true)} hitSlop={10} style={{ marginTop: 14 }}>
+          <Text style={{ color: colors.muted, fontSize: 12.5, fontWeight: '600', textDecorationLine: 'underline' }}>
+            {t('sonstiges.kurzeHilfe')}
+          </Text>
+        </Pressable>
       </Animated.View>
+
+      <Modal visible={zeigeIntro} animationType="slide" onRequestClose={() => setZeigeIntro(false)}>
+        <BrutzelIntroScreens onFertig={() => setZeigeIntro(false)} />
+      </Modal>
     </View>
   );
 }
