@@ -245,7 +245,10 @@
     "rolleMitglied": "Mitglied",
     "einstellungenNichtGeladen": "Einstellungen konnten nicht geladen werden",
     "animationMusik": "Animations-Musik",
-    "animationMusikSub": "Ton bei Begrüßung und Fertigstellung. Aus = stumm."
+    "animationMusikSub": "Ton bei Begrüßung und Fertigstellung. Aus = stumm.",
+    "einstellungen": "Einstellungen",
+    "einstellungenSub": "Brutzel, Animation, Server-Sync, Benachrichtigungen, KI",
+    "serverSyncHinweis": "Ohne Server-Sync bleibt \"Lokal\" komplett privat – dafür ist der Community-Pool nicht nutzbar."
   },
   "detail": {
     "nichtGeladen": "Rezept konnte nicht geladen werden",

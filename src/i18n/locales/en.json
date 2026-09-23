@@ -245,7 +245,10 @@
     "rolleMitglied": "Member",
     "einstellungenNichtGeladen": "Settings could not be loaded",
     "animationMusik": "Animation music",
-    "animationMusikSub": "Sound during greeting and finish celebration. Off = muted."
+    "animationMusikSub": "Sound during greeting and finish celebration. Off = muted.",
+    "einstellungen": "Settings",
+    "einstellungenSub": "Brutzel, animation, server sync, notifications, AI",
+    "serverSyncHinweis": "Without server sync, \"Local\" stays completely private – but the Community Pool won't be usable."
   },
   "detail": {
     "nichtGeladen": "The recipe could not be loaded",

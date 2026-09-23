@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Switch, Pressable, StyleSheet, ActivityIndicator, Alert, ScrollView, TextInput, Modal, Linking } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert, ScrollView, TextInput, Modal, Linking } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme, type BackgroundStyle, type AccentColor } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
 import { useAuth } from '../context/AuthContext';
-import { useServerSync } from '../context/ServerSyncContext';
 import { api, ApiError } from '../api/client';
 import MarkenZeile from '../components/MarkenZeile';
 import { useFocusEffect, type CompositeScreenProps } from '@react-navigation/native';
@@ -79,34 +78,16 @@ const ACCENT_OPTIONS: { key: AccentColor; title: string; color: string }[] = [
   { key: 'gelb', title: 'profil.farbeGelb', color: '#EAB308' },
 ];
 
-const ROWS: { key: PreferenceKey; title: string; subtitle: string; lockedWhen?: (p: Preferences) => boolean }[] = [
-  { key: 'show_brutzel', title: 'profil.brutzelAnzeigen', subtitle: 'profil.brutzelAnzeigenSub' },
-  { key: 'large_text', title: 'profil.grosseSchrift', subtitle: 'profil.grosseSchriftSub' },
-  // 'auto_read_steps' steht bewusst NICHT mehr hier, sondern im
-  // Unterschirm 'Vorlesen & Stimme' - zusammen mit der Stimmenauswahl,
-  // zu der er gehoert. An zwei Stellen derselbe Schalter waere eine
-  // Einladung, dass einer davon irgendwann nicht mehr mitgepflegt wird.
-  // Umbenannt: Der Schalter steuert nicht nur die Begruessung, sondern
-  // jeden bewegten Auftritt von Brutzel - auch die Feier am Ende des
-  // Kochens. Der Feldname in der Datenbank bleibt show_greeting_animation,
-  // eine Spaltenumbenennung waere reines Risiko ohne Gewinn.
-  { key: 'show_greeting_animation', title: 'profil.brutzelAnimation', subtitle: 'profil.brutzelAnimationSub' },
-  // Gehoert inhaltlich zur Animation direkt darueber (nur bei laufendem
-  // Video ist ueberhaupt etwas zu hoeren) - eigener Schalter, weil manche
-  // die Animation behalten, den Ton aber nicht wollen.
-  { key: 'play_animation_music', title: 'profil.animationMusik', subtitle: 'profil.animationMusikSub' },
-];
-
-// Eigene Zeile statt in ROWS: soll unterhalb von "Vorlesen & Stimme"
-// stehen, ROWS wird aber VOR diesem Link gerendert (siehe unten).
-const SERVER_SYNC_ROW = { key: 'server_sync_enabled' as const, title: 'profil.serverSync', subtitle: 'profil.serverSyncSub' };
+// Die einzelnen Schalter-Definitionen (Darstellung, Server-Sync,
+// Benachrichtigungen, KI) leben seit 23.09.2026 in AppSettingsScreen -
+// hier bleibt nur noch der Link dorthin (siehe "profil.einstellungen"
+// weiter unten).
 
 export default function ProfileScreen({ navigation }: Props) {
   const { colors, gradient, radius, theme, setTheme } = useTheme();
   const { inhaltsBreite } = useLayout();
   const { t } = useUebersetzung();
   const { signOut, session } = useAuth();
-  const { refresh: refreshServerSync } = useServerSync();
   // Nur Major.Minor, wie bei HomeArchive AI's eigenem "v2.4" im Profil.
   // Versionsnummer ABSICHTLICH noch nicht angezeigt (23.09.2026): Sie
   // braeuchte expo-application, ein natives Modul - das ist im aktuell
@@ -144,27 +125,6 @@ export default function ProfileScreen({ navigation }: Props) {
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []),
   );
-
-  const handleToggle = async (key: PreferenceKey, value: boolean) => {
-    if (!prefs) return;
-    const previous = prefs;
-    setPrefs({ ...prefs, [key]: value });
-    setSavingKey(key);
-    try {
-      const updated = await api.patch<Preferences>('/preferences/', { [key]: value });
-      if (key === 'server_sync_enabled') {
-        // Die Pool-Knoepfe in den Listen haengen an diesem Wert - ohne
-        // Auffrischen blieben sie bis zum naechsten App-Start ausgegraut.
-        refreshServerSync();
-      }
-      setPrefs(updated);
-    } catch (err) {
-      setPrefs(previous);
-      Alert.alert(t('profil.nichtGespeichert'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
-    } finally {
-      setSavingKey(null);
-    }
-  };
 
   const handleHaubenLevelSelect = async (level: HaubenLevel) => {
     if (!prefs || prefs.default_hauben_level === level) return;
@@ -422,24 +382,20 @@ export default function ProfileScreen({ navigation }: Props) {
 
       <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 20 }]}>{t('profil.darstellungBedienung')}</Text>
 
-      {ROWS.map((row) => (
-        <View key={row.key} style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.rowTitle, { color: colors.text }]}>{t(row.title)}</Text>
-            <Text style={[styles.rowSubtitle, { color: colors.muted }]}>{t(row.subtitle)}</Text>
-          </View>
-          {savingKey === row.key ? (
-            <ActivityIndicator color={colors.muted} />
-          ) : (
-            <Switch
-              value={prefs[row.key]}
-              onValueChange={(value) => handleToggle(row.key, value)}
-              trackColor={{ false: '#E7E1D4', true: gradient[0] }}
-              thumbColor="#fff"
-            />
-          )}
+      {/* Alle Schalter jetzt gesammelt auf einem eigenen Unterschirm
+          (23.09.2026) - sieben Stueck verstreut zwischen Farbwahl, Links
+          und Konto-Aktionen waren schon sehr unuebersichtlich. */}
+      <Pressable
+        onPress={() => navigation.getParent()?.navigate('AppSettings')}
+        style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}
+      >
+        <MaterialCommunityIcons name="tune-variant" size={20} color={colors.muted} style={styles.rowIcon} />
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.rowTitle, { color: colors.text }]}>{t('profil.einstellungen')}</Text>
+          <Text style={[styles.rowSubtitle, { color: colors.muted }]}>{t('profil.einstellungenSub')}</Text>
         </View>
-      ))}
+        <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>
+      </Pressable>
 
       {/* "Vorlesen & Stimme" jetzt oberhalb von Server-Sync (22.09.2026) -
           beide haengen inhaltlich naeher zusammen als Server-Sync und
@@ -458,37 +414,6 @@ export default function ProfileScreen({ navigation }: Props) {
         <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>
       </Pressable>
 
-      {(() => {
-        const isServerSyncLocked = prefs.storage_mode === 'eigene_cloud';
-        return (
-          <View style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.rowTitle, { color: colors.text }]}>{t(SERVER_SYNC_ROW.title)}</Text>
-              <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
-                {isServerSyncLocked ? t('profil.eigeneCloudAktiv') : t(SERVER_SYNC_ROW.subtitle)}
-              </Text>
-            </View>
-            {savingKey === SERVER_SYNC_ROW.key ? (
-              <ActivityIndicator color={colors.muted} />
-            ) : (
-              <Switch
-                value={prefs.server_sync_enabled}
-                onValueChange={(value) => handleToggle(SERVER_SYNC_ROW.key, value)}
-                disabled={isServerSyncLocked}
-                trackColor={{ false: '#E7E1D4', true: gradient[0] }}
-                thumbColor="#fff"
-              />
-            )}
-          </View>
-        );
-      })()}
-
-      {!prefs.server_sync_enabled && (
-        <Text style={[styles.hint, { color: colors.muted }]}>
-          Ohne Server-Sync bleibt "Lokal" komplett privat – dafür ist der Community-Pool nicht nutzbar.
-        </Text>
-      )}
-
       <Pressable
         onPress={() => navigation.getParent()?.navigate('StarterPacks')}
         style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md, marginTop: 8 }]}
@@ -505,37 +430,6 @@ export default function ProfileScreen({ navigation }: Props) {
       <Pressable onPress={() => signOut()} style={[styles.signOutButton, { borderColor: '#DC2626', borderRadius: radius.md }]}>
         <Text style={styles.signOutText}>{t('profil.abmelden')}</Text>
       </Pressable>
-
-      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 26 }]}>{t('profil.benachrichtigungen')}</Text>
-      <View style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}>
-        <MaterialCommunityIcons name="bell-outline" size={20} color={colors.muted} style={styles.rowIcon} />
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.rowTitle, { color: colors.text }]}>{t('profil.benachrichtigungenZeile')}</Text>
-          <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
-            {t('profil.benachrichtigungenSub')}
-          </Text>
-        </View>
-        <Switch
-          value={prefs.notifications_enabled}
-          onValueChange={(v) => handleToggle('notifications_enabled', v)}
-        />
-      </View>
-
-      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 26 }]}>{t('profil.kiFunktionen')}</Text>
-      <View style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}>
-        <MaterialCommunityIcons name="auto-fix" size={20} color={colors.muted} style={styles.rowIcon} />
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.rowTitle, { color: colors.text }]}>{t('profil.kiAnalyse')}</Text>
-          {/* Der Verbrauch steht dabei, nicht nur die Grenze: Wer erst beim
-              Anschlagen der Grenze davon erfaehrt, haelt es fuer einen
-              Fehler. */}
-          <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
-            {t('profil.kiAnalyseSub')}
-            {t('profil.kiVerbrauch', { verbraucht: prefs.ai_calls_this_month, grenze: prefs.ai_monthly_limit })}
-          </Text>
-        </View>
-        <Switch value={prefs.ai_enabled} onValueChange={(v) => handleToggle('ai_enabled', v)} />
-      </View>
 
       <Pressable
         onPress={() => navigation.getParent()?.navigate('StorageSettings')}
