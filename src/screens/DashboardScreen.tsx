@@ -196,19 +196,22 @@ export default function DashboardScreen({ navigation }: Props) {
     const eingeordnet = new Set(categoryOrder ?? []);
     const feste_reihenfolge = (categoryOrder ?? []).filter((tag) => counts.has(tag) && !versteckt.has(tag));
 
-    // Alles Uebrige, das (noch) keine feste Position hat: zuerst "Einfach"
-    // und "Klassiker", falls vorhanden (Standard-Vorgabe), danach der Rest
-    // alphabetisch - nicht mehr nach Haeufigkeit. Eine frisch importierte
-    // Kategorie taucht dadurch trotzdem sofort auf, nur eben eingeordnet
-    // statt nach vorne gedraengt.
+    // Alles Uebrige, das (noch) keine feste Position hat: nach Haeufigkeit
+    // sortiert, haeufigste Kategorie zuerst (22.09.2026, ersetzt eine rein
+    // alphabetische Sortierung). Bei einem frisch registrierten Nutzer ist
+    // categoryOrder noch leer, er sieht also gleich diese Reihenfolge: die
+    // nuetzlichsten Filter ("Vegetarisch", "Schnell", ...) zuerst, seltene
+    // wie "Weihnachten" (oft nur 1 Rezept) weiter hinten - vorher standen
+    // beide rein alphabetisch nebeneinander, ohne Bezug zur tatsaechlichen
+    // Nuetzlichkeit. Bei gleicher Haeufigkeit alphabetisch, fuer eine
+    // stabile Reihenfolge.
     const restKandidaten = Array.from(counts.keys()).filter((tag) => !eingeordnet.has(tag) && !versteckt.has(tag));
-    const STANDARD_ZUERST = ['Einfach', 'Klassiker'];
-    const vorrang = STANDARD_ZUERST.filter((tag) => restKandidaten.includes(tag));
-    const alphabetisch = restKandidaten
-      .filter((tag) => !STANDARD_ZUERST.includes(tag))
-      .sort((a, b) => a.localeCompare(b, 'de'));
+    const nachHaeufigkeit = restKandidaten.sort((a, b) => {
+      const diff = (counts.get(b) ?? 0) - (counts.get(a) ?? 0);
+      return diff !== 0 ? diff : a.localeCompare(b, 'de');
+    });
 
-    return [...feste_reihenfolge, ...vorrang, ...alphabetisch];
+    return [...feste_reihenfolge, ...nachHaeufigkeit];
   }, [recipes, categoryOrder, hiddenCategories]);
 
   // Eine Kategorie per Fingerdruck-halten ausblenden - reversibel, siehe
