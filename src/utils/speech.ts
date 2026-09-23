@@ -119,6 +119,13 @@ export async function brutzelStimme(): Promise<string | undefined> {
     );
     if (treffer) return treffer.identifier;
   }
+  // Keiner der drei Namen gefunden (z.B. weil "Martin" auf diesem Geraet
+  // unter einer anderen Bezeichnung laeuft): 'siri_male' steht in der
+  // Kennung selbst bei jeder maennlichen iOS-Systemstimme, unabhaengig
+  // vom angezeigten Namen - ein zweiter, robusterer Versuch, bevor
+  // ungeachtet des Geschlechts irgendeine Stimme genommen wird.
+  const maennlich = stimmen.find((v) => v.identifier.toLowerCase().includes('siri_male'));
+  if (maennlich) return maennlich.identifier;
   return stimmen[0]?.identifier;
 }
 
@@ -149,6 +156,11 @@ export async function vorleserStimme(): Promise<string | undefined> {
     );
     if (treffer) return treffer.identifier;
   }
+  // Wie bei brutzelStimme(): 'siri_female' als robusterer zweiter Versuch
+  // ueber die Kennung, bevor der Ausweich-Zweig unten (irgendeine andere
+  // Stimme als Brutzel) greift.
+  const weiblich = stimmen.find((v) => v.identifier.toLowerCase().includes('siri_female'));
+  if (weiblich) return weiblich.identifier;
   // Keiner der bekannten weiblichen Namen auf dem Geraet (z.B. Android):
   // wenigstens eine andere Stimme als Brutzels eigene, damit beide nicht
   // zusammenfallen.
