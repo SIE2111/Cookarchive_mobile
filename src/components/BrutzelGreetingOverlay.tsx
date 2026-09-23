@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, Animated, Image, Modal } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Animated, Image, Modal, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import * as Speech from 'expo-speech';
@@ -86,33 +86,47 @@ export default function BrutzelGreetingOverlay({ name, onDismiss, mitVideo = tru
 
   return (
     <View style={[styles.overlay, { backgroundColor: colors.bg }]}>
-      {/* Markenzeile ganz oben: Die Begruessung ist der erste Bildschirm nach
-          dem Start und damit die einzige Stelle, an der Herkunft und Name der
-          App ohne Umweg sichtbar sind. Absolut positioniert, damit sie die
-          mittige Ausrichtung von Video und Text nicht verschiebt. */}
-      <MarkenZeile style={[styles.markenZeile, { top: insets.top + 12 }]} />
+      {/*
+       * Vorher stand die Markenzeile absolut am oberen Rand, waehrend
+       * Video und Text im verbleibenden Platz VERTIKAL ZENTRIERT wurden -
+       * beide Bloecke kannten einander nicht. Kam wie heute mit dem
+       * "Kurze Hilfe"-Link mehr Inhalt dazu, wanderte der zentrierte
+       * Block weiter nach unten, bis das Video die Markenzeile
+       * ueberdeckte und der Link hinter der Tab-Leiste verschwand.
+       * Jetzt steht die Markenzeile im normalen Fluss ganz oben, fest
+       * an ihrem Platz, und alles andere folgt darunter in einer
+       * ScrollView - bei viel Inhalt oder kleinem Bildschirm scrollt der
+       * Rest, statt sich zu ueberlappen.
+       */}
+      <MarkenZeile style={[styles.markenZeile, { paddingTop: insets.top + 12 }]} />
 
-      {/* Standbild LIEGT HINTER dem Player, nicht als Ersatz daneben: Bleibt
-          der Player stumm - was bei genau diesem Video schon am Ende des
-          Kochvorgangs vorkam -, steht hier Brutzel statt einer Luecke.
-          Spielt das Video, verdeckt es das Bild vollstaendig. */}
-      <View style={styles.videoBox}>
-        <Image source={require('../../assets/brutzel-full.png')} style={styles.videoFallback} resizeMode="contain" />
-        {mitVideo && <VideoView player={player} style={styles.video} contentFit="cover" nativeControls={false} />}
-      </View>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 90 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Standbild LIEGT HINTER dem Player, nicht als Ersatz daneben: Bleibt
+            der Player stumm - was bei genau diesem Video schon am Ende des
+            Kochvorgangs vorkam -, steht hier Brutzel statt einer Luecke.
+            Spielt das Video, verdeckt es das Bild vollstaendig. */}
+        <View style={styles.videoBox}>
+          <Image source={require('../../assets/brutzel-full.png')} style={styles.videoFallback} resizeMode="contain" />
+          {mitVideo && <VideoView player={player} style={styles.video} contentFit="cover" nativeControls={false} />}
+        </View>
 
-      <Animated.View style={{ opacity: textOpacity, alignItems: 'center' }}>
-        <Text style={[styles.title, { color: colors.text }]}>{t('sonstiges.hallo', { name })}</Text>
-        <Text style={[styles.subtitle, { color: colors.muted }]}>{t('sonstiges.wasKochen')}</Text>
-        <Pressable onPress={handleDismiss} style={[styles.doneButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}>
-          <Text style={styles.doneButtonText}>{t('sonstiges.losGehts')}</Text>
-        </Pressable>
-        <Pressable onPress={() => setZeigeIntro(true)} hitSlop={10} style={{ marginTop: 14 }}>
-          <Text style={{ color: colors.muted, fontSize: 12.5, fontWeight: '600', textDecorationLine: 'underline' }}>
-            {t('sonstiges.kurzeHilfe')}
-          </Text>
-        </Pressable>
-      </Animated.View>
+        <Animated.View style={{ opacity: textOpacity, alignItems: 'center' }}>
+          <Text style={[styles.title, { color: colors.text }]}>{t('sonstiges.hallo', { name })}</Text>
+          <Text style={[styles.subtitle, { color: colors.muted }]}>{t('sonstiges.wasKochen')}</Text>
+          <Pressable onPress={handleDismiss} style={[styles.doneButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}>
+            <Text style={styles.doneButtonText}>{t('sonstiges.losGehts')}</Text>
+          </Pressable>
+          <Pressable onPress={() => setZeigeIntro(true)} hitSlop={10} style={{ marginTop: 14 }}>
+            <Text style={{ color: colors.muted, fontSize: 12.5, fontWeight: '600', textDecorationLine: 'underline' }}>
+              {t('sonstiges.kurzeHilfe')}
+            </Text>
+          </Pressable>
+        </Animated.View>
+      </ScrollView>
 
       <Modal visible={zeigeIntro} animationType="slide" onRequestClose={() => setZeigeIntro(false)}>
         <BrutzelIntroScreens onFertig={() => setZeigeIntro(false)} />
@@ -122,7 +136,11 @@ export default function BrutzelGreetingOverlay({ name, onDismiss, mitVideo = tru
 }
 
 const styles = StyleSheet.create({
-  overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', padding: 24, zIndex: 50 },
+  overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 50 },
+  // Im normalen Fluss statt zentriert: waechst der Inhalt darunter, bleibt
+  // die Markenzeile trotzdem an ihrem festen Platz oben.
+  scroll: { flex: 1, width: '100%' },
+  scrollContent: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, paddingTop: 16 },
   // schrumpft statt ueberzulaufen, wenn der Platz eng wird
   // 'cover' statt 'contain' bei beiden: Das Standbild ist hochformatig, das
   // Video breit - eingepasst blieben Raender frei und das Bild schaute unter
@@ -130,8 +148,7 @@ const styles = StyleSheet.create({
   // overflow verhindert, dass der beschnittene Teil ueber die Ecken laeuft.
   videoBox: { width: '100%', height: 300, marginBottom: 20, borderRadius: 16, overflow: 'hidden' },
   videoFallback: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' },
-  // Position kommt von hier, Inhalt aus MarkenZeile.
-  markenZeile: { position: 'absolute', left: 24, right: 24 },
+  markenZeile: { paddingHorizontal: 24, paddingBottom: 4 },
   video: { width: '100%', height: '100%' },
   title: { fontSize: 22, fontWeight: '700', marginBottom: 6 },
   subtitle: { fontSize: 13, marginBottom: 22, textAlign: 'center' },
