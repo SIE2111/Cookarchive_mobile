@@ -89,12 +89,11 @@ const ROWS: { key: PreferenceKey; title: string; subtitle: string; lockedWhen?: 
   // Kochens. Der Feldname in der Datenbank bleibt show_greeting_animation,
   // eine Spaltenumbenennung waere reines Risiko ohne Gewinn.
   { key: 'show_greeting_animation', title: 'profil.brutzelAnimation', subtitle: 'profil.brutzelAnimationSub' },
-  {
-    key: 'server_sync_enabled',
-    title: 'profil.serverSync',
-    subtitle: 'profil.serverSyncSub',
-  },
 ];
+
+// Eigene Zeile statt in ROWS: soll unterhalb von "Vorlesen & Stimme"
+// stehen, ROWS wird aber VOR diesem Link gerendert (siehe unten).
+const SERVER_SYNC_ROW = { key: 'server_sync_enabled' as const, title: 'profil.serverSync', subtitle: 'profil.serverSyncSub' };
 
 export default function ProfileScreen({ navigation }: Props) {
   const { colors, gradient, radius, theme, setTheme } = useTheme();
@@ -405,37 +404,28 @@ export default function ProfileScreen({ navigation }: Props) {
 
       <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 20 }]}>{t('profil.darstellungBedienung')}</Text>
 
-      {ROWS.map((row) => {
-        const isServerSyncLocked = row.key === 'server_sync_enabled' && prefs.storage_mode === 'eigene_cloud';
-        return (
-          <View key={row.key} style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.rowTitle, { color: colors.text }]}>{t(row.title)}</Text>
-              <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
-                {isServerSyncLocked ? t('profil.eigeneCloudAktiv') : t(row.subtitle)}
-              </Text>
-            </View>
-            {savingKey === row.key ? (
-              <ActivityIndicator color={colors.muted} />
-            ) : (
-              <Switch
-                value={prefs[row.key]}
-                onValueChange={(value) => handleToggle(row.key, value)}
-                disabled={isServerSyncLocked}
-                trackColor={{ false: '#E7E1D4', true: gradient[0] }}
-                thumbColor="#fff"
-              />
-            )}
+      {ROWS.map((row) => (
+        <View key={row.key} style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.rowTitle, { color: colors.text }]}>{t(row.title)}</Text>
+            <Text style={[styles.rowSubtitle, { color: colors.muted }]}>{t(row.subtitle)}</Text>
           </View>
-        );
-      })}
+          {savingKey === row.key ? (
+            <ActivityIndicator color={colors.muted} />
+          ) : (
+            <Switch
+              value={prefs[row.key]}
+              onValueChange={(value) => handleToggle(row.key, value)}
+              trackColor={{ false: '#E7E1D4', true: gradient[0] }}
+              thumbColor="#fff"
+            />
+          )}
+        </View>
+      ))}
 
-      {!prefs.server_sync_enabled && (
-        <Text style={[styles.hint, { color: colors.muted }]}>
-          Ohne Server-Sync bleibt "Lokal" komplett privat – dafür ist der Community-Pool nicht nutzbar.
-        </Text>
-      )}
-
+      {/* "Vorlesen & Stimme" jetzt oberhalb von Server-Sync (22.09.2026) -
+          beide haengen inhaltlich naeher zusammen als Server-Sync und
+          Starter-Rezepte. */}
       <Pressable
         onPress={() => navigation.getParent()?.navigate('VoiceSettings')}
         style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}
@@ -449,6 +439,37 @@ export default function ProfileScreen({ navigation }: Props) {
         </View>
         <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>
       </Pressable>
+
+      {(() => {
+        const isServerSyncLocked = prefs.storage_mode === 'eigene_cloud';
+        return (
+          <View style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.rowTitle, { color: colors.text }]}>{t(SERVER_SYNC_ROW.title)}</Text>
+              <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
+                {isServerSyncLocked ? t('profil.eigeneCloudAktiv') : t(SERVER_SYNC_ROW.subtitle)}
+              </Text>
+            </View>
+            {savingKey === SERVER_SYNC_ROW.key ? (
+              <ActivityIndicator color={colors.muted} />
+            ) : (
+              <Switch
+                value={prefs.server_sync_enabled}
+                onValueChange={(value) => handleToggle(SERVER_SYNC_ROW.key, value)}
+                disabled={isServerSyncLocked}
+                trackColor={{ false: '#E7E1D4', true: gradient[0] }}
+                thumbColor="#fff"
+              />
+            )}
+          </View>
+        );
+      })()}
+
+      {!prefs.server_sync_enabled && (
+        <Text style={[styles.hint, { color: colors.muted }]}>
+          Ohne Server-Sync bleibt "Lokal" komplett privat – dafür ist der Community-Pool nicht nutzbar.
+        </Text>
+      )}
 
       <Pressable
         onPress={() => navigation.getParent()?.navigate('StarterPacks')}
