@@ -689,7 +689,17 @@
     "bereitsUebernommen": "Already added",
     "vonDir": "From you",
     "uebernommenHaken": "Added ✓",
-    "inSammlungOeffnen": "Open in your collection"
+    "inSammlungOeffnen": "Open in your collection",
+    "introUeberspringen": "Skip",
+    "introRezepteTitel": "Your recipes, in one place",
+    "introRezepteText": "Add recipes by hand, from a photo, or from a website. Folders and categories help you find everything again.",
+    "introKochenTitel": "Cook step by step",
+    "introKochenText": "Cook Mode guides you through preparation with timers and Brutzel’s tips – on three levels, from beginner to pro.",
+    "introEinkaufTitel": "Shopping & weekly plan",
+    "introEinkaufText": "Send ingredients to your shopping list with one tap. Plan your week and see at a glance what you need.",
+    "introHaushaltTitel": "Cook together",
+    "introHaushaltText": "Build a shared collection with your household, or discover new recipes in the Community Pool.",
+    "introLosGehts": "Let's go"
   },
   "uebersetzung": {
     "angebotTitel": "This recipe is written in {sprache}.",

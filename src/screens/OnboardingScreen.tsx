@@ -9,6 +9,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/AppNavigator';
 import type { HaubenLevel } from '../utils/stepLevels';
 import { useLayout } from '../utils/layout';
+import BrutzelIntroScreens from '../components/BrutzelIntroScreens';
 
 // Gleiche Reihenfolge und Benennung wie im Profil - die Auswahl hier ist
 // nur die Erstbelegung, geaendert wird sie spaeter dort.
@@ -36,6 +37,10 @@ export default function OnboardingScreen({ navigation }: Props) {
   const [totalAvailable, setTotalAvailable] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Brutzels kurze Einfuehrung laeuft VOR diesem Einrichtungsschritt -
+  // eigener Zustand statt eigener Navigationsroute, damit "Los geht's"
+  // am Ende der Einfuehrung ohne Zwischenschritt hierher wechselt.
+  const [zeigeIntro, setZeigeIntro] = useState(true);
 
   useEffect(() => {
     api
@@ -76,6 +81,10 @@ export default function OnboardingScreen({ navigation }: Props) {
   // Scrollbar, seit die Stufen-Auswahl dazugekommen ist: Auf kleinen
   // Geraeten passte der Inhalt sonst nicht mehr auf eine Bildschirmhoehe
   // und der "Los geht's"-Button lag unerreichbar unterhalb der Kante.
+  if (zeigeIntro) {
+    return <BrutzelIntroScreens onFertig={() => setZeigeIntro(false)} />;
+  }
+
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.bg }]} edges={['top']}>
       <ScrollView contentContainerStyle={[styles.container, inhaltsBreite]} keyboardShouldPersistTaps="handled">

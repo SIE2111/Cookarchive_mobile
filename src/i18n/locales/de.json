@@ -689,7 +689,17 @@
     "bereitsUebernommen": "Bereits übernommen",
     "vonDir": "Von dir",
     "uebernommenHaken": "Übernommen ✓",
-    "inSammlungOeffnen": "In deiner Sammlung öffnen"
+    "inSammlungOeffnen": "In deiner Sammlung öffnen",
+    "introUeberspringen": "Überspringen",
+    "introRezepteTitel": "Deine Rezepte, an einem Ort",
+    "introRezepteText": "Leg Rezepte per Hand, per Foto oder von einer Webseite an. Ordner und Kategorien helfen dir, alles wiederzufinden.",
+    "introKochenTitel": "Schritt für Schritt kochen",
+    "introKochenText": "Der Koch-Modus führt dich durch die Zubereitung, mit Timern und Brutzels Tipps – auf drei Stufen, von Anfänger bis Profi.",
+    "introEinkaufTitel": "Einkauf & Wochenplan",
+    "introEinkaufText": "Zutaten wandern mit einem Tipp auf die Einkaufsliste. Plane deine Woche und sieh auf einen Blick, was du brauchst.",
+    "introHaushaltTitel": "Gemeinsam kochen",
+    "introHaushaltText": "Bilde mit deinem Haushalt eine gemeinsame Sammlung, oder entdecke neue Rezepte im Community-Pool.",
+    "introLosGehts": "Los geht's"
   },
   "uebersetzung": {
     "angebotTitel": "Dieses Rezept ist auf {sprache} verfasst.",
