@@ -240,7 +240,9 @@
     "speicherDrittanbieter": "Google Drive / OneDrive / Dropbox",
     "rolleAdmin": "Admin (created the household)",
     "rolleMitglied": "Member",
-    "einstellungenNichtGeladen": "Settings could not be loaded"
+    "einstellungenNichtGeladen": "Settings could not be loaded",
+    "animationMusik": "Animation music",
+    "animationMusikSub": "Sound during greeting and finish celebration. Off = muted."
   },
   "detail": {
     "nichtGeladen": "The recipe could not be loaded",

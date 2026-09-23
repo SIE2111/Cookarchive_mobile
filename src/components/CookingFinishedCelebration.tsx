@@ -62,6 +62,7 @@ export default function CookingFinishedCelebration({ recipeTitle, onDone }: Prop
   // ist fertig.") wird nur gesprochen, wenn dieser Schalter an ist, und
   // mit der neutralen Stimme, nicht Brutzels eigener (Auftrag Punkt 3).
   const [autoReadSteps, setAutoReadSteps] = useState(false);
+  const [mitMusik, setMitMusik] = useState(true);
   const hasSpokenRef = React.useRef(false);
   const textOpacity = React.useRef(new Animated.Value(0)).current;
 
@@ -87,11 +88,12 @@ export default function CookingFinishedCelebration({ recipeTitle, onDone }: Prop
 
   useEffect(() => {
     api
-      .get<{ show_brutzel: boolean; show_greeting_animation: boolean; auto_read_steps: boolean }>('/preferences/')
+      .get<{ show_brutzel: boolean; show_greeting_animation: boolean; auto_read_steps: boolean; play_animation_music: boolean }>('/preferences/')
       .then((prefs) => {
         setShowBrutzel(prefs.show_brutzel);
         setAnimated(prefs.show_greeting_animation);
         setAutoReadSteps(prefs.auto_read_steps);
+        setMitMusik(prefs.play_animation_music);
       })
       .catch(() => {
         // Nicht erreichbar: bei den Standardwerten bleiben, der Abschluss
@@ -122,6 +124,13 @@ export default function CookingFinishedCelebration({ recipeTitle, onDone }: Prop
   const player = useVideoPlayer(require('../../assets/brutzel-celebration.mp4'), (p) => {
     p.loop = false;
   });
+
+  // Ton per Profil-Schalter "Animations-Musik" - erst sobald die
+  // Einstellung geladen ist (sonst kurz mit Standardwert 'an' hoerbar,
+  // falls der Nutzer den Ton eigentlich abgeschaltet hat).
+  useEffect(() => {
+    if (prefsLoaded) player.muted = !mitMusik;
+  }, [prefsLoaded, mitMusik, player]);
 
   /**
    * Der Text erscheint IMMER, spaetestens nach 3,5 Sekunden.

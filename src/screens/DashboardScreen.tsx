@@ -57,6 +57,7 @@ export default function DashboardScreen({ navigation }: Props) {
   // "Schritte automatisch vorlesen" - steuert, ob die Begruessung
   // gesprochen wird (Auftrag Punkt 3), unabhaengig von der Animation.
   const [greetingSprechen, setGreetingSprechen] = useState(false);
+  const [greetingMitMusik, setGreetingMitMusik] = useState(true);
   // Kategorien-Reihenfolge/Ausblendungen aus dem Profil (siehe
   // ManageCategoriesScreen). null = noch nicht geladen, dann greift
   // vorlaeufig die reine Haeufigkeitssortierung, bis die Antwort da ist -
@@ -73,6 +74,7 @@ export default function DashboardScreen({ navigation }: Props) {
       .get<{
         display_name: string | null; show_greeting_animation: boolean; show_brutzel: boolean;
         category_order: string[] | null; hidden_categories: string[] | null; auto_read_steps: boolean;
+        play_animation_music: boolean;
       }>('/preferences/')
       .then((prefs) => {
         setProfileDisplayName(prefs.display_name);
@@ -89,6 +91,7 @@ export default function DashboardScreen({ navigation }: Props) {
           hasShownGreetingThisSession = true;
           setGreetingMitVideo(prefs.show_greeting_animation);
           setGreetingSprechen(prefs.auto_read_steps);
+          setGreetingMitMusik(prefs.play_animation_music);
           setShowGreeting(true);
         }
       })
@@ -458,7 +461,7 @@ export default function DashboardScreen({ navigation }: Props) {
       )}
     </ScrollView>
     <ScanFab />
-    {showGreeting && <BrutzelGreetingOverlay name={displayName} mitVideo={greetingMitVideo} sprechen={greetingSprechen} onDismiss={() => setShowGreeting(false)} />}
+    {showGreeting && <BrutzelGreetingOverlay name={displayName} mitVideo={greetingMitVideo} sprechen={greetingSprechen} mitMusik={greetingMitMusik} onDismiss={() => setShowGreeting(false)} />}
     </>
   );
 }

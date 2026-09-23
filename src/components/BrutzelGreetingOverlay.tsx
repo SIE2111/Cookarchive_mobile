@@ -19,6 +19,10 @@ interface Props {
   // NUR dann gesprochen, wenn er an ist (siehe Auftrag Punkt 3). Ohne
   // eigenen Wert wird nicht gesprochen, nicht geraten.
   sprechen?: boolean;
+  // Ton der Begruessung: Die Videodatei traegt eine eigene Tonspur, die
+  // sonst immer mitlaeuft. Profil-Schalter "Animations-Musik", nur
+  // wirksam, wenn mitVideo ueberhaupt ein Video zeigt.
+  mitMusik?: boolean;
 }
 
 
@@ -32,7 +36,7 @@ interface Props {
  * an ist. Brutzels eigene Stimme bleibt den Tipp-Karten im Koch-Modus
  * vorbehalten (siehe Auftrag Punkt 3).
  */
-export default function BrutzelGreetingOverlay({ name, onDismiss, mitVideo = true, sprechen = false }: Props) {
+export default function BrutzelGreetingOverlay({ name, onDismiss, mitVideo = true, sprechen = false, mitMusik = true }: Props) {
   const { colors, gradient, radius } = useTheme();
   const insets = useSafeAreaInsets();
   const { t } = useUebersetzung();
@@ -44,6 +48,7 @@ export default function BrutzelGreetingOverlay({ name, onDismiss, mitVideo = tru
   // werden. Abgespielt und angezeigt wird nur bei eingeschalteter Animation.
   const player = useVideoPlayer(require('../../assets/brutzel-celebration.mp4'), (p) => {
     p.loop = false;
+    p.muted = !mitMusik;
     if (mitVideo) p.play();
   });
 

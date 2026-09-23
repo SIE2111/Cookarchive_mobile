@@ -25,6 +25,7 @@ interface Preferences {
   large_text: boolean;
   auto_read_steps: boolean;
   server_sync_enabled: boolean;
+  play_animation_music: boolean;
   show_greeting_animation: boolean;
   storage_mode: StorageMode;
   default_hauben_level: HaubenLevel;
@@ -38,7 +39,7 @@ interface Preferences {
   ai_monthly_limit: number;
 }
 
-type PreferenceKey = 'show_brutzel' | 'large_text' | 'auto_read_steps' | 'server_sync_enabled' | 'show_greeting_animation' | 'notifications_enabled' | 'ai_enabled';
+type PreferenceKey = 'show_brutzel' | 'large_text' | 'auto_read_steps' | 'server_sync_enabled' | 'show_greeting_animation' | 'play_animation_music' | 'notifications_enabled' | 'ai_enabled';
 
 // Kurzbezeichnungen der Speicherorte fuer die Profil-Zeile. Bewusst nur
 // die Modi - welcher Drittanbieter verbunden ist, steht im Speicherort-
@@ -89,6 +90,10 @@ const ROWS: { key: PreferenceKey; title: string; subtitle: string; lockedWhen?: 
   // Kochens. Der Feldname in der Datenbank bleibt show_greeting_animation,
   // eine Spaltenumbenennung waere reines Risiko ohne Gewinn.
   { key: 'show_greeting_animation', title: 'profil.brutzelAnimation', subtitle: 'profil.brutzelAnimationSub' },
+  // Gehoert inhaltlich zur Animation direkt darueber (nur bei laufendem
+  // Video ist ueberhaupt etwas zu hoeren) - eigener Schalter, weil manche
+  // die Animation behalten, den Ton aber nicht wollen.
+  { key: 'play_animation_music', title: 'profil.animationMusik', subtitle: 'profil.animationMusikSub' },
 ];
 
 // Eigene Zeile statt in ROWS: soll unterhalb von "Vorlesen & Stimme"

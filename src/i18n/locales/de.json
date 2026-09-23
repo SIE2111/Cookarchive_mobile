@@ -240,7 +240,9 @@
     "speicherDrittanbieter": "Google Drive / OneDrive / Dropbox",
     "rolleAdmin": "Admin (Haushalt-Ersteller)",
     "rolleMitglied": "Mitglied",
-    "einstellungenNichtGeladen": "Einstellungen konnten nicht geladen werden"
+    "einstellungenNichtGeladen": "Einstellungen konnten nicht geladen werden",
+    "animationMusik": "Animations-Musik",
+    "animationMusikSub": "Ton bei Begrüßung und Fertigstellung. Aus = stumm."
   },
   "detail": {
     "nichtGeladen": "Rezept konnte nicht geladen werden",
