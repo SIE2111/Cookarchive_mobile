@@ -29,7 +29,7 @@ interface ShoppingItem {
   note: string | null;
 }
 
-export default function ShoppingListScreen({}: Props) {
+export default function ShoppingListScreen({ navigation }: Props) {
   const { colors, gradient, radius } = useTheme();
   const { inhaltsBreite } = useLayout();
   const { t } = useUebersetzung();
@@ -272,6 +272,20 @@ export default function ShoppingListScreen({}: Props) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
+      {/* Der Einkauf-Tab ist wie jeder Tab eigentlich eine Wurzel ohne
+          "zurueck" (man wechselt ja einfach den Tab) - auf Wunsch trotzdem
+          ein Knopf, der ausdruecklich zu Home fuehrt. navigation.navigate
+          statt goBack(): goBack() waere hier ohnehin ohne Wirkung, ein
+          Tab-Root hat nichts, wohin es "zurueck" gehen koennte. */}
+      <Pressable
+        onPress={() => navigation.navigate('Home')}
+        hitSlop={10}
+        style={[styles.backRow, { backgroundColor: colors.card, borderRadius: radius.md }]}
+      >
+        <MaterialCommunityIcons name="chevron-left" size={20} color={colors.text} />
+        <Text style={[styles.backText, { color: colors.text }]}>{t('allgemein.zurueck')}</Text>
+      </Pressable>
+
       {error && <Text style={[styles.errorText, { color: '#DC2626' }]}>{error}</Text>}
 
       <View style={styles.addRow}>
@@ -483,6 +497,8 @@ export default function ShoppingListScreen({}: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: 18, paddingTop: 16 },
+  backRow: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: 14, marginBottom: 12 },
+  backText: { fontSize: 14, fontWeight: '600', marginLeft: 2 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   errorText: { fontSize: 12, marginBottom: 12 },
   addRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
