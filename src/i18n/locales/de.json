@@ -60,7 +60,10 @@
     "mengePlatzhalter": "Menge",
     "einheitPlatzhalter": "Einh.",
     "druckenPdf": "Drucken / PDF",
-    "abgehakteEntfernen": "Abgehakte entfernen"
+    "abgehakteEntfernen": "Abgehakte entfernen",
+    "postenBearbeiten": "Posten bearbeiten",
+    "notiz": "Notiz",
+    "notizPlatzhalter": "z. B. Marke, nur im Angebot …"
   },
   "rezepte": {
     "suchen": "Rezept oder Zutat suchen…",

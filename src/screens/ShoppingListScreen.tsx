@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, SectionList, Pressable, StyleSheet, ActivityIndicator, TextInput, Alert, Keyboard } from 'react-native';
+import { View, Text, SectionList, Pressable, StyleSheet, ActivityIndicator, TextInput, Alert, Keyboard, Modal, ScrollView } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
@@ -26,6 +26,7 @@ interface ShoppingItem {
   category: string | null;
   checked: boolean;
   source_recipe_id: string | null;
+  note: string | null;
 }
 
 export default function ShoppingListScreen({}: Props) {
@@ -39,6 +40,52 @@ export default function ShoppingListScreen({}: Props) {
   const [newItemAmount, setNewItemAmount] = useState('');
   const [newItemUnit, setNewItemUnit] = useState('');
   const [isAdding, setIsAdding] = useState(false);
+
+  // Bearbeiten-Dialog: Name, Menge, Einheit und Notiz je Posten. Tippen
+  // schaltet weiterhin ab/an, Lang-Druecken loescht weiterhin - das
+  // Stift-Symbol in der Zeile oeffnet stattdessen diesen Dialog, damit
+  // keine der bestehenden Gesten umgewidmet werden musste.
+  const [bearbeiteItem, setBearbeiteItem] = useState<ShoppingItem | null>(null);
+  const [bearbeitenName, setBearbeitenName] = useState('');
+  const [bearbeitenMenge, setBearbeitenMenge] = useState('');
+  const [bearbeitenEinheit, setBearbeitenEinheit] = useState('');
+  const [bearbeitenNotiz, setBearbeitenNotiz] = useState('');
+  const [speichertBearbeitung, setSpeichertBearbeitung] = useState(false);
+
+  const oeffneBearbeiten = (item: ShoppingItem) => {
+    setBearbeiteItem(item);
+    setBearbeitenName(item.ingredient_name);
+    setBearbeitenMenge(item.amount != null ? String(item.amount) : '');
+    setBearbeitenEinheit(item.unit ?? '');
+    setBearbeitenNotiz(item.note ?? '');
+  };
+
+  const speichereBearbeitung = async () => {
+    if (!bearbeiteItem) return;
+    const name = bearbeitenName.trim();
+    if (!name) return;
+    const menge = bearbeitenMenge.trim();
+    const einheit = bearbeitenEinheit.trim();
+    const notiz = bearbeitenNotiz.trim();
+    setSpeichertBearbeitung(true);
+    try {
+      const aktualisiert = await api.patch<ShoppingItem>(`/shopping-list/${bearbeiteItem.id}`, {
+        ingredient_name: name,
+        amount: menge ? Number(menge) : null,
+        amount_gesetzt: true,
+        unit: einheit || null,
+        unit_gesetzt: true,
+        note: notiz || null,
+        note_gesetzt: true,
+      });
+      setSections((prev) => prev.map((s) => ({ ...s, data: s.data.map((i) => (i.id === aktualisiert.id ? aktualisiert : i)) })));
+      setBearbeiteItem(null);
+    } catch (err) {
+      Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('einkauf.nichtAktualisiert'));
+    } finally {
+      setSpeichertBearbeitung(false);
+    }
+  };
 
   const load = useCallback(async () => {
     try {
@@ -287,16 +334,26 @@ export default function ShoppingListScreen({}: Props) {
               size={22}
               color={item.checked ? gradient[0] : colors.muted}
             />
-            <Text
-              style={[
-                styles.itemText,
-                { color: item.checked ? colors.muted : colors.text },
-                item.checked && styles.itemTextChecked,
-              ]}
-            >
-              {item.ingredient_name}
-              {item.amount ? `  ·  ${item.amount}${item.unit ?? ''}` : ''}
-            </Text>
+            <View style={{ flex: 1 }}>
+              <Text
+                style={[
+                  styles.itemText,
+                  { color: item.checked ? colors.muted : colors.text },
+                  item.checked && styles.itemTextChecked,
+                ]}
+              >
+                {item.ingredient_name}
+                {item.amount ? `  ·  ${item.amount}${item.unit ?? ''}` : ''}
+              </Text>
+              {!!item.note && (
+                <Text style={[styles.itemNote, { color: colors.muted }]} numberOfLines={2}>
+                  {item.note}
+                </Text>
+              )}
+            </View>
+            <Pressable onPress={() => oeffneBearbeiten(item)} hitSlop={10} style={{ padding: 4 }}>
+              <MaterialCommunityIcons name="pencil-outline" size={17} color={colors.muted} />
+            </Pressable>
           </Pressable>
         )}
       />
@@ -345,6 +402,81 @@ export default function ShoppingListScreen({}: Props) {
         </View>
       )}
       <ScanFab />
+
+      <Modal visible={!!bearbeiteItem} transparent animationType="fade" onRequestClose={() => setBearbeiteItem(null)}>
+        <View style={styles.modalUeberlagerung}>
+          <View style={[styles.modalKarte, { backgroundColor: colors.card, borderRadius: radius.md }]}>
+            <ScrollView keyboardShouldPersistTaps="handled">
+              <Text style={[styles.modalTitel, { color: colors.text }]}>{t('einkauf.postenBearbeiten')}</Text>
+
+              <Text style={[styles.modalLabel, { color: colors.muted }]}>{t('einkauf.zutatPlatzhalter')}</Text>
+              <TextInput
+                value={bearbeitenName}
+                onChangeText={setBearbeitenName}
+                style={[styles.modalInput, { backgroundColor: colors.bg, color: colors.text, borderRadius: radius.sm }]}
+              />
+
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.modalLabel, { color: colors.muted }]}>{t('einkauf.mengePlatzhalter')}</Text>
+                  <TextInput
+                    value={bearbeitenMenge}
+                    onChangeText={setBearbeitenMenge}
+                    keyboardType="numeric"
+                    style={[styles.modalInput, { backgroundColor: colors.bg, color: colors.text, borderRadius: radius.sm }]}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.modalLabel, { color: colors.muted }]}>{t('einkauf.einheitPlatzhalter')}</Text>
+                  <TextInput
+                    value={bearbeitenEinheit}
+                    onChangeText={setBearbeitenEinheit}
+                    style={[styles.modalInput, { backgroundColor: colors.bg, color: colors.text, borderRadius: radius.sm }]}
+                  />
+                </View>
+              </View>
+
+              <Text style={[styles.modalLabel, { color: colors.muted }]}>{t('einkauf.notiz')}</Text>
+              <TextInput
+                value={bearbeitenNotiz}
+                onChangeText={setBearbeitenNotiz}
+                placeholder={t('einkauf.notizPlatzhalter')}
+                placeholderTextColor={colors.muted}
+                multiline
+                numberOfLines={3}
+                style={[
+                  styles.modalInput,
+                  styles.modalNotizInput,
+                  { backgroundColor: colors.bg, color: colors.text, borderRadius: radius.sm },
+                ]}
+              />
+
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 18 }}>
+                <Pressable
+                  onPress={() => setBearbeiteItem(null)}
+                  style={[styles.modalKnopf, { borderColor: colors.muted, borderWidth: 1, borderRadius: radius.sm }]}
+                >
+                  <Text style={{ color: colors.muted, fontWeight: '600' }}>{t('allgemein.abbrechen')}</Text>
+                </Pressable>
+                <Pressable
+                  onPress={speichereBearbeitung}
+                  disabled={speichertBearbeitung || !bearbeitenName.trim()}
+                  style={[
+                    styles.modalKnopf,
+                    { backgroundColor: gradient[0], borderRadius: radius.sm, opacity: !bearbeitenName.trim() ? 0.5 : 1 },
+                  ]}
+                >
+                  {speichertBearbeitung ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text style={{ color: '#fff', fontWeight: '700' }}>{t('allgemein.speichern')}</Text>
+                  )}
+                </Pressable>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -360,8 +492,16 @@ const styles = StyleSheet.create({
   addButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   sectionHeader: { fontSize: 10.5, fontWeight: '700', letterSpacing: 0.5, marginTop: 14, marginBottom: 8 },
   itemRow: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, marginBottom: 6 },
-  itemText: { fontSize: 13.5, flex: 1 },
+  itemText: { fontSize: 13.5 },
+  itemNote: { fontSize: 11.5, fontStyle: 'italic', marginTop: 2 },
   itemTextChecked: { textDecorationLine: 'line-through' },
+  modalUeberlagerung: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 24 },
+  modalKarte: { padding: 20, maxHeight: '80%' },
+  modalTitel: { fontSize: 17, fontWeight: '700', marginBottom: 14 },
+  modalLabel: { fontSize: 11.5, fontWeight: '600', marginTop: 10, marginBottom: 4 },
+  modalInput: { height: 42, paddingHorizontal: 12, fontSize: 14 },
+  modalNotizInput: { height: 72, paddingTop: 10, textAlignVertical: 'top' },
+  modalKnopf: { flex: 1, height: 46, alignItems: 'center', justifyContent: 'center' },
   emptyText: { fontSize: 13, textAlign: 'center', marginTop: 40, lineHeight: 20 },
   clearButton: { alignItems: 'center', paddingVertical: 14 },
   clearButtonText: { fontSize: 12, fontWeight: '600' },

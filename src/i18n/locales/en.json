@@ -60,7 +60,10 @@
     "mengePlatzhalter": "Amount",
     "einheitPlatzhalter": "Unit",
     "druckenPdf": "Print / PDF",
-    "abgehakteEntfernen": "Remove ticked items"
+    "abgehakteEntfernen": "Remove ticked items",
+    "postenBearbeiten": "Edit item",
+    "notiz": "Note",
+    "notizPlatzhalter": "e.g. brand, only on sale …"
   },
   "rezepte": {
     "suchen": "Search recipes or ingredients…",
