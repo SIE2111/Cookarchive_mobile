@@ -6,6 +6,8 @@ import { useUebersetzung } from '../i18n';
 import { useAuth } from '../context/AuthContext';
 import { useServerSync } from '../context/ServerSyncContext';
 import { api, ApiError } from '../api/client';
+import * as Application from 'expo-application';
+import MarkenZeile from '../components/MarkenZeile';
 import { useFocusEffect, type CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
@@ -106,6 +108,11 @@ export default function ProfileScreen({ navigation }: Props) {
   const { t } = useUebersetzung();
   const { signOut, session } = useAuth();
   const { refresh: refreshServerSync } = useServerSync();
+  // Nur Major.Minor, wie bei HomeArchive AI's eigenem "v2.4" im Profil.
+  // nativeApplicationVersion statt app.json: Bei appVersionSource "remote"
+  // (siehe eas.json) ist app.json nicht mehr die verbindliche Quelle, das
+  // hier eingebettete Ergebnis des jeweiligen Builds schon.
+  const versionAnzeige = Application.nativeApplicationVersion?.split('.').slice(0, 2).join('.') ?? null;
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
@@ -620,6 +627,20 @@ export default function ProfileScreen({ navigation }: Props) {
         <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>
       </Pressable>
 
+      {/* Marke + Versionsnummer ganz unten, wie es HomeArchive AI in seinem
+          eigenen Profil-Bildschirm schon macht (dort "HomeArchive AI v2.4").
+          Die Versionsnummer kommt bewusst NICHT aus app.json - die eas.json
+          hat appVersionSource "remote", app.json ist also nicht die
+          verbindliche Quelle. Stattdessen die tatsaechlich in DIESEM Build
+          eingebettete native Versionsnummer, zweistellig wie bei HomeArchive
+          AI (nur Major.Minor, ohne Patch-Stelle). */}
+      <View style={styles.footer}>
+        <MarkenZeile />
+        {versionAnzeige && (
+          <Text style={[styles.footerVersion, { color: colors.muted }]}>{`v${versionAnzeige}`}</Text>
+        )}
+      </View>
+
       <Modal visible={showDeleteDialog} transparent animationType="fade" onRequestClose={() => setShowDeleteDialog(false)}>
         <View style={styles.modalBackdrop}>
           <View style={[styles.modalCard, { backgroundColor: colors.bg, borderRadius: radius.lg }]}>
@@ -682,4 +703,6 @@ const styles = StyleSheet.create({
   modalDanger: { height: 46, backgroundColor: '#DC2626', alignItems: 'center', justifyContent: 'center', marginTop: 16 },
   modalDangerText: { color: '#fff', fontWeight: '700', fontSize: 14 },
   modalCancel: { fontSize: 12.5, textAlign: 'center' },
+  footer: { alignItems: 'center', marginTop: 34, marginBottom: 6 },
+  footerVersion: { fontSize: 11, marginTop: 10 },
 });

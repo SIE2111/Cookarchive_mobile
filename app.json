@@ -2,7 +2,7 @@
   "expo": {
     "name": "Mein Kochbuch",
     "slug": "meinkochbuch",
-    "version": "0.1.0",
+    "version": "1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -21,7 +21,6 @@
         "NSCameraUsageDescription": "Mein Kochbuch braucht Kamerazugriff, um Kochbuchseiten oder Rezeptzettel zu fotografieren und automatisch zu erfassen.",
         "NSPhotoLibraryUsageDescription": "Mein Kochbuch braucht Zugriff auf deine Fotos, um Rezeptbilder auszuwählen oder Kochbuchseiten aus der Galerie zu erfassen.",
         "UIBackgroundModes": [
-          "audio",
           "audio"
         ],
         "ITSAppUsesNonExemptEncryption": false
@@ -31,12 +30,8 @@
       "package": "at.homearchive.meinkochbuch",
       "permissions": [
         "android.permission.CAMERA",
-        "android.permission.READ_MEDIA_IMAGES",
         "android.permission.POST_NOTIFICATIONS",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.CAMERA",
         "android.permission.READ_MEDIA_IMAGES",
-        "android.permission.POST_NOTIFICATIONS",
         "android.permission.RECORD_AUDIO"
       ],
       "adaptiveIcon": {
