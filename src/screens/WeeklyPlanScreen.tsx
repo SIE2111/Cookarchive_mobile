@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Alert, Modal, TextInput } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Alert, Modal, TextInput, Image } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
@@ -459,5 +459,8 @@ const styles = StyleSheet.create({
   pickerSearch: { height: 44, paddingHorizontal: 14, fontSize: 13.5, marginBottom: 14 },
   servingsRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
   servingsInput: { width: 60, height: 38, paddingHorizontal: 10, fontSize: 13.5, textAlign: 'center' },
-  pickerRow: { padding: 13, marginBottom: 7 },
+  pickerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10, marginBottom: 7 },
+  pickerThumb: { width: 42, height: 42 },
+  pickerThumbPlatzhalter: { alignItems: 'center', justifyContent: 'center' },
+  pickerChip: { paddingVertical: 6, paddingHorizontal: 12 },
 });
