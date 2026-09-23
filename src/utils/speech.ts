@@ -123,3 +123,35 @@ export async function brutzelStimme(): Promise<string | undefined> {
 }
 
 export const VOICE_SAMPLE = 'Servus, ich bin Brutzel. Lass die Zwiebel goldgelb werden, nicht braun.';
+
+/**
+ * Die "Vorleser-Stimme": liest Schritte, die Begruessung, die
+ * Fertigstellung und den Timer-Countdown vor - ueberall dort, wo die App
+ * selbst zum Nutzer spricht, nicht Brutzel persoenlich. Bis 22.09.2026
+ * lief das ohne jede Vorgabe (Speech.speak ohne voice-Parameter), also
+ * mit der Standardstimme des Geraets. Seit Brutzels eigene Stimme mit
+ * normaler statt hoeher gepitchter Tonlage spricht, konnten beide auf
+ * demselben Geraet zufaellig dieselbe Systemstimme treffen - dann war
+ * nicht mehr zu unterscheiden, ob gerade der Schritt vorgelesen wird
+ * oder Brutzel selbst spricht.
+ *
+ * Deshalb jetzt fest eine WEIBLICHE Stimme, klar getrennt von Brutzels
+ * maennlicher: 'anna' ist Apples bekannte deutsche Standardstimme einer
+ * Frau, 'petra' und 'helena' die hoeherwertigen Alternativen dazu.
+ */
+const VORLESER_STANDARD_STIMMEN = ['anna', 'petra', 'helena'];
+
+export async function vorleserStimme(): Promise<string | undefined> {
+  const stimmen = await getGermanVoices();
+  for (const name of VORLESER_STANDARD_STIMMEN) {
+    const treffer = stimmen.find(
+      (v) => v.name.toLowerCase().includes(name) || v.identifier.toLowerCase().includes(name),
+    );
+    if (treffer) return treffer.identifier;
+  }
+  // Keiner der bekannten weiblichen Namen auf dem Geraet (z.B. Android):
+  // wenigstens eine andere Stimme als Brutzels eigene, damit beide nicht
+  // zusammenfallen.
+  const brutzel = await brutzelStimme();
+  return stimmen.find((v) => v.identifier !== brutzel)?.identifier ?? stimmen[stimmen.length - 1]?.identifier;
+}

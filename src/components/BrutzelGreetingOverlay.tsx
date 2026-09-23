@@ -3,7 +3,7 @@ import { View, Text, Pressable, StyleSheet, Animated, Image, Modal, ScrollView }
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import * as Speech from 'expo-speech';
-import { SPEECH_LANGUAGE } from '../utils/speech';
+import { SPEECH_LANGUAGE, vorleserStimme } from '../utils/speech';
 import { useTheme } from '../theme/ThemeContext';
 import MarkenZeile from './MarkenZeile';
 import BrutzelIntroScreens from './BrutzelIntroScreens';
@@ -69,9 +69,10 @@ export default function BrutzelGreetingOverlay({ name, onDismiss, mitVideo = tru
       return;
     }
 
-    // Neutrale Stimme (kein voice/pitch/rate) statt Brutzels eigener -
-    // die ist den Tipp-Karten vorbehalten (siehe Auftrag Punkt 3).
-    Speech.speak(greetingText, { language: SPEECH_LANGUAGE });
+    // Feste Vorleser-Stimme (weiblich) statt Brutzels eigener (maennlich)
+    // - die ist den Tipp-Karten vorbehalten (siehe Auftrag Punkt 3), hier
+    // spricht die App selbst.
+    vorleserStimme().then((voice) => Speech.speak(greetingText, { language: SPEECH_LANGUAGE, voice }));
 
     return () => {
       Speech.stop();

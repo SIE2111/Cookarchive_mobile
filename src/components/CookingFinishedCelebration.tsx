@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import * as Speech from 'expo-speech';
-import { SPEECH_LANGUAGE } from '../utils/speech';
+import { SPEECH_LANGUAGE, vorleserStimme } from '../utils/speech';
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
 import BrutzelAvatar from './BrutzelAvatar';
@@ -114,7 +114,9 @@ export default function CookingFinishedCelebration({ recipeTitle, onDone }: Prop
     // die Sprachausgabe ist geraeteweit Deutsch, unabhaengig von der
     // gewaehlten UI-Sprache.
     const text = recipeTitle ? `Guten Appetit! ${recipeTitle} ist fertig.` : 'Guten Appetit!';
-    Speech.speak(text, { language: SPEECH_LANGUAGE });
+    // Feste Vorleser-Stimme (weiblich), siehe utils/speech.ts - unterscheidet
+    // sich hoerbar von Brutzels eigener (maennlicher) Stimme.
+    vorleserStimme().then((voice) => Speech.speak(text, { language: SPEECH_LANGUAGE, voice }));
     return () => {
       Speech.stop();
     };

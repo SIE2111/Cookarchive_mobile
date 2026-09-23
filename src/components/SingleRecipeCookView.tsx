@@ -3,7 +3,7 @@ import { View, Text, Pressable, StyleSheet, ActivityIndicator, Modal, TextInput,
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import * as Speech from 'expo-speech';
 import { useLayout } from '../utils/layout';
-import { SPEECH_LANGUAGE, BRUTZEL_PITCH, BRUTZEL_RATE, loadBrutzelVoice } from '../utils/speech';
+import { SPEECH_LANGUAGE, BRUTZEL_PITCH, BRUTZEL_RATE, loadBrutzelVoice, vorleserStimme } from '../utils/speech';
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
 import TranslationBanner from './TranslationBanner';
@@ -168,6 +168,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
   // der Pause automatisch aktuell.
   const brutzelTipRef = React.useRef('');
   const [brutzelVoice, setBrutzelVoice] = useState<string | undefined>(undefined);
+  const [vorleserVoice, setVorleserVoice] = useState<string | undefined>(undefined);
   const [largeText, setLargeText] = useState(false);
   const [techniqueVideo, setTechniqueVideo] = useState<TechniqueVideoInfo | null>(null);
   // Welche Technik in diesem Kochvorgang schon gezeigt wurde. Wer beim
@@ -323,6 +324,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
   // und klang je nach Geraet beliebig.
   useEffect(() => {
     loadBrutzelVoice().then(setBrutzelVoice);
+    vorleserStimme().then(setVorleserVoice);
   }, []);
 
   const handleSpeakTip = (text: string) => {
@@ -357,6 +359,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
     setIsSpeaking(true);
     Speech.speak(currentStep.text, {
       language: SPEECH_LANGUAGE,
+      voice: vorleserVoice,
       onDone: () => setIsSpeaking(false),
       onStopped: () => setIsSpeaking(false),
       onError: () => setIsSpeaking(false),
@@ -389,6 +392,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
     setIsSpeaking(true);
     Speech.speak(currentStep.text, {
       language: SPEECH_LANGUAGE,
+      voice: vorleserVoice,
       onStopped: () => setIsSpeaking(false),
       onError: () => setIsSpeaking(false),
       onDone: () => {
@@ -871,7 +875,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
           // sicher im Vordergrund, unabhaengig davon, ob Benachrichtigungs-
           // Berechtigung erteilt wurde - die geplante Push-Benachrichtigung
           // allein reichte offenbar nicht als verlaessliches Signal).
-          Speech.speak(t('kochen.timerFertig'), { language: SPEECH_LANGUAGE });
+          Speech.speak(t('kochen.timerFertig'), { language: SPEECH_LANGUAGE, voice: vorleserVoice });
           return 0;
         }
         return prev - 1;
