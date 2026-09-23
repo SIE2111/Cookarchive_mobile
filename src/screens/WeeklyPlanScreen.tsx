@@ -76,6 +76,10 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAddingToList, setIsAddingToList] = useState(false);
+  // 'woche' oder ein dateKey (welcher Tag gerade einen Vorschlag anfordert)
+  // - so laesst sich pro Knopf ein eigener Ladezustand anzeigen, ohne
+  // fuer jeden der sieben Tage einen eigenen State anzulegen.
+  const [vorschlagLaeuft, setVorschlagLaeuft] = useState<string | null>(null);
 
   const [pickerTarget, setPickerTarget] = useState<{ dateKey: string; slot: MealSlot; position?: number } | null>(null);
   const [allRecipes, setAllRecipes] = useState<RecipeSummary[]>([]);
@@ -205,6 +209,32 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
     entries
       .filter((e) => e.plan_date === dateKey && e.meal_slot === slot)
       .sort((a, b) => a.position - b.position);
+
+  // Fuellt nur LEERE Hauptgericht-Plaetze - das macht der Server ohnehin
+  // schon so (siehe /ai/suggest-week-plan), diese Funktion ruft ihn nur
+  // fuer den richtigen Zeitraum auf.
+  const holeVorschlag = async (kennung: string, von: string, bis: string) => {
+    setVorschlagLaeuft(kennung);
+    try {
+      const res = await api.post<{ filled: unknown[]; empty_slots_found: number }>(
+        '/ai/suggest-week-plan',
+        { start_date: von, end_date: bis },
+      );
+      if (res.empty_slots_found === 0) {
+        Alert.alert(t('wochenplan.vorschlagTitel'), t('wochenplan.bereitsVollText'));
+        return;
+      }
+      if (res.filled.length === 0) {
+        Alert.alert(t('wochenplan.vorschlagTitel'), t('wochenplan.keinVorschlagText'));
+        return;
+      }
+      await loadWeek();
+    } catch (err) {
+      Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('wochenplan.vorschlagFehlgeschlagen'));
+    } finally {
+      setVorschlagLaeuft(null);
+    }
+  };
 
   const filteredRecipes = recipeSearch.trim()
     ? allRecipes.filter((r) => r.title.toLowerCase().includes(recipeSearch.trim().toLowerCase()))
@@ -403,7 +433,8 @@ const styles = StyleSheet.create({
   // Knapp unter der Haelfte, damit der Abstand dazwischen Platz hat.
   tagInSpalte: { width: '47%' },
   daySection: { marginBottom: 18 },
-  dayLabel: { fontSize: 13.5, fontWeight: '700', marginBottom: 8 },
+  dayLabelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  dayLabel: { fontSize: 13.5, fontWeight: '700' },
   slotRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 11, marginBottom: 6 },
   // flexShrink 0 ist hier der entscheidende Teil, nicht die Breite: In
   // einer Flex-Zeile darf ein Element standardmaessig unter seine

@@ -560,7 +560,12 @@
     "beilagenVoll": "Sides full (2 of 2)",
     "rezeptWaehlen": "Choose a recipe",
     "portionen": "Servings:",
-    "suchen": "Search recipes…"
+    "suchen": "Search recipes…",
+    "wocheVorschlagen": "Suggest for week",
+    "vorschlagTitel": "Meal suggestion",
+    "bereitsVollText": "Everything is already planned for this period.",
+    "keinVorschlagText": "Brutzel couldn't find a fitting suggestion right now. Maybe add a few of your own recipes first.",
+    "vorschlagFehlgeschlagen": "The meal suggestion failed."
   },
   "teilen": {
     "rezeptSchicken": "Send recipe",

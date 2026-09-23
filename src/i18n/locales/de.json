@@ -560,7 +560,12 @@
     "beilagenVoll": "Beilagen voll (2 von 2)",
     "rezeptWaehlen": "Rezept wählen",
     "portionen": "Portionen:",
-    "suchen": "Rezept suchen…"
+    "suchen": "Rezept suchen…",
+    "wocheVorschlagen": "Woche vorschlagen",
+    "vorschlagTitel": "Essensvorschlag",
+    "bereitsVollText": "Für diesen Zeitraum ist schon alles geplant.",
+    "keinVorschlagText": "Brutzel konnte gerade keinen passenden Vorschlag finden. Leg vielleicht erst ein paar eigene Rezepte an.",
+    "vorschlagFehlgeschlagen": "Der Essensvorschlag ist fehlgeschlagen."
   },
   "teilen": {
     "rezeptSchicken": "Rezept schicken",
