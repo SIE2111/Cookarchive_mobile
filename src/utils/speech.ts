@@ -78,24 +78,30 @@ export async function saveBrutzelVoice(identifier: string | null): Promise<void>
 }
 
 /**
- * Brutzel spricht etwas hoeher und einen Tick langsamer als die
- * Schrittansage. So ist auch dann hoerbar, wer gerade redet, wenn das
- * Geraet nur eine einzige deutsche Stimme hat.
+ * Brutzel spricht mit normaler Tonhoehe (22.09.2026) - eine erwachsene,
+ * maennliche Vorlesestimme statt der vorherigen, hoeher gepitchten
+ * Charakterstimme. Etwas langsamer als die Schrittansage bleibt er, das
+ * hat mit der Tonlage nichts zu tun.
  */
-export const BRUTZEL_PITCH = 1.15;
+export const BRUTZEL_PITCH = 1.0;
 export const BRUTZEL_RATE = 0.95;
 
 /** Beispielsatz zum Anhoeren in der Stimmenauswahl. */
 /**
- * Brutzels Stimme, wenn der Nutzer keine ausgewaehlt hat.
- *
- * Vorher suchte die Begruessung selbst nach Namen wie 'markus' oder
- * 'martin' - das sind Vorlese-Stimmen, sachlich und erwachsen. Apples
- * Charakterstimmen passen zu einer Figur deutlich besser. Gesucht wird in
- * dieser Reihenfolge; ist keine davon auf dem Geraet, entscheidet wie
- * bisher die Reihenfolge aus getGermanVoices().
+ * Brutzels Stimme, wenn der Nutzer keine ausgewaehlt hat: eine normale,
+ * MAENNLICHE Vorlesestimme (22.09.2026, vorher probeweise Apples
+ * Charakterstimmen wie 'rocko'/'eddy' - klang nicht mehr wie eine
+ * "Normalstimme"). 'yannick' und 'markus' sind die bekannten deutschen
+ * iOS-Systemstimmen eines Mannes (Yannick in hoeherer Qualitaet, wo
+ * nachgeladen), 'martin' die dritte maennliche seit iOS 11. Auf Android
+ * gibt es diese Namen meist nicht - dort entscheidet wie bisher die
+ * Reihenfolge aus getGermanVoices() (beste Qualitaet zuerst), ohne dass
+ * sich am Geschlecht der Stimme etwas erzwingen liesse.
  */
-const BRUTZEL_STANDARD_STIMMEN = ['rocko', 'eddy', 'reed', 'flo'];
+const BRUTZEL_STANDARD_STIMMEN = ['yannick', 'markus', 'martin'];
+// Fuer die Stimmenauswahl exportiert, um Duplikate von Brutzels eigener
+// Stimme aus den Alternativen auszuschliessen (siehe BrutzelVoicePicker).
+export const BRUTZEL_STANDARD_NAMEN = BRUTZEL_STANDARD_STIMMEN;
 
 /**
  * Die Stimme, mit der Brutzel ueberall spricht: die gewaehlte, sonst die

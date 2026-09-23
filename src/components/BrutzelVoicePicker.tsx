@@ -11,8 +11,18 @@ import {
   BRUTZEL_PITCH,
   BRUTZEL_RATE,
   VOICE_SAMPLE,
+  BRUTZEL_STANDARD_NAMEN,
   type GermanVoice,
 } from '../utils/speech';
+
+// Nur noch zwei Alternativen zu Brutzels eigener Stimme (22.09.2026),
+// statt jeder deutschen Stimme des Geraets - eine lange Liste war vor
+// allem verwirrend. Welche zwei das sind, entscheidet weiterhin das
+// Geraet (beste Qualitaet zuerst, siehe getGermanVoices), nur die
+// ANZAHL ist jetzt begrenzt. Ausgeschlossen werden Stimmen, die schon
+// Brutzels eigene sein koennten (BRUTZEL_STANDARD_NAMEN) - sonst stuende
+// eine von beiden zweimal in der Liste.
+const ANZAHL_ALTERNATIVEN = 2;
 
 /**
  * Auswahl von Brutzels Stimme.
@@ -21,9 +31,8 @@ import {
  * entscheidet das Geraet. Ein iPhone hat andere als ein Samsung, und
  * selbst zwei iPhones unterscheiden sich, je nachdem welche Stimmen in
  * den Systemeinstellungen nachgeladen wurden. Eine fest eingebaute Liste
- * waere auf der Haelfte der Geraete schlicht falsch.
- *
- * Deshalb: auslesen, was da ist, anhoeren lassen, auswaehlen.
+ * waere auf der Haelfte der Geraete schlicht falsch. Begrenzt wird nur
+ * die ANZAHL der angebotenen Alternativen, nicht WELCHE es sind.
  */
 export default function BrutzelVoicePicker() {
   const { colors, gradient, radius } = useTheme();
@@ -35,7 +44,10 @@ export default function BrutzelVoicePicker() {
   useEffect(() => {
     Promise.all([getGermanVoices(), loadBrutzelVoice()])
       .then(([list, stored]) => {
-        setVoices(list);
+        const alternativen = list
+          .filter((v) => !BRUTZEL_STANDARD_NAMEN.some((n) => v.name.toLowerCase().includes(n) || v.identifier.toLowerCase().includes(n)))
+          .slice(0, ANZAHL_ALTERNATIVEN);
+        setVoices(alternativen);
         setSelected(stored);
       })
       .finally(() => setIsLoading(false));
@@ -82,8 +94,8 @@ export default function BrutzelVoicePicker() {
       <Text style={[styles.label, { color: colors.muted }]}>BRUTZELS STIMME</Text>
       <Text style={[styles.hint, { color: colors.muted }]}>
         {voices.length === 0
-          ? 'Dein Gerät meldet keine deutschen Stimmen. Brutzel spricht dann mit der Standardstimme des Systems.'
-          : 'Antippen zum Anhören und Auswählen. Welche Stimmen es gibt, gibt dein Gerät vor – weitere lassen sich in den Systemeinstellungen nachladen.'}
+          ? 'Dein Gerät meldet keine weiteren deutschen Stimmen. Brutzel spricht dann mit seiner normalen Stimme.'
+          : 'Antippen zum Anhören und Auswählen.'}
       </Text>
 
       {rows.map((voice) => {
@@ -105,14 +117,14 @@ export default function BrutzelVoicePicker() {
           >
             <View style={{ flex: 1 }}>
               <Text style={[styles.name, { color: colors.text }]}>
-                {voice ? voice.name : 'Standardstimme des Geräts'}
+                {voice ? voice.name : 'Brutzels Stimme'}
               </Text>
               <Text style={[styles.meta, { color: colors.muted }]}>
                 {voice
                   ? [voice.language, voice.quality && voice.quality.toLowerCase() !== 'default' ? 'hohe Qualität' : null]
                       .filter(Boolean)
                       .join(' · ')
-                  : 'Was das System vorgibt'}
+                  : 'Normale männliche Stimme'}
               </Text>
             </View>
 
