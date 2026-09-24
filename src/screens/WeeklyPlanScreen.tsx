@@ -303,7 +303,11 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
                   return (
                     <View key={slot.key} style={{ marginBottom: 6 }}>
                       <Pressable
-                        onPress={() => (haupt ? removeEntry(haupt.id) : openPicker(dateKey, slot.key, 0))}
+                        onPress={() =>
+                          haupt
+                            ? navigation.navigate('RecipeDetail', { recipeId: haupt.recipe_id, title: haupt.recipe_title })
+                            : openPicker(dateKey, slot.key, 0)
+                        }
                         onLongPress={() => openPicker(dateKey, slot.key, 0)}
                         style={[styles.slotRow, { backgroundColor: colors.card, borderRadius: radius.sm, marginBottom: 0 }]}
                       >
@@ -314,7 +318,15 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
                               {haupt.recipe_title}
                               {haupt.servings ? ` · ${haupt.servings} Port.` : ''}
                             </Text>
-                            <MaterialCommunityIcons name="close-circle-outline" size={16} color={colors.muted} />
+                            {/* Eigener Pressable statt Teil der Zeile: Antippen des
+                                Rezepts soll zur Rezeptansicht fuehren (23.09.2026,
+                                vorher entfernte ein Tipp den Eintrag sofort wieder -
+                                man musste das Rezept fuer den Koch-Modus jedes Mal
+                                neu suchen). Entfernen jetzt gezielt ueber das X,
+                                Rezept wechseln weiterhin per langem Druck. */}
+                            <Pressable onPress={() => removeEntry(haupt.id)} hitSlop={8}>
+                              <MaterialCommunityIcons name="close-circle-outline" size={16} color={colors.muted} />
+                            </Pressable>
                           </View>
                         ) : (
                           <Text style={[styles.slotEmpty, { color: gradient[0] }]}>+ Rezept wählen</Text>
