@@ -469,8 +469,8 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 8, paddingVertical: 4 }}
-              style={{ flexGrow: 0, marginBottom: 8 }}
+              contentContainerStyle={{ gap: 8, alignItems: 'center' }}
+              style={styles.pickerKategorienBar}
             >
               {pickerKategorien.map((kat) => {
                 const aktiv = pickerKategorie === kat;
@@ -556,5 +556,10 @@ const styles = StyleSheet.create({
   pickerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10, marginBottom: 7 },
   pickerThumb: { width: 42, height: 42 },
   pickerThumbPlatzhalter: { alignItems: 'center', justifyContent: 'center' },
-  pickerChip: { paddingVertical: 6, paddingHorizontal: 12 },
+  pickerChip: { height: 38, paddingHorizontal: 13, justifyContent: 'center', alignItems: 'center' },
+  // height + flexShrink: 0 sind der entscheidende Teil (23.09.2026) - ohne
+  // beides quetscht das umgebende Layout diese Zeile auf fast nichts
+  // zusammen, genau der Fehler, der im normalen Rezepte-Tab (categoryBar)
+  // schon einmal aufgetreten und dort so geloest worden war.
+  pickerKategorienBar: { height: 50, marginBottom: 10, flexGrow: 0, flexShrink: 0 },
 });
