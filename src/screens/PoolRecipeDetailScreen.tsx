@@ -9,7 +9,15 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/AppNavigator';
 import { useLayout } from '../utils/layout';
 
-type Props = NativeStackScreenProps<MainStackParamList, 'PoolRecipeDetail'>;
+type Props = NativeStackScreenProps<MainStackParamList, 'PoolRecipeDetail'> & {
+  onClose?: () => void;
+  // Beim Uebernehmen eines schon vorhandenen Rezepts (409-Fall) springt
+  // die eigenstaendige Version per navigation.replace() direkt zur
+  // eigenen Kopie. Eingebettet gibt es dafuer keinen Stack-Eintrag zum
+  // Ersetzen - der Elternscreen (CommunityPoolScreen) wechselt stattdessen
+  // selbst auf die eingebettete RecipeDetailScreen fuer diese ID.
+  onOpenLocal?: (recipeId: string, title: string) => void;
+};
 
 interface PublicRecipeDetail {
   id: string;
@@ -52,8 +60,11 @@ const LEVELS: { key: HaubenLevel; label: string; hats: number }[] = [
  * auch fremde Rezepte kleinschrittig erklaert bekommen. Umschalten geht
  * hier trotzdem, ohne die eigene Grundeinstellung zu aendern.
  */
-export default function PoolRecipeDetailScreen({ route, navigation }: Props) {
+export default function PoolRecipeDetailScreen({ route, navigation, onClose, onOpenLocal }: Props) {
   const { publicRecipeId } = route.params;
+  const eingebettet = !!onClose;
+  const schliessen = onClose ?? (() => navigation.goBack());
+  const oeffneLocal = onOpenLocal ?? ((recipeId: string, title: string) => navigation.replace('RecipeDetail', { recipeId, title }));
   const { colors, gradient, radius } = useTheme();
   const { inhaltsBreite } = useLayout();
   const { t } = useUebersetzung();
@@ -119,7 +130,7 @@ export default function PoolRecipeDetailScreen({ route, navigation }: Props) {
       if (err instanceof ApiError && err.status === 409) {
         const localRecipeId = (err.data as { local_recipe_id?: string } | undefined)?.local_recipe_id;
         if (localRecipeId) {
-          navigation.replace('RecipeDetail', { recipeId: localRecipeId, title: recipe.title });
+          oeffneLocal(localRecipeId, recipe.title);
           return;
         }
       }
@@ -140,7 +151,7 @@ export default function PoolRecipeDetailScreen({ route, navigation }: Props) {
       if (err instanceof ApiError && err.status === 409) {
         const localRecipeId = (err.data as { local_recipe_id?: string } | undefined)?.local_recipe_id;
         if (localRecipeId) {
-          navigation.replace('RecipeDetail', { recipeId: localRecipeId, title: recipe.title });
+          oeffneLocal(localRecipeId, recipe.title);
           return;
         }
       }
@@ -169,7 +180,7 @@ export default function PoolRecipeDetailScreen({ route, navigation }: Props) {
             try {
               await api.post('/pool/unpublish', { recipe_id: recipe.original_recipe_id });
               Alert.alert(t('sonstiges.ausPoolEntfernt'), t('sonstiges.ausPoolEntferntText', { titel: recipe.title }));
-              navigation.goBack();
+              schliessen();
             } catch (err) {
               Alert.alert(
                 t('sonstiges.ausPoolEntfernenFehlgeschlagen'),
@@ -211,6 +222,18 @@ export default function PoolRecipeDetailScreen({ route, navigation }: Props) {
     .join(' · ');
 
   return (
+    <>
+    {eingebettet && (
+      <View style={[styles.eingebetterHeader, { backgroundColor: colors.bg, borderBottomColor: colors.cardBorder }]}>
+        <Text style={[styles.eingebetterTitel, { color: colors.text }]} numberOfLines={1}>
+          {recipe.title}
+        </Text>
+        <Pressable onPress={schliessen} hitSlop={10} style={styles.eingebetterSchliessen}>
+          <MaterialCommunityIcons name="close" size={18} color={colors.text} />
+          <Text style={{ color: colors.text, fontSize: 13.5, fontWeight: '600' }}>{t('allgemein.schliessen')}</Text>
+        </Pressable>
+      </View>
+    )}
     <ScrollView
       style={{ backgroundColor: colors.bg }}
       contentContainerStyle={[styles.container, inhaltsBreite]}
@@ -334,10 +357,14 @@ export default function PoolRecipeDetailScreen({ route, navigation }: Props) {
         </View>
       ))}
     </ScrollView>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
+  eingebetterHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, paddingVertical: 12, borderBottomWidth: 1 },
+  eingebetterTitel: { fontSize: 15.5, fontWeight: '700', flex: 1, marginRight: 12 },
+  eingebetterSchliessen: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   container: { padding: 18, paddingBottom: 60 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   cover: { width: '100%', height: 190, marginBottom: 14 },

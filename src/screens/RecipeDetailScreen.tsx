@@ -15,7 +15,13 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/AppNavigator';
 import { useLayout } from '../utils/layout';
 
-type Props = NativeStackScreenProps<MainStackParamList, 'RecipeDetail'>;
+type Props = NativeStackScreenProps<MainStackParamList, 'RecipeDetail'> & {
+  // Nur gesetzt, wenn der Bildschirm NICHT als eigener Stack-Screen laeuft,
+  // sondern rechts neben einer Liste eingebettet ist (iPad quer). Ersetzt
+  // dann den nativen "Zurueck"-Header (den es eingebettet gar nicht gibt)
+  // durch eine eigene Kopfzeile mit "Schliessen".
+  onClose?: () => void;
+};
 
 interface Ingredient {
   name: string;
@@ -83,11 +89,16 @@ interface RecipeSummary {
 
 const MAX_SELECTABLE_SIDES = 2;
 
-export default function RecipeDetailScreen({ route, navigation }: Props) {
+export default function RecipeDetailScreen({ route, navigation, onClose }: Props) {
   const { colors, gradient, radius } = useTheme();
   const { inhaltsBreiteZweispaltig, istTablet } = useLayout();
   const { t, sprache } = useUebersetzung();
   const { recipeId } = route.params;
+  // Eingebettet (iPad quer, siehe RecipesScreen) hat keinen nativen
+  // Header, also auch kein "Zurueck" darin - schliessen() geht dann ueber
+  // die vom Elternscreen uebergebene Funktion statt navigation.goBack().
+  const eingebettet = !!onClose;
+  const schliessen = onClose ?? (() => navigation.goBack());
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [largeText, setLargeText] = useState(false);
@@ -687,7 +698,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
           {
             text: t('detail.haushaltFremdKnopf'),
             style: 'destructive',
-            onPress: () => speichereHaushalt(false, () => navigation.goBack()),
+            onPress: () => speichereHaushalt(false, () => schliessen()),
           },
         ],
       );
@@ -713,7 +724,7 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
           onPress: async () => {
             try {
               await api.delete(`/recipes/${recipeId}`);
-              navigation.goBack();
+              schliessen();
             } catch (err) {
               Alert.alert(t('profil.loeschenFehlgeschlagen'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
             }
@@ -741,6 +752,17 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
 
   return (
     <>
+    {eingebettet && (
+      <View style={[styles.eingebetterHeader, { backgroundColor: colors.bg, borderBottomColor: colors.cardBorder }]}>
+        <Text style={[styles.eingebetterTitel, { color: colors.text }]} numberOfLines={1}>
+          {recipe.title}
+        </Text>
+        <Pressable onPress={schliessen} hitSlop={10} style={styles.eingebetterSchliessen}>
+          <MaterialCommunityIcons name="close" size={18} color={colors.text} />
+          <Text style={{ color: colors.text, fontSize: 13.5, fontWeight: '600' }}>{t('allgemein.schliessen')}</Text>
+        </Pressable>
+      </View>
+    )}
     <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={[styles.container, inhaltsBreiteZweispaltig]}>
       {/* Tablet: links das Rezept selbst (Bild, Titel, Portionen,
           Ausruestung), rechts alles zum Handeln (Zubereitung starten,
@@ -1341,6 +1363,9 @@ export default function RecipeDetailScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
+  eingebetterHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, paddingVertical: 12, borderBottomWidth: 1 },
+  eingebetterTitel: { fontSize: 15.5, fontWeight: '700', flex: 1, marginRight: 12 },
+  eingebetterSchliessen: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 },
   modalCard: { padding: 20 },
   modalTitle: { fontSize: 15, fontWeight: '700', marginBottom: 12 },

@@ -27,9 +27,25 @@ export const MAX_BREITE_ZWEISPALTIG = 980;
 const TABLET_AB = 700;
 
 export function useLayout() {
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
+  const istTablet = width >= TABLET_AB;
+  // Handys sind auf Hochformat fixiert (siehe app.json) und erreichen
+  // TABLET_AB nie - quer/hoch unterscheiden also ausschliesslich
+  // zwischen den beiden iPad-Ausrichtungen, nicht zwischen Handy/Tablet.
+  const quer = istTablet && width > height;
+  const hoch = istTablet && !quer;
   return {
-    istTablet: width >= TABLET_AB,
+    istTablet,
+    quer,
+    hoch,
+    /**
+     * Kachelbreite fuer ein Raster mit `spalten` Spalten in einem Bereich
+     * von `breite` Punkten: (Breite - 2*Rand - (Spalten-1)*Abstand) / Spalten.
+     * `rand` und `abstand` folgen den ueblichen Werten aus dem jeweiligen
+     * Bildschirm-Layout, als Parameter statt fest verdrahtet.
+     */
+    kachelbreite: (breite: number, spalten: number, rand: number, abstand: number) =>
+      (breite - 2 * rand - (spalten - 1) * abstand) / spalten,
     /**
      * Auf Container legen, die Text oder Karten enthalten:
      * `[styles.container, inhaltsBreite]`. Zentriert und begrenzt.
