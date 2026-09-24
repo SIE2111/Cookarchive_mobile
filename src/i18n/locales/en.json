@@ -63,7 +63,8 @@
     "abgehakteEntfernen": "Remove ticked items",
     "postenBearbeiten": "Edit item",
     "notiz": "Note",
-    "notizPlatzhalter": "e.g. brand, only on sale …"
+    "notizPlatzhalter": "e.g. brand, only on sale …",
+    "keinPostenAusgewaehlt": "Select an item from the list"
   },
   "rezepte": {
     "suchen": "Search recipes or ingredients…",

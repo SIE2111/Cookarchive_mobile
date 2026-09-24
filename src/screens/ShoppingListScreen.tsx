@@ -31,7 +31,7 @@ interface ShoppingItem {
 
 export default function ShoppingListScreen({ navigation }: Props) {
   const { colors, gradient, radius } = useTheme();
-  const { inhaltsBreite } = useLayout();
+  const { inhaltsBreite, quer } = useLayout();
   const { t } = useUebersetzung();
   const [sections, setSections] = useState<{ title: string; data: ShoppingItem[] }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -270,8 +270,84 @@ export default function ShoppingListScreen({ navigation }: Props) {
     );
   }
 
+  // Einmal definiert, an beiden Einsatzorten verwendet (Modal bei Handy/
+  // hochkant, eingebettet bei quer) - siehe Rueckgabe unten.
+  const bearbeitenFormular = (
+    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={quer ? { padding: 18 } : undefined}>
+      <Text style={[styles.modalTitel, { color: colors.text }]}>{t('einkauf.postenBearbeiten')}</Text>
+
+      <Text style={[styles.modalLabel, { color: colors.muted }]}>{t('einkauf.zutatPlatzhalter')}</Text>
+      <TextInput
+        value={bearbeitenName}
+        onChangeText={setBearbeitenName}
+        style={[styles.modalInput, { backgroundColor: colors.bg, color: colors.text, borderRadius: radius.sm }]}
+      />
+
+      <View style={{ flexDirection: 'row', gap: 10 }}>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.modalLabel, { color: colors.muted }]}>{t('einkauf.mengePlatzhalter')}</Text>
+          <TextInput
+            value={bearbeitenMenge}
+            onChangeText={setBearbeitenMenge}
+            keyboardType="numeric"
+            style={[styles.modalInput, { backgroundColor: colors.bg, color: colors.text, borderRadius: radius.sm }]}
+          />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.modalLabel, { color: colors.muted }]}>{t('einkauf.einheitPlatzhalter')}</Text>
+          <TextInput
+            value={bearbeitenEinheit}
+            onChangeText={setBearbeitenEinheit}
+            style={[styles.modalInput, { backgroundColor: colors.bg, color: colors.text, borderRadius: radius.sm }]}
+          />
+        </View>
+      </View>
+
+      <Text style={[styles.modalLabel, { color: colors.muted }]}>{t('einkauf.notiz')}</Text>
+      <TextInput
+        value={bearbeitenNotiz}
+        onChangeText={setBearbeitenNotiz}
+        placeholder={t('einkauf.notizPlatzhalter')}
+        placeholderTextColor={colors.muted}
+        multiline
+        numberOfLines={3}
+        style={[
+          styles.modalInput,
+          styles.modalNotizInput,
+          { backgroundColor: colors.bg, color: colors.text, borderRadius: radius.sm },
+        ]}
+      />
+
+      <View style={{ flexDirection: 'row', gap: 10, marginTop: 18 }}>
+        <Pressable
+          onPress={() => setBearbeiteItem(null)}
+          style={[styles.modalKnopf, { borderColor: colors.muted, borderWidth: 1, borderRadius: radius.sm }]}
+        >
+          <Text style={{ color: colors.muted, fontWeight: '600' }}>{t('allgemein.abbrechen')}</Text>
+        </Pressable>
+        <Pressable
+          onPress={speichereBearbeitung}
+          disabled={speichertBearbeitung || !bearbeitenName.trim()}
+          style={[
+            styles.modalKnopf,
+            { backgroundColor: gradient[0], borderRadius: radius.sm, opacity: !bearbeitenName.trim() ? 0.5 : 1 },
+          ]}
+        >
+          {speichertBearbeitung ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <Text style={{ color: '#fff', fontWeight: '700' }}>{t('allgemein.speichern')}</Text>
+          )}
+        </Pressable>
+      </View>
+    </ScrollView>
+  );
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}>
+    // "quer": Liste links (fester Rahmen ueber styles.container), rechts
+    // der Bearbeiten-Bereich eingebettet. Sonst volle Breite wie bisher.
+    <View style={{ flex: 1, flexDirection: quer ? 'row' : 'column' }}>
+    <View style={[styles.container, { backgroundColor: colors.bg }, quer && { width: 400, flex: undefined, borderRightWidth: 1, borderRightColor: colors.cardBorder }]}>
       {/* Der Einkauf-Tab ist wie jeder Tab eigentlich eine Wurzel ohne
           "zurueck" (man wechselt ja einfach den Tab) - auf Wunsch trotzdem
           ein Knopf, der ausdruecklich zu Home fuehrt. navigation.navigate
@@ -417,86 +493,43 @@ export default function ShoppingListScreen({ navigation }: Props) {
       )}
       <ScanFab />
 
-      <Modal visible={!!bearbeiteItem} transparent animationType="fade" onRequestClose={() => setBearbeiteItem(null)}>
-        <View style={styles.modalUeberlagerung}>
-          <View style={[styles.modalKarte, { backgroundColor: colors.card, borderRadius: radius.md }]}>
-            <ScrollView keyboardShouldPersistTaps="handled">
-              <Text style={[styles.modalTitel, { color: colors.text }]}>{t('einkauf.postenBearbeiten')}</Text>
-
-              <Text style={[styles.modalLabel, { color: colors.muted }]}>{t('einkauf.zutatPlatzhalter')}</Text>
-              <TextInput
-                value={bearbeitenName}
-                onChangeText={setBearbeitenName}
-                style={[styles.modalInput, { backgroundColor: colors.bg, color: colors.text, borderRadius: radius.sm }]}
-              />
-
-              <View style={{ flexDirection: 'row', gap: 10 }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.modalLabel, { color: colors.muted }]}>{t('einkauf.mengePlatzhalter')}</Text>
-                  <TextInput
-                    value={bearbeitenMenge}
-                    onChangeText={setBearbeitenMenge}
-                    keyboardType="numeric"
-                    style={[styles.modalInput, { backgroundColor: colors.bg, color: colors.text, borderRadius: radius.sm }]}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.modalLabel, { color: colors.muted }]}>{t('einkauf.einheitPlatzhalter')}</Text>
-                  <TextInput
-                    value={bearbeitenEinheit}
-                    onChangeText={setBearbeitenEinheit}
-                    style={[styles.modalInput, { backgroundColor: colors.bg, color: colors.text, borderRadius: radius.sm }]}
-                  />
-                </View>
-              </View>
-
-              <Text style={[styles.modalLabel, { color: colors.muted }]}>{t('einkauf.notiz')}</Text>
-              <TextInput
-                value={bearbeitenNotiz}
-                onChangeText={setBearbeitenNotiz}
-                placeholder={t('einkauf.notizPlatzhalter')}
-                placeholderTextColor={colors.muted}
-                multiline
-                numberOfLines={3}
-                style={[
-                  styles.modalInput,
-                  styles.modalNotizInput,
-                  { backgroundColor: colors.bg, color: colors.text, borderRadius: radius.sm },
-                ]}
-              />
-
-              <View style={{ flexDirection: 'row', gap: 10, marginTop: 18 }}>
-                <Pressable
-                  onPress={() => setBearbeiteItem(null)}
-                  style={[styles.modalKnopf, { borderColor: colors.muted, borderWidth: 1, borderRadius: radius.sm }]}
-                >
-                  <Text style={{ color: colors.muted, fontWeight: '600' }}>{t('allgemein.abbrechen')}</Text>
-                </Pressable>
-                <Pressable
-                  onPress={speichereBearbeitung}
-                  disabled={speichertBearbeitung || !bearbeitenName.trim()}
-                  style={[
-                    styles.modalKnopf,
-                    { backgroundColor: gradient[0], borderRadius: radius.sm, opacity: !bearbeitenName.trim() ? 0.5 : 1 },
-                  ]}
-                >
-                  {speichertBearbeitung ? (
-                    <ActivityIndicator color="#fff" size="small" />
-                  ) : (
-                    <Text style={{ color: '#fff', fontWeight: '700' }}>{t('allgemein.speichern')}</Text>
-                  )}
-                </Pressable>
-              </View>
-            </ScrollView>
+      {/* Formularinhalt einmal definiert, einmal verwendet - je nach
+          "quer" entweder in ein Modal gepackt (Handy, iPad hochkant) oder
+          direkt in die rechte Spalte eingebettet (iPad quer), statt der
+          urspruenglichen Idee "Wochenplan oder Rezeptauswahl rechts":
+          konsistent mit dem Liste-links/Detail-rechts-Muster der anderen
+          Bildschirme, und tatsaechlich nuetzlich statt zwei lose
+          verbundene Inhalte nebeneinander. */}
+      {!quer && (
+        <Modal visible={!!bearbeiteItem} transparent animationType="fade" onRequestClose={() => setBearbeiteItem(null)}>
+          <View style={styles.modalUeberlagerung}>
+            <View style={[styles.modalKarte, { backgroundColor: colors.card, borderRadius: radius.md }]}>
+              {bearbeitenFormular}
+            </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
+      )}
+    </View>
+    {quer && (
+      <View style={[styles.querDetailSpalte, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
+        {bearbeiteItem ? (
+          bearbeitenFormular
+        ) : (
+          <View style={styles.leereAuswahl}>
+            <MaterialCommunityIcons name="pencil-outline" size={36} color={colors.muted} />
+            <Text style={{ color: colors.muted, fontSize: 13, marginTop: 10 }}>{t('einkauf.keinPostenAusgewaehlt')}</Text>
+          </View>
+        )}
+      </View>
+    )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: 18, paddingTop: 16 },
+  querDetailSpalte: { flex: 1, borderLeftWidth: 0 },
+  leereAuswahl: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30 },
   backRow: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: 14, marginBottom: 12 },
   backText: { fontSize: 14, fontWeight: '600', marginLeft: 2 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },

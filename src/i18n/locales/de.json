@@ -63,7 +63,8 @@
     "abgehakteEntfernen": "Abgehakte entfernen",
     "postenBearbeiten": "Posten bearbeiten",
     "notiz": "Notiz",
-    "notizPlatzhalter": "z. B. Marke, nur im Angebot …"
+    "notizPlatzhalter": "z. B. Marke, nur im Angebot …",
+    "keinPostenAusgewaehlt": "Posten aus der Liste wählen"
   },
   "rezepte": {
     "suchen": "Rezept oder Zutat suchen…",
