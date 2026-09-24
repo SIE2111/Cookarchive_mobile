@@ -42,7 +42,7 @@ let hasShownGreetingThisSession = false;
 
 export default function DashboardScreen({ navigation }: Props) {
   const { colors, gradient, radius } = useTheme();
-  const { inhaltsBreite } = useLayout();
+  const { istTablet, inhaltsBreite, inhaltsBreiteZweispaltig } = useLayout();
   const { t } = useUebersetzung();
   const { session } = useAuth();
   const [recipes, setRecipes] = useState<RecipeSummary[]>([]);
@@ -287,91 +287,80 @@ export default function DashboardScreen({ navigation }: Props) {
     );
   }
 
-  return (
-    <>
-    <ScrollView
-      style={{ backgroundColor: colors.bg }}
-      contentContainerStyle={[styles.container, inhaltsBreite]}
-      refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
+  // Als Konstanten statt direkt im JSX: am Handy in genau dieser
+  // Reihenfolge untereinander (wie bisher, unveraendert), am Tablet auf
+  // zwei Spalten verteilt (siehe Rueckgabe unten). Jeder Block bleibt
+  // dieselbe JSX wie vorher, nur eben benannt statt inline.
+  const blockStats = (
+    <View style={styles.statsRow}>
+      <View style={[styles.statCard, { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.cardBorder }]}>
+        <Text style={[styles.statValue, { color: colors.text }]}>{recipes.length}</Text>
+        <Text style={[styles.statLabel, { color: colors.muted }]}>{t('dashboard.rezepte')}</Text>
+      </View>
+      <View style={[styles.statCard, { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.cardBorder }]}>
+        <Text style={[styles.statValue, { color: colors.text }]}>{stats?.cooked_this_week ?? '–'}</Text>
+        <Text style={[styles.statLabel, { color: colors.muted }]}>{t('dashboard.dieseWocheGekocht')}</Text>
+      </View>
+      <View style={[styles.statCard, { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.cardBorder }]}>
+        <Text style={[styles.statValue, { color: colors.text }]}>{stats?.cooked_total ?? '–'}</Text>
+        <Text style={[styles.statLabel, { color: colors.muted }]}>{t('dashboard.insgesamtGekocht')}</Text>
+      </View>
+    </View>
+  );
+
+  const blockDaily = recipeOfTheDay && (
+    <Pressable
+      onPress={() =>
+        navigation.navigate('RecipeDetail', { recipeId: recipeOfTheDay.id, title: recipeOfTheDay.title })
+      }
+      style={[styles.dailyCard, { borderRadius: radius.lg }]}
     >
-      {/* Begruessung ("Hallo …! 👋" / "Was kochen wir heute?") bewusst
-          entfernt: Sie kostete zwei Zeilen fuer eine Information, die man
-          nach dem ersten Oeffnen kennt, und schob die Rezepte nach unten.
-          Die animierte Brutzel-Begruessung beim Start bleibt - dort ist
-          sie ein Moment, hier war sie Dauermoebel. displayName wird
-          weiterhin fuer diese Animation gebraucht. */}
-
-      {error && <Text style={[styles.errorText, { color: '#DC2626' }]}>{error}</Text>}
-
-      {/* Statistik-Kacheln - alle drei aus echten Daten, keine erfundenen Werte */}
-      <View style={styles.statsRow}>
-        <View style={[styles.statCard, { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.cardBorder }]}>
-          <Text style={[styles.statValue, { color: colors.text }]}>{recipes.length}</Text>
-          <Text style={[styles.statLabel, { color: colors.muted }]}>{t('dashboard.rezepte')}</Text>
-        </View>
-        <View style={[styles.statCard, { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.cardBorder }]}>
-          <Text style={[styles.statValue, { color: colors.text }]}>{stats?.cooked_this_week ?? '–'}</Text>
-          <Text style={[styles.statLabel, { color: colors.muted }]}>{t('dashboard.dieseWocheGekocht')}</Text>
-        </View>
-        <View style={[styles.statCard, { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.cardBorder }]}>
-          <Text style={[styles.statValue, { color: colors.text }]}>{stats?.cooked_total ?? '–'}</Text>
-          <Text style={[styles.statLabel, { color: colors.muted }]}>{t('dashboard.insgesamtGekocht')}</Text>
-        </View>
+      <View style={[styles.dailyBadge, { backgroundColor: gradient[0] }]}>
+        <Text style={styles.dailyBadgeText}>{t('dashboard.rezeptDesTages')}</Text>
       </View>
-
-      {/* Rezept des Tages */}
-      {recipeOfTheDay && (
-        <Pressable
-          onPress={() =>
-            navigation.navigate('RecipeDetail', { recipeId: recipeOfTheDay.id, title: recipeOfTheDay.title })
-          }
-          style={[styles.dailyCard, { borderRadius: radius.lg }]}
-        >
-          <View style={[styles.dailyBadge, { backgroundColor: gradient[0] }]}>
-            <Text style={styles.dailyBadgeText}>{t('dashboard.rezeptDesTages')}</Text>
-          </View>
-          {recipeOfTheDay.cover_image_url ? (
-            <Image source={{ uri: recipeOfTheDay.cover_image_url }} style={styles.dailyImage} />
-          ) : (
-            <LinearGradient colors={gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.dailyImage} />
-          )}
-          <View style={styles.dailyInfo}>
-            <Text style={[styles.dailyTitle, { color: colors.text }]} numberOfLines={1}>
-              {recipeOfTheDay.title}
-            </Text>
-            <Text style={[styles.dailyMeta, { color: colors.muted }]}>
-              {recipeOfTheDay.prep_time_minutes ? `⏱ ${recipeOfTheDay.prep_time_minutes} Min.` : ''}
-              {recipeOfTheDay.servings ? `  ·  🍽 ${recipeOfTheDay.servings} ${t('dashboard.portionenKurz')}` : ''}
-            </Text>
-          </View>
-        </Pressable>
+      {recipeOfTheDay.cover_image_url ? (
+        <Image source={{ uri: recipeOfTheDay.cover_image_url }} style={styles.dailyImage} />
+      ) : (
+        <LinearGradient colors={gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.dailyImage} />
       )}
-
-      {/* Schnellaktionen */}
-      <View style={styles.actionsRow}>
-        <Pressable
-          onPress={() => navigation.navigate('Einkauf')}
-          style={[styles.actionButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}
-        >
-          <MaterialCommunityIcons name="cart-outline" size={18} color="#fff" />
-          <Text style={styles.actionText}>{t('dashboard.einkaufszettel')}</Text>
-        </Pressable>
-        <Pressable
-          onPress={() => navigation.navigate('WeeklyPlan')}
-          style={[styles.actionButton, { backgroundColor: colors.card, borderRadius: radius.md }]}
-        >
-          <MaterialCommunityIcons name="calendar-week-outline" size={18} color={colors.text} />
-          <Text style={[styles.actionText, { color: colors.text }]}>{t('dashboard.wochenplaner')}</Text>
-        </Pressable>
+      <View style={styles.dailyInfo}>
+        <Text style={[styles.dailyTitle, { color: colors.text }]} numberOfLines={1}>
+          {recipeOfTheDay.title}
+        </Text>
+        <Text style={[styles.dailyMeta, { color: colors.muted }]}>
+          {recipeOfTheDay.prep_time_minutes ? `⏱ ${recipeOfTheDay.prep_time_minutes} Min.` : ''}
+          {recipeOfTheDay.servings ? `  ·  🍽 ${recipeOfTheDay.servings} ${t('dashboard.portionenKurz')}` : ''}
+        </Text>
       </View>
+    </Pressable>
+  );
 
-      {/* Ganz oben, weil eine Sendung von einer echten Person kommt und
-          untergeht, wenn sie unter Listen und Kategorien liegt. Die Karte
-          blendet sich selbst aus, wenn nichts offen ist. */}
-      <IncomingSharesCard />
+  const blockActions = (
+    <View style={styles.actionsRow}>
+      <Pressable
+        onPress={() => navigation.navigate('Einkauf')}
+        style={[styles.actionButton, { backgroundColor: gradient[0], borderRadius: radius.md }]}
+      >
+        <MaterialCommunityIcons name="cart-outline" size={18} color="#fff" />
+        <Text style={styles.actionText}>{t('dashboard.einkaufszettel')}</Text>
+      </Pressable>
+      <Pressable
+        onPress={() => navigation.navigate('WeeklyPlan')}
+        style={[styles.actionButton, { backgroundColor: colors.card, borderRadius: radius.md }]}
+      >
+        <MaterialCommunityIcons name="calendar-week-outline" size={18} color={colors.text} />
+        <Text style={[styles.actionText, { color: colors.text }]}>{t('dashboard.wochenplaner')}</Text>
+      </Pressable>
+    </View>
+  );
 
-      {/* Kategorien - aus den tatsaechlich vorkommenden Tags abgeleitet, plus
-          eine feste Lieblingsgerichte-Kachel, immer sichtbar */}
+  // Ganz oben, weil eine Sendung von einer echten Person kommt und
+  // untergeht, wenn sie unter Listen und Kategorien liegt. Die Karte
+  // blendet sich selbst aus, wenn nichts offen ist.
+  const blockShares = <IncomingSharesCard />;
+
+  const blockKategorien = (
+    <>
       <View style={styles.categoriesHeaderRow}>
         <Text style={[styles.sectionLabel, { color: colors.text }]}>{t('dashboard.kategorien')}</Text>
         <Pressable
@@ -416,9 +405,13 @@ export default function DashboardScreen({ navigation }: Props) {
           </Text>
         </Pressable>
       )}
+    </>
+  );
 
-      {/* Zuletzt zubereitet (nur Hauptgerichte, keine mitgekochten Beilagen -
-          siehe CookModeScreen.tsx, ruft mark-cooked nur fuer recipeIds[0] auf) */}
+  // Zuletzt zubereitet (nur Hauptgerichte, keine mitgekochten Beilagen -
+  // siehe CookModeScreen.tsx, ruft mark-cooked nur fuer recipeIds[0] auf)
+  const blockZuletzt = (
+    <>
       <Text style={[styles.sectionLabel, { color: colors.text }]}>{t('dashboard.zuletztZubereitet')}</Text>
       {recentlyCooked.length === 0 ? (
         <Text style={[styles.emptyText, { color: colors.muted }]}>
@@ -462,6 +455,53 @@ export default function DashboardScreen({ navigation }: Props) {
           ))}
         </View>
       )}
+    </>
+  );
+
+  return (
+    <>
+    <ScrollView
+      style={{ backgroundColor: colors.bg }}
+      contentContainerStyle={[styles.container, istTablet ? inhaltsBreiteZweispaltig : inhaltsBreite]}
+      refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
+    >
+      {/* Begruessung ("Hallo …! 👋" / "Was kochen wir heute?") bewusst
+          entfernt: Sie kostete zwei Zeilen fuer eine Information, die man
+          nach dem ersten Oeffnen kennt, und schob die Rezepte nach unten.
+          Die animierte Brutzel-Begruessung beim Start bleibt - dort ist
+          sie ein Moment, hier war sie Dauermoebel. displayName wird
+          weiterhin fuer diese Animation gebraucht. */}
+
+      {error && <Text style={[styles.errorText, { color: '#DC2626' }]}>{error}</Text>}
+
+      {istTablet ? (
+        // Zwei Spalten (links ~7/12, rechts ~5/12): links alles rund ums
+        // "was koche ich heute" (Zahlen, Rezept des Tages, Schnellaktionen,
+        // eingehende Freigaben), rechts zum Stoebern (Kategorien,
+        // zuletzt Gekochtes). Am Handy bleibt die alte, einspaltige
+        // Reihenfolge unveraendert - siehe else-Zweig.
+        <View style={styles.zweiSpalten}>
+          <View style={styles.spalteLinks}>
+            {blockStats}
+            {blockDaily}
+            {blockActions}
+            {blockShares}
+          </View>
+          <View style={styles.spalteRechts}>
+            {blockKategorien}
+            {blockZuletzt}
+          </View>
+        </View>
+      ) : (
+        <>
+          {blockStats}
+          {blockDaily}
+          {blockActions}
+          {blockShares}
+          {blockKategorien}
+          {blockZuletzt}
+        </>
+      )}
     </ScrollView>
     <ScanFab />
     {showGreeting && <BrutzelGreetingOverlay name={displayName} mitVideo={greetingMitVideo} sprechen={greetingSprechen} mitMusik={greetingMitMusik} onDismiss={() => setShowGreeting(false)} />}
@@ -477,6 +517,12 @@ export default function DashboardScreen({ navigation }: Props) {
 // Liste erneut aus dem Bild.
 const styles = StyleSheet.create({
   container: { padding: 18, paddingBottom: 40 },
+  // Zwei Spalten am Tablet: links ~7/12, rechts ~5/12 (Auftrag Punkt 4).
+  // gap statt Raendern an den Kindern, damit sich die Blockabstaende
+  // innerhalb einer Spalte nicht mit dem Spaltenabstand vermischen.
+  zweiSpalten: { flexDirection: 'row', gap: 18, alignItems: 'flex-start' },
+  spalteLinks: { flex: 7 },
+  spalteRechts: { flex: 5 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   errorText: { fontSize: 12, marginBottom: 12 },
   statsRow: { flexDirection: 'row', gap: 10, marginBottom: 12, marginTop: 4 },
