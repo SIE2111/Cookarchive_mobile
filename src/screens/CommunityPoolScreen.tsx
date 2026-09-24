@@ -9,6 +9,8 @@ import { api, ApiError } from '../api/client';
 import ScanFab from '../components/ScanFab';
 import type { MainStackParamList } from '../navigation/AppNavigator';
 import { useLayout } from '../utils/layout';
+import PoolRecipeDetailScreen from './PoolRecipeDetailScreen';
+import RecipeDetailScreen from './RecipeDetailScreen';
 
 interface PublicRecipeSummary {
   id: string;
@@ -44,9 +46,15 @@ interface ForkFeedback {
  */
 export default function CommunityPoolScreen() {
   const { colors, gradient, radius } = useTheme();
-  const { istTablet, inhaltsBreiteZweispaltig } = useLayout();
+  const { quer, hoch, inhaltsBreiteZweispaltig } = useLayout();
   const { t } = useUebersetzung();
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
+  // "pool": noch unveraendertes fremdes Rezept, "lokal": schon uebernommene
+  // eigene Kopie (z.B. nach dem 409-Fall in handleFork) - genau eine der
+  // beiden eingebetteten Ansichten ist aktiv, nie beide gleichzeitig.
+  const [auswahl, setAuswahl] = useState<
+    { art: 'pool' | 'lokal'; id: string; titel: string } | null
+  >(null);
   const [recipes, setRecipes] = useState<PublicRecipeSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -103,7 +111,11 @@ export default function CommunityPoolScreen() {
       if (err instanceof ApiError && err.status === 409) {
         const localRecipeId = (err.data as { local_recipe_id?: string } | undefined)?.local_recipe_id;
         if (localRecipeId) {
-          navigation.navigate('RecipeDetail', { recipeId: localRecipeId, title: recipe.title });
+          if (quer) {
+            setAuswahl({ art: 'lokal', id: localRecipeId, titel: recipe.title });
+          } else {
+            navigation.navigate('RecipeDetail', { recipeId: localRecipeId, title: recipe.title });
+          }
           return;
         }
       }
@@ -132,16 +144,17 @@ export default function CommunityPoolScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+    <View style={{ flex: 1, flexDirection: quer ? 'row' : 'column' }}>
+    <View style={{ flex: quer ? undefined : 1, width: quer ? 400 : undefined, borderRightWidth: quer ? 1 : 0, borderRightColor: colors.cardBorder, backgroundColor: colors.bg }}>
       <FlatList
         contentContainerStyle={[{ padding: 18, paddingBottom: 100 }, inhaltsBreiteZweispaltig]}
         data={recipes}
         keyExtractor={(item) => item.id}
-        // key MUSS sich mit der Spaltenzahl aendern, sonst wirft React
-        // Native beim Drehen des Tablets einen Fehler.
-        key={`spalten-${istTablet ? 2 : 1}`}
-        numColumns={istTablet ? 2 : 1}
-        columnWrapperStyle={istTablet ? { gap: 9 } : undefined}
+        // Nur "hoch" bekommt das 3-spaltige Bild-Raster - "quer" bleibt
+        // einspaltig (Liste links, Detail rechts eingebettet).
+        key={`spalten-${hoch ? 3 : 1}`}
+        numColumns={hoch ? 3 : 1}
+        columnWrapperStyle={hoch ? { gap: 9 } : undefined}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
         ListHeaderComponent={
           <>
@@ -158,94 +171,168 @@ export default function CommunityPoolScreen() {
             Gruppen-Symbol, mit dem du es für alle sichtbar machst.
           </Text>
         }
-        renderItem={({ item }) => (
-          // Antippen oeffnet die Vollansicht. Vorher konnte man ein fremdes
-          // Rezept nur blind uebernehmen - was drin ist, sah man erst
-          // danach in der eigenen Sammlung.
-          <Pressable
-            onPress={() => navigation.navigate('PoolRecipeDetail', { publicRecipeId: item.id, title: item.title })}
-            style={[styles.card, istTablet && styles.karteInSpalte, { backgroundColor: colors.card, borderRadius: radius.md }]}
-          >
-            {item.cover_image_url ? (
-              <Image source={{ uri: item.cover_image_url }} style={[styles.thumb, { borderRadius: radius.sm }]} />
-            ) : (
-              <View style={[styles.thumb, styles.thumbEmpty, { borderRadius: radius.sm }]}>
-                <MaterialCommunityIcons name="silverware-fork-knife" size={18} color={colors.muted} />
-              </View>
-            )}
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={[styles.title, { color: colors.text }]} numberOfLines={2}>{item.title}</Text>
-              <Text style={[styles.meta, { color: colors.muted }]} numberOfLines={1}>
-                {[
-                  item.prep_time_minutes ? `${item.prep_time_minutes} Min.` : null,
-                  item.servings ? `${item.servings} Port.` : null,
-                  `${item.download_count}× übernommen`,
-                  item.avg_rating ? `★ ${item.avg_rating}` : null,
-                ]
-                  .filter(Boolean)
-                  .join(' · ')}
-              </Text>
-            </View>
-            {(() => {
-              if (item.is_own) {
-                return (
-                  <View style={[styles.forkButton, styles.statusBox]}>
-                    <Text style={[styles.besitzText, { color: colors.muted }]} numberOfLines={2}>{t('sonstiges.vonDir')}</Text>
-                  </View>
-                );
-              }
-              const feedback = forkFeedback[item.id];
-              if (feedback) {
-                // Gerade jetzt uebernommen - kein Dialog, der Knopf zeigt
-                // direkt den Zielordner (Auftrag Punkt 12).
-                return (
-                  <View style={[styles.forkButton, styles.statusBox]}>
-                    <Text style={[styles.besitzText, { color: '#16A34A' }]} numberOfLines={2}>
-                      {t('sonstiges.uebernommenHaken')}
+        renderItem={({ item }) => {
+          const oeffnePool = () => {
+            if (quer) setAuswahl({ art: 'pool', id: item.id, titel: item.title });
+            else navigation.navigate('PoolRecipeDetail', { publicRecipeId: item.id, title: item.title });
+          };
+          const status = (kompakt: boolean) => {
+            if (item.is_own) {
+              return (
+                <View style={[styles.forkButton, kompakt && styles.statusKompakt, !kompakt && styles.statusBox]}>
+                  <Text style={[styles.besitzText, kompakt && { textAlign: 'left' }, { color: colors.muted }]} numberOfLines={2}>{t('sonstiges.vonDir')}</Text>
+                </View>
+              );
+            }
+            const feedback = forkFeedback[item.id];
+            if (feedback) {
+              // Gerade jetzt uebernommen - kein Dialog, der Knopf zeigt
+              // direkt den Zielordner (Auftrag Punkt 12).
+              return (
+                <View style={[styles.forkButton, kompakt && styles.statusKompakt, !kompakt && styles.statusBox]}>
+                  <Text style={[styles.besitzText, kompakt && { textAlign: 'left' }, { color: '#16A34A' }]} numberOfLines={2}>
+                    {t('sonstiges.uebernommenHaken')}
+                  </Text>
+                  {feedback.folderName && !kompakt && (
+                    <Text style={[styles.folderHintText, kompakt && { textAlign: 'left' }, { color: colors.muted }]} numberOfLines={2}>
+                      {feedback.folderName}
                     </Text>
-                    {feedback.folderName && (
-                      <Text style={[styles.folderHintText, { color: colors.muted }]} numberOfLines={2}>
-                        {feedback.folderName}
-                      </Text>
-                    )}
-                  </View>
-                );
-              }
-              if (item.already_forked) {
-                return (
-                  <Pressable
-                    onPress={() => handleFork(item)}
-                    disabled={forkingId === item.id}
-                    style={[styles.forkButton, styles.statusBox]}
-                  >
-                    {forkingId === item.id ? (
-                      <ActivityIndicator color={colors.muted} size="small" />
-                    ) : (
-                      <Text style={[styles.besitzText, { color: gradient[0] }]} numberOfLines={2}>
-                        {t('sonstiges.inSammlungOeffnen')}
-                      </Text>
-                    )}
-                  </Pressable>
-                );
-              }
+                  )}
+                </View>
+              );
+            }
+            if (item.already_forked) {
               return (
                 <Pressable
                   onPress={() => handleFork(item)}
                   disabled={forkingId === item.id}
-                  style={[styles.forkButton, styles.statusBox, { backgroundColor: gradient[0], borderRadius: radius.sm }]}
+                  style={[styles.forkButton, kompakt && styles.statusKompakt, !kompakt && styles.statusBox]}
                 >
                   {forkingId === item.id ? (
-                    <ActivityIndicator color="#fff" size="small" />
+                    <ActivityIndicator color={colors.muted} size="small" />
                   ) : (
-                    <Text style={styles.forkButtonText} numberOfLines={2}>Übernehmen</Text>
+                    <Text style={[styles.besitzText, kompakt && { textAlign: 'left' }, { color: gradient[0] }]} numberOfLines={2}>
+                      {t('sonstiges.inSammlungOeffnen')}
+                    </Text>
                   )}
                 </Pressable>
               );
-            })()}
-          </Pressable>
-        )}
+            }
+            return (
+              <Pressable
+                onPress={() => handleFork(item)}
+                disabled={forkingId === item.id}
+                style={[
+                  styles.forkButton,
+                  kompakt && styles.statusKompakt,
+                  !kompakt && styles.statusBox,
+                  { backgroundColor: gradient[0], borderRadius: radius.sm },
+                ]}
+              >
+                {forkingId === item.id ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={[styles.forkButtonText, kompakt && { textAlign: 'left' }]} numberOfLines={2}>Übernehmen</Text>
+                )}
+              </Pressable>
+            );
+          };
+
+          // hoch: Karte mit grossem Bild oben, Status als schmale Zeile
+          // darunter. Sonst (Handy, quer): die bisherige Zeile mit
+          // Vorschaubild links, Status rechts in fester Breite.
+          if (hoch) {
+            return (
+              <Pressable
+                onPress={oeffnePool}
+                style={[styles.karte, { backgroundColor: colors.card, borderRadius: radius.md }]}
+              >
+                {item.cover_image_url ? (
+                  <Image source={{ uri: item.cover_image_url }} style={styles.karteBild} />
+                ) : (
+                  <View style={[styles.karteBild, styles.thumbEmpty]}>
+                    <MaterialCommunityIcons name="silverware-fork-knife" size={22} color={colors.muted} />
+                  </View>
+                )}
+                <View style={{ padding: 10 }}>
+                  <Text style={[styles.title, { color: colors.text }]} numberOfLines={2}>{item.title}</Text>
+                  <Text style={[styles.meta, { color: colors.muted }]} numberOfLines={1}>
+                    {[
+                      item.prep_time_minutes ? `${item.prep_time_minutes} Min.` : null,
+                      item.servings ? `${item.servings} Port.` : null,
+                      `${item.download_count}× übernommen`,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </Text>
+                  <View style={{ marginTop: 6, alignItems: 'flex-start' }}>{status(true)}</View>
+                </View>
+              </Pressable>
+            );
+          }
+
+          return (
+            // Antippen oeffnet die Vollansicht. Vorher konnte man ein fremdes
+            // Rezept nur blind uebernehmen - was drin ist, sah man erst
+            // danach in der eigenen Sammlung.
+            <Pressable
+              onPress={oeffnePool}
+              style={[
+                styles.card,
+                auswahl?.art === 'pool' && auswahl.id === item.id && quer && { borderColor: gradient[0], borderWidth: 1.5 },
+                { backgroundColor: colors.card, borderRadius: radius.md },
+              ]}
+            >
+              {item.cover_image_url ? (
+                <Image source={{ uri: item.cover_image_url }} style={[styles.thumb, { borderRadius: radius.sm }]} />
+              ) : (
+                <View style={[styles.thumb, styles.thumbEmpty, { borderRadius: radius.sm }]}>
+                  <MaterialCommunityIcons name="silverware-fork-knife" size={18} color={colors.muted} />
+                </View>
+              )}
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={[styles.title, { color: colors.text }]} numberOfLines={2}>{item.title}</Text>
+                <Text style={[styles.meta, { color: colors.muted }]} numberOfLines={1}>
+                  {[
+                    item.prep_time_minutes ? `${item.prep_time_minutes} Min.` : null,
+                    item.servings ? `${item.servings} Port.` : null,
+                    `${item.download_count}× übernommen`,
+                    item.avg_rating ? `★ ${item.avg_rating}` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </Text>
+              </View>
+              {status(false)}
+            </Pressable>
+          );
+        }}
       />
       <ScanFab />
+    </View>
+    {quer && (
+      <View style={{ flex: 1, backgroundColor: colors.bg }}>
+        {auswahl?.art === 'pool' ? (
+          <PoolRecipeDetailScreen
+            navigation={navigation as never}
+            route={{ key: `embedded-pool-${auswahl.id}`, name: 'PoolRecipeDetail', params: { publicRecipeId: auswahl.id, title: auswahl.titel } } as never}
+            onClose={() => setAuswahl(null)}
+            onOpenLocal={(id, titel) => setAuswahl({ art: 'lokal', id, titel })}
+          />
+        ) : auswahl?.art === 'lokal' ? (
+          <RecipeDetailScreen
+            navigation={navigation as never}
+            route={{ key: `embedded-lokal-${auswahl.id}`, name: 'RecipeDetail', params: { recipeId: auswahl.id, title: auswahl.titel } } as never}
+            onClose={() => setAuswahl(null)}
+          />
+        ) : (
+          <View style={styles.leereAuswahl}>
+            <MaterialCommunityIcons name="account-group-outline" size={36} color={colors.muted} />
+            <Text style={{ color: colors.muted, fontSize: 13, marginTop: 10 }}>{t('rezepte.keineAuswahl')}</Text>
+          </View>
+        )}
+      </View>
+    )}
     </View>
   );
 }
@@ -267,7 +354,12 @@ const styles = StyleSheet.create({
   // sollen Thumbnail und Status-Spalte oben ausgerichtet bleiben, statt
   // sich an der Zeilenmitte zu orientieren.
   card: { flexDirection: 'row', alignItems: 'flex-start', padding: 14, marginBottom: 9 },
-  karteInSpalte: { flex: 1 },
+  // Portrait-Raster (hoch, 3 Spalten): Karte mit grossem Bild oben,
+  // Status als schmale Zeile darunter statt der breiten Spalte rechts.
+  karte: { flex: 1, overflow: 'hidden', marginBottom: 9 },
+  karteBild: { width: '100%', aspectRatio: 1.3 },
+  statusKompakt: { paddingHorizontal: 10, paddingVertical: 5 },
+  leereAuswahl: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30 },
   title: { fontSize: 14, fontWeight: '700', flex: 1, minWidth: 0 },
   meta: { fontSize: 10.5, marginTop: 3 },
   forkButton: { paddingHorizontal: 14, paddingVertical: 9 },
