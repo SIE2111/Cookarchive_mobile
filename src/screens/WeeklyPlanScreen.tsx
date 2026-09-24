@@ -254,20 +254,39 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
         </Pressable>
       </View>
 
-      <Pressable
-        onPress={handleAddWeekToShoppingList}
-        disabled={isAddingToList}
-        style={[styles.addAllButton, { backgroundColor: gradient[0], borderRadius: radius.md, opacity: isAddingToList ? 0.7 : 1 }]}
-      >
-        {isAddingToList ? (
-          <ActivityIndicator color="#fff" size="small" />
-        ) : (
-          <>
-            <MaterialCommunityIcons name="cart-plus" size={16} color="#fff" />
-            <Text style={styles.addAllButtonText}>{t('wochenplan.zutatenDerWoche')}</Text>
-          </>
-        )}
-      </Pressable>
+      <View style={{ flexDirection: 'row', gap: 10 }}>
+        <Pressable
+          onPress={() => holeVorschlag('woche', startKey, endKey)}
+          disabled={vorschlagLaeuft !== null}
+          style={[
+            styles.addAllButton,
+            { flex: 1, backgroundColor: colors.card, borderRadius: radius.md, opacity: vorschlagLaeuft !== null ? 0.7 : 1 },
+          ]}
+        >
+          {vorschlagLaeuft === 'woche' ? (
+            <ActivityIndicator color={gradient[0]} size="small" />
+          ) : (
+            <>
+              <MaterialCommunityIcons name="auto-fix" size={16} color={gradient[0]} />
+              <Text style={[styles.addAllButtonText, { color: gradient[0] }]}>{t('wochenplan.wocheVorschlagen')}</Text>
+            </>
+          )}
+        </Pressable>
+        <Pressable
+          onPress={handleAddWeekToShoppingList}
+          disabled={isAddingToList}
+          style={[styles.addAllButton, { flex: 1, backgroundColor: gradient[0], borderRadius: radius.md, opacity: isAddingToList ? 0.7 : 1 }]}
+        >
+          {isAddingToList ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <>
+              <MaterialCommunityIcons name="cart-plus" size={16} color="#fff" />
+              <Text style={styles.addAllButtonText}>{t('wochenplan.zutatenDerWoche')}</Text>
+            </>
+          )}
+        </Pressable>
+      </View>
 
       {error && <Text style={{ color: '#DC2626', fontSize: 12, marginTop: 10 }}>{error}</Text>}
 
@@ -287,9 +306,23 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
             const isToday = toDateKey(new Date()) === dateKey;
             return (
               <View key={dateKey} style={[styles.daySection, istTablet && styles.tagInSpalte]}>
-                <Text style={[styles.dayLabel, { color: isToday ? gradient[0] : colors.text }]}>
-                  {t(WEEKDAY_KEYS[i])}, {formatShort(day)}
-                </Text>
+                <View style={styles.dayLabelRow}>
+                  <Text style={[styles.dayLabel, { color: isToday ? gradient[0] : colors.text }]}>
+                    {t(WEEKDAY_KEYS[i])}, {formatShort(day)}
+                  </Text>
+                  <Pressable
+                    onPress={() => holeVorschlag(dateKey, dateKey, dateKey)}
+                    disabled={vorschlagLaeuft !== null}
+                    hitSlop={8}
+                    style={{ opacity: vorschlagLaeuft !== null ? 0.5 : 1 }}
+                  >
+                    {vorschlagLaeuft === dateKey ? (
+                      <ActivityIndicator color={gradient[0]} size="small" />
+                    ) : (
+                      <MaterialCommunityIcons name="auto-fix" size={17} color={gradient[0]} />
+                    )}
+                  </Pressable>
+                </View>
                 {MEAL_SLOTS.map((slot) => {
                   const slotEntries = entriesFor(dateKey, slot.key);
                   const haupt = slotEntries.find((e) => e.position === 0);
