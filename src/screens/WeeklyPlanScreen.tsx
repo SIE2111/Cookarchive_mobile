@@ -40,6 +40,11 @@ interface RecipeSummary {
   title: string;
 }
 
+// Immer dasselbe Gold, unabhaengig von der gewaehlten Akzentfarbe
+// (23.09.2026) - derselbe Ton wie die Standard-Akzentfarbe "gelb" im
+// Theme (#EAB308), damit der Zauberstab bei jeder Farbwahl gleich aussieht.
+const ZAUBERSTAB_GOLD = '#EAB308';
+
 function toDateKey(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
@@ -264,11 +269,11 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
           ]}
         >
           {vorschlagLaeuft === 'woche' ? (
-            <ActivityIndicator color={gradient[0]} size="small" />
+            <ActivityIndicator color={ZAUBERSTAB_GOLD} size="small" />
           ) : (
             <>
-              <MaterialCommunityIcons name="auto-fix" size={16} color={gradient[0]} />
-              <Text style={[styles.addAllButtonText, { color: gradient[0] }]}>{t('wochenplan.wocheVorschlagen')}</Text>
+              <MaterialCommunityIcons name="auto-fix" size={16} color={ZAUBERSTAB_GOLD} />
+              <Text style={[styles.addAllButtonText, { color: ZAUBERSTAB_GOLD }]}>{t('wochenplan.wocheVorschlagen')}</Text>
             </>
           )}
         </Pressable>
@@ -317,9 +322,9 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
                     style={{ opacity: vorschlagLaeuft !== null ? 0.5 : 1 }}
                   >
                     {vorschlagLaeuft === dateKey ? (
-                      <ActivityIndicator color={gradient[0]} size="small" />
+                      <ActivityIndicator color={ZAUBERSTAB_GOLD} size="small" />
                     ) : (
-                      <MaterialCommunityIcons name="auto-fix" size={17} color={gradient[0]} />
+                      <MaterialCommunityIcons name="auto-fix" size={17} color={ZAUBERSTAB_GOLD} />
                     )}
                   </Pressable>
                 </View>
