@@ -6,6 +6,7 @@ import { useUebersetzung } from '../i18n';
 import { useAuth } from '../context/AuthContext';
 import { api, ApiError } from '../api/client';
 import MarkenZeile from '../components/MarkenZeile';
+import * as Application from 'expo-application';
 import { useFocusEffect, type CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
@@ -89,17 +90,17 @@ export default function ProfileScreen({ navigation }: Props) {
   const { t } = useUebersetzung();
   const { signOut, session } = useAuth();
   // Nur Major.Minor, wie bei HomeArchive AI's eigenem "v2.4" im Profil.
-  // Versionsnummer ABSICHTLICH noch nicht angezeigt (23.09.2026): Sie
-  // braeuchte expo-application, ein natives Modul - das ist im aktuell
-  // per EAS Update ausgelieferten JS-Bundle noch nicht sicher, weil der
-  // dazu passende native Build (siehe Versionierungs-Leitfaden) noch
-  // aussteht. Ein blosser Import eines fehlenden nativen Moduls kann auf
-  // manchen Geraeten schon selbst abstuerzen, ein try/catch um die
-  // Nutzung kommt dafuer zu spaet. Sobald der echte 1.0-Build gelaufen
-  // ist: import * as Application from 'expo-application' wieder oben
-  // ergaenzen und hier versionAnzeige = Application.nativeApplicationVersion
-  // ?.split('.').slice(0, 2).join('.') ?? null setzen.
-  const versionAnzeige: string | null = null;
+  // nativeApplicationVersion statt app.json: Bei appVersionSource "remote"
+  // (siehe eas.json) ist app.json nicht mehr die verbindliche Quelle, das
+  // hier eingebettete Ergebnis des jeweiligen Builds schon. Ab jetzt
+  // wieder aktiv (23.09.2026) - der naechste Build bindet expo-application
+  // fest ein, das Risiko eines fehlenden nativen Moduls entfaellt damit.
+  let versionAnzeige: string | null = null;
+  try {
+    versionAnzeige = Application.nativeApplicationVersion?.split('.').slice(0, 2).join('.') ?? null;
+  } catch {
+    versionAnzeige = null;
+  }
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
