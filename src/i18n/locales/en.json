@@ -89,7 +89,8 @@
     "ordnerLeer": "This folder is still empty.",
     "nochKeine": "No recipes yet – add your first one with the button below.",
     "keineEigenen": "No recipes of your own yet – imported, unchanged starter recipes are hidden here.",
-    "vonMitglied": "From {name}"
+    "vonMitglied": "From {name}",
+    "keineAuswahl": "Select a recipe from the list"
   },
   "starter": {
     "titel": "Starter recipes",

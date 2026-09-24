@@ -89,7 +89,8 @@
     "ordnerLeer": "Dieser Ordner ist noch leer.",
     "nochKeine": "Noch keine Rezepte – leg dein erstes über den Button unten an.",
     "keineEigenen": "Noch keine eigenen Rezepte – importierte, unveränderte Starter-Rezepte werden hier ausgeblendet.",
-    "vonMitglied": "Von {name}"
+    "vonMitglied": "Von {name}",
+    "keineAuswahl": "Rezept aus der Liste wählen"
   },
   "starter": {
     "titel": "Starter-Rezepte",

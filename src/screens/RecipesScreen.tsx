@@ -24,6 +24,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { MainTabParamList, MainStackParamList } from '../navigation/AppNavigator';
 import { useLayout } from '../utils/layout';
+import RecipeDetailScreen from './RecipeDetailScreen';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabParamList, 'Rezepte'>,
@@ -69,8 +70,22 @@ interface FolderSummary {
 
 export default function RecipesScreen({ navigation, route }: Props) {
   const { colors, gradient, radius } = useTheme();
-  const { istTablet, inhaltsBreiteZweispaltig } = useLayout();
+  const { istTablet, quer, hoch, inhaltsBreiteZweispaltig } = useLayout();
   const { t } = useUebersetzung();
+  // iPad quer: eingebettetes Detail statt Vollbild-Navigation (siehe
+  // RecipeDetailScreen "onClose"). Bei Verlassen des Querformats oder
+  // Tabs bleibt die Auswahl bestehen, wird aber ohnehin nicht mehr
+  // gerendert, solange quer nicht (mehr) zutrifft.
+  const [ausgewaehlteId, setAusgewaehlteId] = useState<string | null>(null);
+  const [ausgewaehlterTitel, setAusgewaehlterTitel] = useState('');
+  const oeffneRezept = (id: string, title: string) => {
+    if (quer) {
+      setAusgewaehlteId(id);
+      setAusgewaehlterTitel(title);
+    } else {
+      navigation.navigate('RecipeDetail', { recipeId: id, title });
+    }
+  };
   const [recipes, setRecipes] = useState<RecipeSummary[]>([]);
 
   const toggleFavorit = async (id: string) => {
@@ -230,7 +245,17 @@ export default function RecipesScreen({ navigation, route }: Props) {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}>
+    // "quer": Liste links in fester Breite, Detail rechts eingebettet.
+    // Sonst (Handy, iPad hoch) bleibt es bei der einen, vollen Spalte -
+    // "container" behaelt dafuer sein flex:1 und wird nicht extra breit.
+    <View style={{ flex: 1, flexDirection: quer ? 'row' : 'column' }}>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: colors.bg },
+        quer && { flex: undefined, width: 400, borderRightWidth: 1, borderRightColor: colors.cardBorder },
+      ]}
+    >
       <View style={[styles.searchBar, { backgroundColor: colors.card, borderRadius: radius.md }]}>
         <MaterialCommunityIcons name="magnify" size={17} color={colors.muted} />
         <TextInput
@@ -388,10 +413,12 @@ export default function RecipesScreen({ navigation, route }: Props) {
         keyExtractor={(item) => item.id}
         // key MUSS sich mit der Spaltenzahl aendern: React Native lehnt es
         // ab, numColumns an einer bestehenden Liste zu aendern, und wirft
-        // beim Drehen des Tablets sonst einen Fehler.
-        key={`spalten-${istTablet ? 2 : 1}`}
-        numColumns={istTablet ? 2 : 1}
-        columnWrapperStyle={istTablet ? { gap: 9 } : undefined}
+        // beim Drehen des Tablets sonst einen Fehler. Nur "hoch" bekommt
+        // das 3-spaltige Raster - "quer" bleibt einspaltig, weil dort die
+        // Liste nur die linke Haelfte einnimmt (Detail rechts daneben).
+        key={`spalten-${hoch ? 3 : 1}`}
+        numColumns={hoch ? 3 : 1}
+        columnWrapperStyle={hoch ? { gap: 9 } : undefined}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
         // Nimmt den restlichen Platz auf, damit er nicht an die
         // Filterleisten darueber verteilt wird (siehe styles.folderBar).
@@ -414,10 +441,50 @@ export default function RecipesScreen({ navigation, route }: Props) {
             </Text>
           ) : null
         }
-        renderItem={({ item }) => (
+        renderItem={({ item }) =>
+          hoch ? (
+            <Pressable
+              onPress={() => oeffneRezept(item.id, item.title)}
+              style={[styles.recipeKarte, { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.cardBorder }]}
+            >
+              <View>
+                {item.cover_image_url ? (
+                  <Image source={{ uri: item.cover_image_url }} style={styles.karteBild} />
+                ) : (
+                  <View style={[styles.karteBild, styles.karteBildPlatzhalter, { backgroundColor: colors.bg }]}>
+                    <MaterialCommunityIcons name="silverware-fork-knife" size={22} color={colors.muted} />
+                  </View>
+                )}
+                <Pressable
+                  onPress={() => toggleFavorit(item.id)}
+                  hitSlop={10}
+                  style={[styles.karteHerz, { backgroundColor: colors.bg }]}
+                >
+                  <MaterialCommunityIcons
+                    name={item.is_favorite ? 'heart' : 'heart-outline'}
+                    size={16}
+                    color={item.is_favorite ? gradient[0] : colors.muted}
+                  />
+                </Pressable>
+              </View>
+              <View style={{ padding: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                  <Text style={[styles.recipeTitle, { color: colors.text }]} numberOfLines={1}>{item.title}</Text>
+                  <MaterialCommunityIcons name={SOURCE_ICONS[item.source_type] ?? 'file-outline'} size={12} color={colors.muted} />
+                </View>
+                {item.tags && item.tags.length > 0 && (
+                  <Text style={[styles.recipeTags, { color: colors.muted }]} numberOfLines={1}>{item.tags.join(' · ')}</Text>
+                )}
+              </View>
+            </Pressable>
+          ) : (
           <Pressable
-            onPress={() => navigation.navigate('RecipeDetail', { recipeId: item.id, title: item.title })}
-            style={[styles.recipeRow, istTablet && styles.karteInSpalte, { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.cardBorder }]}
+            onPress={() => oeffneRezept(item.id, item.title)}
+            style={[
+              styles.recipeRow,
+              ausgewaehlteId === item.id && quer && { borderColor: gradient[0], borderWidth: 1.5 },
+              { backgroundColor: colors.card, borderRadius: radius.md, borderWidth: 1, borderColor: colors.cardBorder },
+            ]}
           >
             {item.cover_image_url ? (
               <Image source={{ uri: item.cover_image_url }} style={[styles.thumbnail, { borderRadius: radius.sm }]} />
@@ -460,7 +527,8 @@ export default function RecipesScreen({ navigation, route }: Props) {
               />
             </Pressable>
           </Pressable>
-        )}
+          )
+        }
       />
 
       <ScanFab />
@@ -494,6 +562,29 @@ export default function RecipesScreen({ navigation, route }: Props) {
         </View>
       </Modal>
     </View>
+    {quer && (
+      <View style={{ flex: 1, backgroundColor: colors.bg }}>
+        {ausgewaehlteId ? (
+          <RecipeDetailScreen
+            // Dieselbe echte navigation wie oben - "Bearbeiten"/"Kochen"
+            // aus der eingebetteten Ansicht sollen weiterhin richtig
+            // ueber den Stack (Vollbild) oeffnen. Nur route ist ein
+            // minimales, selbst gebautes Objekt: RecipeDetailScreen liest
+            // ausschliesslich route.params.recipeId, kein Bezug zu einer
+            // echten Navigationsposition noetig.
+            navigation={navigation as never}
+            route={{ key: `embedded-${ausgewaehlteId}`, name: 'RecipeDetail', params: { recipeId: ausgewaehlteId, title: ausgewaehlterTitel } } as never}
+            onClose={() => setAusgewaehlteId(null)}
+          />
+        ) : (
+          <View style={styles.leereAuswahl}>
+            <MaterialCommunityIcons name="silverware-fork-knife" size={36} color={colors.muted} />
+            <Text style={{ color: colors.muted, fontSize: 13, marginTop: 10 }}>{t('rezepte.keineAuswahl')}</Text>
+          </View>
+        )}
+      </View>
+    )}
+    </View>
   );
 }
 
@@ -522,7 +613,14 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 13, textAlign: 'center', marginTop: 40, lineHeight: 20 },
   recipeRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 10, marginBottom: 9 },
   // In der zweispaltigen Ansicht teilen sich die Karten die Zeile.
-  karteInSpalte: { flex: 1 },
+  // Portrait-Raster (hoch, 3 Spalten): Karte mit grossem Bild oben statt
+  // der schmalen Zeile - bei drei nebeneinander waere eine Zeile mit
+  // 46x46-Vorschaubild kaum noch als Bild erkennbar.
+  recipeKarte: { flex: 1, overflow: 'hidden', marginBottom: 9 },
+  karteBild: { width: '100%', aspectRatio: 1.3 },
+  karteBildPlatzhalter: { alignItems: 'center', justifyContent: 'center' },
+  karteHerz: { position: 'absolute', top: 6, right: 6, padding: 5, borderRadius: 14 },
+  leereAuswahl: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30 },
   thumbnail: { width: 46, height: 46 },
   thumbnailPlaceholder: { width: 46, height: 46 },
   recipeTitle: { fontSize: 14, fontWeight: '700', flexShrink: 1 },
