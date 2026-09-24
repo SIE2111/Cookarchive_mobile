@@ -6,6 +6,7 @@ import { useUebersetzung } from '../i18n';
 import { useAuth } from '../context/AuthContext';
 import { api, ApiError } from '../api/client';
 import MarkenZeile from '../components/MarkenZeile';
+import AppSettingsScreen from './AppSettingsScreen';
 import * as Application from 'expo-application';
 import { useFocusEffect, type CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -86,7 +87,7 @@ const ACCENT_OPTIONS: { key: AccentColor; title: string; color: string }[] = [
 
 export default function ProfileScreen({ navigation }: Props) {
   const { colors, gradient, radius, theme, setTheme } = useTheme();
-  const { inhaltsBreite } = useLayout();
+  const { inhaltsBreite, quer } = useLayout();
   const { t } = useUebersetzung();
   const { signOut, session } = useAuth();
   // Nur Major.Minor, wie bei HomeArchive AI's eigenem "v2.4" im Profil.
@@ -248,9 +249,16 @@ export default function ProfileScreen({ navigation }: Props) {
   };
 
   return (
+    // "quer": Profilmenue links (max. 400pt), Einstellungen-Bildschirm
+    // rechts eingebettet - wie bei den anderen Bildschirmen ist
+    // AppSettingsScreen dafuer ideal, weil es schon KEINE eigenen
+    // navigation/route-Props braucht (laedt seine Daten selbst).
+    <View style={{ flex: 1, flexDirection: quer ? 'row' : 'column' }}>
     <ScrollView
       keyboardShouldPersistTaps="handled"
-      keyboardDismissMode="on-drag" style={{ backgroundColor: colors.bg }} contentContainerStyle={[styles.container, inhaltsBreite]}>
+      keyboardDismissMode="on-drag"
+      style={[{ backgroundColor: colors.bg }, quer && { width: 400, borderRightWidth: 1, borderRightColor: colors.cardBorder }]}
+      contentContainerStyle={[styles.container, inhaltsBreite]}>
       <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 4 }]}>{t('profil.name')}</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 4 }}>
         <TextInput
@@ -387,15 +395,17 @@ export default function ProfileScreen({ navigation }: Props) {
           (23.09.2026) - sieben Stueck verstreut zwischen Farbwahl, Links
           und Konto-Aktionen waren schon sehr unuebersichtlich. */}
       <Pressable
-        onPress={() => navigation.getParent()?.navigate('AppSettings')}
-        style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}
+        onPress={() => {
+          if (!quer) navigation.getParent()?.navigate('AppSettings');
+        }}
+        style={[styles.row, { backgroundColor: quer ? colors.bg : colors.card, borderRadius: radius.md }, quer && { borderWidth: 1, borderColor: gradient[0] }]}
       >
         <MaterialCommunityIcons name="tune-variant" size={20} color={colors.muted} style={styles.rowIcon} />
         <View style={{ flex: 1 }}>
           <Text style={[styles.rowTitle, { color: colors.text }]}>{t('profil.einstellungen')}</Text>
           <Text style={[styles.rowSubtitle, { color: colors.muted }]}>{t('profil.einstellungenSub')}</Text>
         </View>
-        <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>
+        {!quer && <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>}
       </Pressable>
 
       {/* "Vorlesen & Stimme" jetzt oberhalb von Server-Sync (22.09.2026) -
@@ -579,6 +589,12 @@ export default function ProfileScreen({ navigation }: Props) {
         </View>
       </Modal>
     </ScrollView>
+    {quer && (
+      <View style={{ flex: 1, backgroundColor: colors.bg }}>
+        <AppSettingsScreen />
+      </View>
+    )}
+    </View>
   );
 }
 
