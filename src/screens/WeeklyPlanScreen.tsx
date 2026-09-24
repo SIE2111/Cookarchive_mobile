@@ -38,6 +38,8 @@ interface PlanEntry {
 interface RecipeSummary {
   id: string;
   title: string;
+  cover_image_url: string | null;
+  tags: string[] | null;
 }
 
 // Immer dasselbe Gold, unabhaengig von der gewaehlten Akzentfarbe
@@ -89,6 +91,11 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
   const [pickerTarget, setPickerTarget] = useState<{ dateKey: string; slot: MealSlot; position?: number } | null>(null);
   const [allRecipes, setAllRecipes] = useState<RecipeSummary[]>([]);
   const [recipeSearch, setRecipeSearch] = useState('');
+  // Kategorie-Filter NUR innerhalb dieses Auswahl-Dialogs - eigener,
+  // lokaler Zustand statt Navigations-Parameter wie im normalen
+  // Rezepte-Tab, weil der Dialog ja ueber dem Wochenplan schwebt und
+  // nicht selbst eine Route ist. Wird beim Schliessen zurueckgesetzt.
+  const [pickerKategorie, setPickerKategorie] = useState<string | null>(null);
   const [defaultServings, setDefaultServings] = useState(4);
   const [servingsInput, setServingsInput] = useState('4');
 
@@ -241,9 +248,12 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
     }
   };
 
-  const filteredRecipes = recipeSearch.trim()
-    ? allRecipes.filter((r) => r.title.toLowerCase().includes(recipeSearch.trim().toLowerCase()))
-    : allRecipes;
+  const pickerKategorien = Array.from(new Set(allRecipes.flatMap((r) => r.tags ?? []))).sort((a, b) =>
+    a.localeCompare(b, 'de'),
+  );
+  const filteredRecipes = allRecipes
+    .filter((r) => !recipeSearch.trim() || r.title.toLowerCase().includes(recipeSearch.trim().toLowerCase()))
+    .filter((r) => !pickerKategorie || r.tags?.includes(pickerKategorie));
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
@@ -429,7 +439,13 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
         <View style={[styles.pickerContainer, { backgroundColor: colors.bg }]}>
           <View style={styles.pickerHeader}>
             <Text style={[styles.pickerTitle, { color: colors.text }]}>{t('wochenplan.rezeptWaehlen')}</Text>
-            <Pressable onPress={() => setPickerTarget(null)} hitSlop={10}>
+            <Pressable
+              onPress={() => {
+                setPickerTarget(null);
+                setPickerKategorie(null);
+              }}
+              hitSlop={10}
+            >
               <MaterialCommunityIcons name="close" size={24} color={colors.text} />
             </Pressable>
           </View>
@@ -449,6 +465,27 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
             value={recipeSearch}
             onChangeText={setRecipeSearch}
           />
+          {pickerKategorien.length > 0 && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 8, paddingVertical: 4 }}
+              style={{ flexGrow: 0, marginBottom: 8 }}
+            >
+              {pickerKategorien.map((kat) => {
+                const aktiv = pickerKategorie === kat;
+                return (
+                  <Pressable
+                    key={kat}
+                    onPress={() => setPickerKategorie(aktiv ? null : kat)}
+                    style={[styles.pickerChip, { backgroundColor: aktiv ? gradient[0] : colors.card, borderRadius: radius.sm }]}
+                  >
+                    <Text style={{ color: aktiv ? '#fff' : colors.text, fontSize: 12.5, fontWeight: '600' }}>{kat}</Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          )}
           <ScrollView>
             {filteredRecipes.map((r) => (
               <Pressable
@@ -456,7 +493,14 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
                 onPress={() => assignRecipe(r.id)}
                 style={[styles.pickerRow, { backgroundColor: colors.card, borderRadius: radius.sm }]}
               >
-                <Text style={{ color: colors.text, fontSize: 13.5 }}>{r.title}</Text>
+                {r.cover_image_url ? (
+                  <Image source={{ uri: r.cover_image_url }} style={[styles.pickerThumb, { borderRadius: radius.sm }]} />
+                ) : (
+                  <View style={[styles.pickerThumb, styles.pickerThumbPlatzhalter, { borderRadius: radius.sm, backgroundColor: colors.bg }]}>
+                    <MaterialCommunityIcons name="silverware-fork-knife" size={16} color={colors.muted} />
+                  </View>
+                )}
+                <Text style={{ color: colors.text, fontSize: 13.5, flex: 1 }}>{r.title}</Text>
               </Pressable>
             ))}
             {filteredRecipes.length === 0 && (
