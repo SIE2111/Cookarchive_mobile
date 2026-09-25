@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Image, Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, ScrollView, Image, Pressable, StyleSheet, ActivityIndicator, Alert, Modal, TextInput } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
@@ -40,6 +40,7 @@ interface PublicRecipeDetail {
   // Nur gesetzt, wenn is_own - die id der PRIVATEN Quelle, die
   // /pool/unpublish erwartet.
   original_recipe_id?: string | null;
+  owner_display_name?: string | null;
 }
 
 const LEVELS: { key: HaubenLevel; label: string; hats: number }[] = [
@@ -81,6 +82,28 @@ export default function PoolRecipeDetailScreen({ route, navigation, onClose, onO
   // (Fallback-Ordner unbekannt) und das trotzdem ein Erfolg ist.
   const [justForked, setJustForked] = useState(false);
   const [justForkedFolder, setJustForkedFolder] = useState<string | null>(null);
+  // Nachricht an den Einsteller (23.09.2026) - eigenes kleines Modal statt
+  // eines vollen Postfachs: Text eingeben, Server verschickt per E-Mail
+  // (siehe /pool/{id}/contact-owner), reply_to zeigt auf den Absender.
+  const [nachrichtOffen, setNachrichtOffen] = useState(false);
+  const [nachrichtText, setNachrichtText] = useState('');
+  const [nachrichtSendet, setNachrichtSendet] = useState(false);
+
+  const sendeNachricht = async () => {
+    const text = nachrichtText.trim();
+    if (!text) return;
+    setNachrichtSendet(true);
+    try {
+      await api.post(`/pool/${publicRecipeId}/contact-owner`, { message: text });
+      setNachrichtOffen(false);
+      setNachrichtText('');
+      Alert.alert(t('sonstiges.nachrichtGesendetTitel'), t('sonstiges.nachrichtGesendetText'));
+    } catch (err) {
+      Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('sonstiges.nachrichtFehlgeschlagen'));
+    } finally {
+      setNachrichtSendet(false);
+    }
+  };
 
   const load = async (wantedLevel: HaubenLevel) => {
     try {
@@ -251,6 +274,11 @@ export default function PoolRecipeDetailScreen({ route, navigation, onClose, onO
       {recipe.tags && recipe.tags.length > 0 && (
         <Text style={[styles.meta, { color: colors.muted }]}>{recipe.tags.join(' · ')}</Text>
       )}
+      {!recipe.is_own && recipe.owner_display_name && (
+        <Text style={[styles.meta, { color: colors.muted }]}>
+          {t('rezepte.vonMitglied', { name: recipe.owner_display_name })}
+        </Text>
+      )}
 
       {recipe.is_own ? (
         <Pressable
@@ -293,6 +321,15 @@ export default function PoolRecipeDetailScreen({ route, navigation, onClose, onO
           ) : (
             <Text style={styles.forkButtonText}>{t('sonstiges.inKochbuchUebernehmen')}</Text>
           )}
+        </Pressable>
+      )}
+
+      {!recipe.is_own && (
+        <Pressable onPress={() => setNachrichtOffen(true)} style={styles.nachrichtLink}>
+          <MaterialCommunityIcons name="email-outline" size={15} color={colors.muted} />
+          <Text style={{ color: colors.muted, fontSize: 12.5, fontWeight: '600' }}>
+            {t('sonstiges.nachrichtSchreiben')}
+          </Text>
         </Pressable>
       )}
 
@@ -357,6 +394,48 @@ export default function PoolRecipeDetailScreen({ route, navigation, onClose, onO
         </View>
       ))}
     </ScrollView>
+
+    <Modal visible={nachrichtOffen} transparent animationType="fade" onRequestClose={() => setNachrichtOffen(false)}>
+      <View style={styles.modalUeberlagerung}>
+        <View style={[styles.modalKarte, { backgroundColor: colors.card, borderRadius: radius.md }]}>
+          <Text style={[styles.modalTitle, { color: colors.text }]}>{t('sonstiges.nachrichtSchreiben')}</Text>
+          <Text style={[styles.meta, { color: colors.muted, marginBottom: 12 }]}>
+            {t('sonstiges.nachrichtHinweis', { titel: recipe.title })}
+          </Text>
+          <TextInput
+            value={nachrichtText}
+            onChangeText={setNachrichtText}
+            placeholder={t('sonstiges.nachrichtPlatzhalter')}
+            placeholderTextColor={colors.muted}
+            multiline
+            numberOfLines={5}
+            style={[styles.nachrichtInput, { backgroundColor: colors.bg, color: colors.text, borderRadius: radius.sm }]}
+          />
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
+            <Pressable
+              onPress={() => setNachrichtOffen(false)}
+              style={[styles.modalKnopf, { borderColor: colors.muted, borderWidth: 1, borderRadius: radius.sm }]}
+            >
+              <Text style={{ color: colors.muted, fontWeight: '600' }}>{t('allgemein.abbrechen')}</Text>
+            </Pressable>
+            <Pressable
+              onPress={sendeNachricht}
+              disabled={nachrichtSendet || !nachrichtText.trim()}
+              style={[
+                styles.modalKnopf,
+                { backgroundColor: gradient[0], borderRadius: radius.sm, opacity: !nachrichtText.trim() ? 0.5 : 1 },
+              ]}
+            >
+              {nachrichtSendet ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={{ color: '#fff', fontWeight: '700' }}>{t('sonstiges.senden')}</Text>
+              )}
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
     </>
   );
 }
@@ -365,6 +444,12 @@ const styles = StyleSheet.create({
   eingebetterHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, paddingVertical: 12, borderBottomWidth: 1 },
   eingebetterTitel: { fontSize: 15.5, fontWeight: '700', flex: 1, marginRight: 12 },
   eingebetterSchliessen: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  nachrichtLink: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'center', marginTop: 10, marginBottom: 4, padding: 6 },
+  modalUeberlagerung: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 24 },
+  modalKarte: { padding: 20 },
+  modalTitle: { fontSize: 15.5, fontWeight: '700', marginBottom: 6 },
+  modalKnopf: { flex: 1, height: 46, alignItems: 'center', justifyContent: 'center' },
+  nachrichtInput: { minHeight: 100, paddingHorizontal: 12, paddingVertical: 10, fontSize: 13.5, textAlignVertical: 'top' },
   container: { padding: 18, paddingBottom: 60 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   cover: { width: '100%', height: 190, marginBottom: 14 },

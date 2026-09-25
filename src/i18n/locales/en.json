@@ -719,7 +719,14 @@
     "introHaushaltTitel": "Cook together",
     "introHaushaltText": "Build a shared collection with your household, or discover new recipes in the Community Pool.",
     "introLosGehts": "Let's go",
-    "kurzeHilfe": "See a quick app tour"
+    "kurzeHilfe": "See a quick app tour",
+    "nachrichtSchreiben": "Write a message",
+    "nachrichtHinweis": "Your message about \"{titel}\" goes by email to the person who posted the recipe. They can reply directly.",
+    "nachrichtPlatzhalter": "Your message …",
+    "nachrichtGesendetTitel": "Message sent",
+    "nachrichtGesendetText": "Your message is on its way.",
+    "nachrichtFehlgeschlagen": "The message could not be sent.",
+    "senden": "Send"
   },
   "uebersetzung": {
     "angebotTitel": "This recipe is written in {sprache}.",

@@ -25,6 +25,9 @@ interface PublicRecipeSummary {
   // Uebernehmen-Knopf entfaellt dann - eine Kopie waere ein Duplikat.
   is_own?: boolean;
   already_forked?: boolean;
+  // Name der Person, die das Rezept eingestellt hat - None bei einem
+  // Konto ohne gesetzten Anzeigenamen.
+  owner_display_name?: string | null;
 }
 
 interface ForkFeedback {
@@ -265,6 +268,11 @@ export default function CommunityPoolScreen() {
                       .filter(Boolean)
                       .join(' · ')}
                   </Text>
+                  {!item.is_own && item.owner_display_name && (
+                    <Text style={[styles.ownerHint, { color: colors.muted }]} numberOfLines={1}>
+                      {t('rezepte.vonMitglied', { name: item.owner_display_name })}
+                    </Text>
+                  )}
                   <View style={{ marginTop: 6, alignItems: 'flex-start' }}>{status(true)}</View>
                 </View>
               </Pressable>
@@ -302,6 +310,11 @@ export default function CommunityPoolScreen() {
                     .filter(Boolean)
                     .join(' · ')}
                 </Text>
+                {!item.is_own && item.owner_display_name && (
+                  <Text style={[styles.ownerHint, { color: colors.muted }]} numberOfLines={1}>
+                    {t('rezepte.vonMitglied', { name: item.owner_display_name })}
+                  </Text>
+                )}
               </View>
               {status(false)}
             </Pressable>
@@ -362,6 +375,7 @@ const styles = StyleSheet.create({
   leereAuswahl: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30 },
   title: { fontSize: 14, fontWeight: '700', flex: 1, minWidth: 0 },
   meta: { fontSize: 10.5, marginTop: 3 },
+  ownerHint: { fontSize: 10, marginTop: 2 },
   forkButton: { paddingHorizontal: 14, paddingVertical: 9 },
   forkButtonText: { color: '#fff', fontWeight: '700', fontSize: 11.5, textAlign: 'right' },
   besitzText: { fontSize: 11, fontWeight: '600', textAlign: 'right' },

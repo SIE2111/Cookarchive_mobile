@@ -719,7 +719,14 @@
     "introHaushaltTitel": "Gemeinsam kochen",
     "introHaushaltText": "Bilde mit deinem Haushalt eine gemeinsame Sammlung, oder entdecke neue Rezepte im Community-Pool.",
     "introLosGehts": "Los geht's",
-    "kurzeHilfe": "Kurze Hilfe zur App ansehen"
+    "kurzeHilfe": "Kurze Hilfe zur App ansehen",
+    "nachrichtSchreiben": "Nachricht schreiben",
+    "nachrichtHinweis": "Deine Nachricht zu „{titel}\" geht per E-Mail an die Person, die das Rezept eingestellt hat. Sie kann direkt darauf antworten.",
+    "nachrichtPlatzhalter": "Deine Nachricht …",
+    "nachrichtGesendetTitel": "Nachricht gesendet",
+    "nachrichtGesendetText": "Deine Nachricht ist unterwegs.",
+    "nachrichtFehlgeschlagen": "Die Nachricht konnte nicht gesendet werden.",
+    "senden": "Senden"
   },
   "uebersetzung": {
     "angebotTitel": "Dieses Rezept ist auf {sprache} verfasst.",
