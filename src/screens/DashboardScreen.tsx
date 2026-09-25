@@ -319,9 +319,9 @@ export default function DashboardScreen({ navigation }: Props) {
         <Text style={styles.dailyBadgeText}>{t('dashboard.rezeptDesTages')}</Text>
       </View>
       {recipeOfTheDay.cover_image_url ? (
-        <Image source={{ uri: recipeOfTheDay.cover_image_url }} style={styles.dailyImage} />
+        <Image source={{ uri: recipeOfTheDay.cover_image_url }} style={[styles.dailyImage, istTablet && styles.dailyImageTablet]} />
       ) : (
-        <LinearGradient colors={gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.dailyImage} />
+        <LinearGradient colors={gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.dailyImage, istTablet && styles.dailyImageTablet]} />
       )}
       <View style={styles.dailyInfo}>
         <Text style={[styles.dailyTitle, { color: colors.text }]} numberOfLines={1}>
@@ -533,6 +533,11 @@ const styles = StyleSheet.create({
   dailyBadge: { position: 'absolute', top: 12, left: 12, zIndex: 1, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
   dailyBadgeText: { color: '#fff', fontSize: 9.5, fontWeight: '700', letterSpacing: 0.4 },
   dailyImage: { width: '100%', height: 118 },
+  // Auf Tablet ist die Karte (inhaltsBreiteZweispaltig, bis 980pt statt
+  // 620pt) deutlich breiter - bei unveraenderter Hoehe wirkt das Foto
+  // gestaucht/zu schmal im Verhaeltnis zur Kartenbreite. Skaliert grob
+  // proportional mit (Breitenverhaeltnis ca. 1,6x).
+  dailyImageTablet: { height: 240 },
   dailyInfo: { paddingHorizontal: 14, paddingVertical: 11 },
   dailyTitle: { fontSize: 15.5, fontWeight: '700' },
   dailyMeta: { fontSize: 11.5, marginTop: 4 },
