@@ -32,6 +32,7 @@ import OnboardingScreen from '../screens/OnboardingScreen';
 import StarterPacksScreen from '../screens/StarterPacksScreen';
 import LanguageSettingsScreen from '../screens/LanguageSettingsScreen';
 import AppSettingsScreen from '../screens/AppSettingsScreen';
+import MyPoolsScreen from '../screens/MyPoolsScreen';
 import StorageSettingsScreen from '../screens/StorageSettingsScreen';
 import PhotoCaptureScreen from '../screens/PhotoCaptureScreen';
 import ManageCategoriesScreen from '../screens/ManageCategoriesScreen';
@@ -92,6 +93,7 @@ export type MainStackParamList = {
   LanguageSettings: undefined;
   StorageSettings: undefined;
   AppSettings: undefined;
+  MyPools: undefined;
   PhotoCapture: undefined;
 };
 
@@ -224,6 +226,7 @@ function MainNavigator() {
       <MainStack.Screen name="ManageCategories" component={ManageCategoriesScreen} options={{ headerShown: false }} />
       <MainStack.Screen name="LanguageSettings" component={LanguageSettingsScreen} options={{ headerShown: false }} />
       <MainStack.Screen name="AppSettings" component={AppSettingsScreen} options={{ title: 'Einstellungen' }} />
+      <MainStack.Screen name="MyPools" component={MyPoolsScreen} options={{ title: 'Meine Pools' }} />
       <MainStack.Screen name="StorageSettings" component={StorageSettingsScreen} options={{ title: 'Speicherort' }} />
       <MainStack.Screen name="PhotoCapture" component={PhotoCaptureScreen} options={{ title: 'Foto erfassen' }} />
     </MainStack.Navigator>
