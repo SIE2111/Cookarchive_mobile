@@ -574,7 +574,9 @@
     "fuerWelcheMahlzeiten": "For which meals?",
     "kategorieOptional": "Category (optional)",
     "alleKategorien": "All",
-    "vorschlagenKnopf": "Suggest"
+    "vorschlagenKnopf": "Suggest",
+    "keineMahlzeitMarkiert": "No meal selected",
+    "keineMahlzeitMarkiertText": "Please select at least breakfast, lunch or dinner."
   },
   "teilen": {
     "rezeptSchicken": "Send recipe",
@@ -764,7 +766,9 @@
     "rezepteBehalten": "Keep",
     "rezepteEntfernen": "Remove too",
     "keineAktivenPools": "No active pools - activate one under \"My Pools\" in your profile.",
-    "teilweiseVeroeffentlicht": "Published in {erfolge} of {gesamt} pools. Error: {fehler}"
+    "teilweiseVeroeffentlicht": "Published in {erfolge} of {gesamt} pools. Error: {fehler}",
+    "keinPoolMarkiert": "No pool selected",
+    "keinPoolMarkiertText": "Please select at least one pool."
   },
   "uebersetzung": {
     "angebotTitel": "This recipe is written in {sprache}.",

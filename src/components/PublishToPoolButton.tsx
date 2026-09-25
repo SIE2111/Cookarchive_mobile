@@ -83,7 +83,10 @@ export default function PublishToPoolButton({
   };
 
   const veroeffentlicheAusgewaehlte = async () => {
-    if (ausgewaehlteIds.size === 0) return;
+    if (ausgewaehlteIds.size === 0) {
+      Alert.alert(t('sonstiges.keinPoolMarkiert'), t('sonstiges.keinPoolMarkiertText'));
+      return;
+    }
     setIsPublishing(true);
     const ziele = Array.from(ausgewaehlteIds);
     try {
@@ -265,7 +268,7 @@ export default function PublishToPoolButton({
             </Pressable>
             <Pressable
               onPress={veroeffentlicheAusgewaehlte}
-              disabled={isPublishing || ausgewaehlteIds.size === 0}
+              disabled={isPublishing}
               style={[
                 styles.modalKnopf,
                 { backgroundColor: gradient[0], borderRadius: radius.sm, opacity: ausgewaehlteIds.size === 0 ? 0.5 : 1 },

@@ -253,22 +253,28 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
   // ob es der Wochen- oder ein Tages-Knopf war (fuer den Ladezustand am
   // jeweiligen Knopf), "von"/"bis" den Zeitraum.
   const [vorschlagDialog, setVorschlagDialog] = useState<{ kennung: string; von: string; bis: string } | null>(null);
-  const [dialogMahlzeiten, setDialogMahlzeiten] = useState<Set<string>>(
-    new Set(['fruehstueck', 'mittag', 'abend']),
-  );
+  // Leer statt "alle drei vormarkiert" (23.09.2026) - bei mehreren
+  // Optionen soll aktiv ausgewaehlt werden, nicht abgewaehlt. Nur bei
+  // GENAU EINER Option (hier: nie der Fall, es gibt immer drei
+  // Mahlzeiten zur Wahl) waere eine Vormarkierung die Ausnahme.
+  const [dialogMahlzeiten, setDialogMahlzeiten] = useState<Set<string>>(new Set());
   const [dialogKategorie, setDialogKategorie] = useState<string | null>(null);
   const dialogKategorien = Array.from(new Set(allRecipes.flatMap((r) => r.tags ?? []))).sort((a, b) =>
     a.localeCompare(b, 'de'),
   );
 
   const oeffneVorschlagDialog = (kennung: string, von: string, bis: string) => {
-    setDialogMahlzeiten(new Set(['fruehstueck', 'mittag', 'abend']));
+    setDialogMahlzeiten(new Set());
     setDialogKategorie(null);
     setVorschlagDialog({ kennung, von, bis });
   };
 
   const bestaetigeVorschlagDialog = () => {
-    if (!vorschlagDialog || dialogMahlzeiten.size === 0) return;
+    if (!vorschlagDialog) return;
+    if (dialogMahlzeiten.size === 0) {
+      Alert.alert(t('wochenplan.keineMahlzeitMarkiert'), t('wochenplan.keineMahlzeitMarkiertText'));
+      return;
+    }
     const { kennung, von, bis } = vorschlagDialog;
     setVorschlagDialog(null);
     holeVorschlag(kennung, von, bis, Array.from(dialogMahlzeiten), dialogKategorie);
@@ -611,7 +617,6 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
 
             <Pressable
               onPress={bestaetigeVorschlagDialog}
-              disabled={dialogMahlzeiten.size === 0}
               style={[
                 styles.dialogBestaetigen,
                 { backgroundColor: gradient[0], borderRadius: radius.sm, opacity: dialogMahlzeiten.size === 0 ? 0.5 : 1 },

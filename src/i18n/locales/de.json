@@ -574,7 +574,9 @@
     "fuerWelcheMahlzeiten": "Für welche Mahlzeiten?",
     "kategorieOptional": "Kategorie (optional)",
     "alleKategorien": "Alle",
-    "vorschlagenKnopf": "Vorschlagen"
+    "vorschlagenKnopf": "Vorschlagen",
+    "keineMahlzeitMarkiert": "Keine Mahlzeit ausgewählt",
+    "keineMahlzeitMarkiertText": "Bitte mindestens Frühstück, Mittag oder Abend markieren."
   },
   "teilen": {
     "rezeptSchicken": "Rezept schicken",
@@ -764,7 +766,9 @@
     "rezepteBehalten": "Behalten",
     "rezepteEntfernen": "Auch entfernen",
     "keineAktivenPools": "Keine aktiven Pools - unter \"Meine Pools\" im Profil einen aktivieren.",
-    "teilweiseVeroeffentlicht": "In {erfolge} von {gesamt} Pools veröffentlicht. Fehler: {fehler}"
+    "teilweiseVeroeffentlicht": "In {erfolge} von {gesamt} Pools veröffentlicht. Fehler: {fehler}",
+    "keinPoolMarkiert": "Kein Pool ausgewählt",
+    "keinPoolMarkiertText": "Bitte mindestens einen Pool markieren."
   },
   "uebersetzung": {
     "angebotTitel": "Dieses Rezept ist auf {sprache} verfasst.",
