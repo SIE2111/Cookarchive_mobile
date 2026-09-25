@@ -39,6 +39,10 @@ export default function HouseholdScreen() {
   const [newHouseholdName, setNewHouseholdName] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [inviteCode, setInviteCode] = useState<string | null>(null);
+  // Vom Server fertig zusammengebaut, inkl. App-Store-Links (23.09.2026,
+  // "gleiche Logik" wie bei Pools) - lieber das verwenden als hier lokal
+  // einen zweiten, staendig veraltenden Text zu pflegen.
+  const [inviteShareText, setInviteShareText] = useState<string | null>(null);
   const [inviteName, setInviteName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [invites, setInvites] = useState<InviteListItem[]>([]);
@@ -102,12 +106,13 @@ export default function HouseholdScreen() {
     }
     setIsBusy(true);
     try {
-      const invite = await api.post<{ code: string; email_sent: boolean }>('/households/invite', {
+      const invite = await api.post<{ code: string; email_sent: boolean; share_text: string }>('/households/invite', {
         name: inviteName.trim() || null,
         email,
       });
       setInviteName('');
       setInviteEmail('');
+      setInviteShareText(invite.share_text);
       await loadInvites();
       if (invite.email_sent) {
         Alert.alert(t('haushalt.einladungVerschickt'), t('haushalt.einladungVerschicktText', { email }));
@@ -155,8 +160,9 @@ export default function HouseholdScreen() {
   const handleInvite = async () => {
     setIsBusy(true);
     try {
-      const invite = await api.post<{ code: string; expires_at: string }>('/households/invite');
+      const invite = await api.post<{ code: string; expires_at: string; share_text: string }>('/households/invite');
       setInviteCode(invite.code);
+      setInviteShareText(invite.share_text);
     } catch (err) {
       Alert.alert(t('haushalt.einladungFehlgeschlagen'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
     } finally {
@@ -167,7 +173,10 @@ export default function HouseholdScreen() {
   const handleShareInvite = () => {
     if (!inviteCode) return;
     Share.share({
-      message: `Komm in meinen Kochbuch-Haushalt "${household?.name}"! Gib in der App unter Profil → Haushalt diesen Code ein: ${inviteCode} (24 Std. gültig)`,
+      // Vom Server (inkl. App-Store-Links), Rueckfall auf den alten festen
+      // Text nur falls er aus irgendeinem Grund fehlen sollte.
+      message: inviteShareText
+        ?? `Komm in meinen Kochbuch-Haushalt "${household?.name}"! Gib in der App unter Profil → Haushalt diesen Code ein: ${inviteCode} (24 Std. gültig)`,
     }).catch(() => {
       // Teilen abgebrochen/fehlgeschlagen - kein Alert noetig, der Code steht ja weiterhin sichtbar da
     });
