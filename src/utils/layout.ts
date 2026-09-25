@@ -24,7 +24,10 @@ export const MAX_BREITE_ZWEISPALTIG = 980;
  * Ab dieser Breite behandeln wir das Geraet als Tablet. Der Wert liegt
  * ueber dem groessten Handy im Querformat, aber unter dem kleinsten iPad.
  */
-const TABLET_AB = 700;
+// Exportiert, damit App.tsx (Android-Ausrichtungssperre) dieselbe
+// Schwelle verwendet statt eine zweite Zahl zu pflegen, die
+// auseinanderlaufen koennte.
+export const TABLET_AB = 700;
 
 export function useLayout() {
   const { width, height } = useWindowDimensions();

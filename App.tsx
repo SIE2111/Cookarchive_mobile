@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import { Platform, Dimensions } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import * as Updates from 'expo-updates';
+import * as ScreenOrientation from 'expo-screen-orientation';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider } from './src/theme/ThemeContext';
@@ -8,6 +10,7 @@ import { AuthProvider } from './src/context/AuthContext';
 import { ServerSyncProvider } from './src/context/ServerSyncContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import { spracheLaden } from './src/i18n';
+import { TABLET_AB } from './src/utils/layout';
 
 export default function App() {
   // Die Sprache soll vor dem ersten Bild feststehen - sonst erscheint die
@@ -64,6 +67,34 @@ export default function App() {
     })();
 
     return () => clearTimeout(fensterSchliessen);
+  }, []);
+
+  // Nur Android: iOS unterscheidet ueber "supportsTablet" in app.json
+  // schon von selbst zwischen iPhone (Hochformat gesperrt) und iPad
+  // (frei drehbar) - fuer Android gibt es keine solche eingebaute
+  // Handy/Tablet-Unterscheidung. Ohne das hier wuerde "orientation:
+  // portrait" in app.json AUCH Android-Tablets fest aufs Hochformat
+  // sperren, und die ganze quer/hoch-Aufteilung (siehe useLayout)
+  // haette dort nie eine Wirkung. Einmalig beim Start, nach derselben
+  // Schwelle wie useLayout - Dimensions.get('screen') statt 'window',
+  // weil die Geraeteklasse sich waehrend der Sitzung nicht aendert und
+  // unabhaengig von der aktuellen Ausrichtung ermittelt werden soll.
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const { width, height } = Dimensions.get('screen');
+    const istTabletGeraet = Math.max(width, height) >= TABLET_AB;
+    (async () => {
+      try {
+        if (istTabletGeraet) {
+          await ScreenOrientation.unlockAsync();
+        } else {
+          await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+        }
+      } catch {
+        // Kein kritischer Pfad - im schlimmsten Fall bleibt es bei der
+        // app.json-Standardausrichtung.
+      }
+    })();
   }, []);
 
   if (!spracheBereit) return null;

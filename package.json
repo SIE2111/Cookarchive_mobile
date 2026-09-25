@@ -24,6 +24,7 @@
     "expo-linear-gradient": "^57.0.2",
     "expo-localization": "~57.0.2",
     "expo-notifications": "~57.0.20",
+    "expo-screen-orientation": "^57.0.2",
     "expo-sharing": "~57.0.21",
     "expo-speech": "^57.0.3",
     "expo-status-bar": "^57.0.1",
