@@ -145,7 +145,7 @@ function MainTabs() {
     >
       <Tab.Screen name="Home" component={DashboardScreen} options={{ title: 'Home' }} />
       <Tab.Screen name="Rezepte" component={RecipesScreen} />
-      <Tab.Screen name="Pool" component={CommunityPoolScreen} options={{ title: 'Pool' }} />
+      <Tab.Screen name="Pool" component={CommunityPoolScreen} options={{ title: 'Community Pool' }} />
       <Tab.Screen name="Einkauf" component={ShoppingListScreen} />
       <Tab.Screen name="Profil" component={ProfileScreen} options={{ title: 'Profil' }} />
     </Tab.Navigator>

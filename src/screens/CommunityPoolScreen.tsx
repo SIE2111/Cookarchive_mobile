@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, Pressable, StyleSheet, ActivityIndicator, Alert, RefreshControl, Image } from 'react-native';
+import { View, Text, FlatList, Pressable, StyleSheet, ActivityIndicator, Alert, RefreshControl, Image, ScrollView } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -64,10 +64,22 @@ export default function CommunityPoolScreen() {
   const [error, setError] = useState<string | null>(null);
   const [forkingId, setForkingId] = useState<string | null>(null);
   const [forkFeedback, setForkFeedback] = useState<Record<string, ForkFeedback>>({});
+  // Umschalter nur bei MEHREREN aktiven Pools (23.09.2026) - bei genau
+  // einem (im Regelfall der Community-Pool) entfaellt die Zeile ganz und
+  // genau dieser eine wird durchsucht.
+  const [aktivePools, setAktivePools] = useState<{ id: string; name: string; is_community: boolean }[]>([]);
+  const [gewaehlterPoolId, setGewaehlterPoolId] = useState('community');
+
+  useEffect(() => {
+    api
+      .get<{ id: string; name: string; is_community: boolean; active: boolean }[]>('/pools/')
+      .then((alle) => setAktivePools(alle.filter((p) => p.active)))
+      .catch(() => {});
+  }, []);
 
   const load = React.useCallback(async () => {
     try {
-      setRecipes(await api.get<PublicRecipeSummary[]>('/pool/'));
+      setRecipes(await api.get<PublicRecipeSummary[]>(`/pool/?pool_id=${encodeURIComponent(gewaehlterPoolId)}`));
       setError(null);
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
@@ -76,7 +88,7 @@ export default function CommunityPoolScreen() {
         setError(err instanceof ApiError ? err.detail : t('sonstiges.poolNichtGeladen'));
       }
     }
-  }, []);
+  }, [gewaehlterPoolId]);
 
   useEffect(() => {
     load().finally(() => setIsLoading(false));
@@ -166,6 +178,33 @@ export default function CommunityPoolScreen() {
               Rezepte, die andere geteilt haben. Übernommene Rezepte landen als eigene Kopie in deiner
               Sammlung – Änderungen daran bleiben bei dir.
             </Text>
+            {aktivePools.length > 1 && (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 8, alignItems: 'center' }}
+                style={styles.poolUmschalterBar}
+              >
+                {aktivePools.map((p) => {
+                  const aktiv = gewaehlterPoolId === p.id;
+                  return (
+                    <Pressable
+                      key={p.id}
+                      onPress={() => setGewaehlterPoolId(p.id)}
+                      style={[styles.poolChip, { backgroundColor: aktiv ? gradient[0] : colors.card, borderRadius: radius.sm }]}
+                    >
+                      <MaterialCommunityIcons
+                        name={p.is_community ? 'earth' : 'account-group'}
+                        size={13}
+                        color={aktiv ? '#fff' : colors.muted}
+                        style={{ marginRight: 5 }}
+                      />
+                      <Text style={{ color: aktiv ? '#fff' : colors.text, fontSize: 12.5, fontWeight: '600' }}>{p.name}</Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            )}
           </>
         }
         ListEmptyComponent={
@@ -363,6 +402,8 @@ const styles = StyleSheet.create({
   thumbEmpty: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(128,128,128,0.15)' },
   header: { fontSize: 19, fontWeight: '700', marginBottom: 4 },
   headerSub: { fontSize: 11.5, lineHeight: 17, marginBottom: 16 },
+  poolUmschalterBar: { height: 42, marginBottom: 14, flexGrow: 0, flexShrink: 0 },
+  poolChip: { flexDirection: 'row', alignItems: 'center', height: 34, paddingHorizontal: 12, justifyContent: 'center' },
   // alignItems:'flex-start' statt 'center': bei einem zweizeiligen Titel
   // sollen Thumbnail und Status-Spalte oben ausgerichtet bleiben, statt
   // sich an der Zeilenmitte zu orientieren.
