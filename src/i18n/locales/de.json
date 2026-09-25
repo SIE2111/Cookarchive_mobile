@@ -758,7 +758,11 @@
     "bestehendeAktivFrage": "Bestehende Pools aktiv lassen?",
     "bestehendeAktivText": "Du hast schon aktive Pools. Sollen die aktiv bleiben, oder nur der neue?",
     "nurNeuerPool": "Nur der neue",
-    "alleAktivLassen": "Alle aktiv lassen"
+    "alleAktivLassen": "Alle aktiv lassen",
+    "eigeneRezepteFrage": "Eigene Rezepte im Pool behalten?",
+    "eigeneRezepteText": "Deine im Pool veröffentlichten Rezepte können nach dem Verlassen stehen bleiben oder mit entfernt werden. Schon übernommene Kopien anderer sind davon nicht betroffen.",
+    "rezepteBehalten": "Behalten",
+    "rezepteEntfernen": "Auch entfernen"
   },
   "uebersetzung": {
     "angebotTitel": "Dieses Rezept ist auf {sprache} verfasst.",

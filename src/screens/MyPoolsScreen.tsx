@@ -197,6 +197,17 @@ export default function MyPoolsScreen() {
     });
   };
 
+  const verlasseWirklich = async (keepRecipes: boolean) => {
+    if (!verwaltePool) return;
+    try {
+      await api.delete(`/pools/${verwaltePool.id}/leave?keep_recipes=${keepRecipes}`);
+      setVerwaltePool(null);
+      laden();
+    } catch (err) {
+      Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
+    }
+  };
+
   const verlassePool = () => {
     if (!verwaltePool) return;
     Alert.alert(
@@ -207,14 +218,19 @@ export default function MyPoolsScreen() {
         {
           text: t('sonstiges.verlassen'),
           style: 'destructive',
-          onPress: async () => {
-            try {
-              await api.delete(`/pools/${verwaltePool.id}/leave`);
-              setVerwaltePool(null);
-              laden();
-            } catch (err) {
-              Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
-            }
+          onPress: () => {
+            // Zweite Frage (23.09.2026): was mit selbst veroeffentlichten
+            // Rezepten in DIESEM Pool passiert - unabhaengig davon, ob
+            // ueberhaupt welche vorhanden sind (dann ist die Wahl
+            // folgenlos, aber die Frage stellt sich einheitlich).
+            Alert.alert(
+              t('sonstiges.eigeneRezepteFrage'),
+              t('sonstiges.eigeneRezepteText'),
+              [
+                { text: t('sonstiges.rezepteBehalten'), onPress: () => verlasseWirklich(true) },
+                { text: t('sonstiges.rezepteEntfernen'), style: 'destructive', onPress: () => verlasseWirklich(false) },
+              ],
+            );
           },
         },
       ],

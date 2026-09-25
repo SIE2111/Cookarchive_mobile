@@ -758,7 +758,11 @@
     "bestehendeAktivFrage": "Keep existing pools active?",
     "bestehendeAktivText": "You already have active pools. Should they stay active, or only the new one?",
     "nurNeuerPool": "Only the new one",
-    "alleAktivLassen": "Keep all active"
+    "alleAktivLassen": "Keep all active",
+    "eigeneRezepteFrage": "Keep your recipes in the pool?",
+    "eigeneRezepteText": "Your recipes published in this pool can stay after you leave, or be removed too. Copies others already took are not affected.",
+    "rezepteBehalten": "Keep",
+    "rezepteEntfernen": "Remove too"
   },
   "uebersetzung": {
     "angebotTitel": "This recipe is written in {sprache}.",
