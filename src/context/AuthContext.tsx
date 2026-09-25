@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useMemo, useRef, useState 
 import type { Session } from '@supabase/supabase-js';
 import { spracheZumServer } from '../i18n';
 import { supabase } from '../api/supabaseClient';
-import { api } from '../api/client';
+import { api, setOnTrialExpired } from '../api/client';
 
 /**
  * Kochbuch nutzt bewusst Pflicht-Login (kein Kein-Kontozwang-Prinzip wie
@@ -41,6 +41,12 @@ interface AuthContextValue {
   /** Fordert einen neuen Code an. */
   resendCode: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
+  /** 3-Monats-Testphase abgelaufen (Backend antwortet 402 auf JEDEM
+   * authentifizierten Request, siehe deps.py/client.ts) - gesetzt sobald
+   * irgendein API-Call das meldet, unabhaengig davon welcher Screen gerade
+   * aktiv war. null = nicht abgelaufen. */
+  trialExpired: string | null;
+  clearTrialExpired: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -49,6 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [justRegistered, setJustRegistered] = useState(false);
+  const [trialExpired, setTrialExpired] = useState<string | null>(null);
 
   // Das bei der Registrierung eingegebene Passwort, damit nach der
   // Code-Bestaetigung sofort eingeloggt werden kann, ohne es erneut
@@ -75,12 +82,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.subscription.unsubscribe();
   }, []);
 
+  // Registriert sich einmalig als Ziel fuer den globalen 402-Hook aus
+  // client.ts (siehe dort) - so faengt AuthContext jeden abgelaufenen
+  // Request ab, egal welcher Screen ihn ausgeloest hat.
+  useEffect(() => {
+    setOnTrialExpired((detail) => setTrialExpired(detail));
+    return () => setOnTrialExpired(null);
+  }, []);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       session,
       isLoading,
       justRegistered,
       clearJustRegistered: () => setJustRegistered(false),
+      trialExpired,
+      clearTrialExpired: () => setTrialExpired(null),
       signInWithPassword: async (email, password) => {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -116,10 +133,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
       signOut: async () => {
         pendingPassword.current = null;
+        setTrialExpired(null);
         await supabase.auth.signOut();
       },
     }),
-    [session, isLoading, justRegistered],
+    [session, isLoading, justRegistered, trialExpired],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
