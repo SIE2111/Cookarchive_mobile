@@ -2,7 +2,7 @@ import React from 'react';
 import { NavigationContainer, type NavigatorScreenParams } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, View, Text, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useAuth } from '../context/AuthContext';
@@ -234,13 +234,36 @@ function MainNavigator() {
 }
 
 export default function AppNavigator() {
-  const { session, isLoading } = useAuth();
+  const { session, isLoading, trialExpired, signOut } = useAuth();
   const { colors, isLoaded: themeLoaded } = useTheme();
 
   if (isLoading || !themeLoaded) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>
         <ActivityIndicator color={colors.text} />
+      </View>
+    );
+  }
+
+  // 3-Monats-Testphase abgelaufen (siehe AuthContext.tsx/client.ts) -
+  // blockiert VOR Main/AuthNavigator, unabhaengig davon, welcher Request
+  // das 402 ausgeloest hat.
+  if (trialExpired) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg, padding: 32 }}>
+        <Text style={{ fontSize: 40, marginBottom: 16 }}>⏳</Text>
+        <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text, textAlign: 'center', marginBottom: 10 }}>
+          Testphase abgelaufen
+        </Text>
+        <Text style={{ fontSize: 14, color: colors.muted, textAlign: 'center', lineHeight: 20 }}>
+          {trialExpired}
+        </Text>
+        <Pressable
+          onPress={() => signOut()}
+          style={{ marginTop: 28, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 12, borderWidth: 1, borderColor: colors.cardBorder }}
+        >
+          <Text style={{ color: colors.muted, fontSize: 14, fontWeight: '600' }}>Abmelden</Text>
+        </Pressable>
       </View>
     );
   }
