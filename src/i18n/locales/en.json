@@ -750,7 +750,15 @@
     "verlassen": "Leave",
     "communyPoolsAbschnitt": "Community & Pools",
     "meinePools": "My Pools",
-    "meinePoolsSub": "Create your own pools, invite people, toggle the Community Pool"
+    "meinePoolsSub": "Create your own pools, invite people, toggle the Community Pool",
+    "vonName": "from {name}",
+    "pruefen": "Check",
+    "beitrittBestaetigen": "Confirm join",
+    "beitrittBestaetigenText": "You were invited to the pool \"{pool}\" by {name}. Join?",
+    "bestehendeAktivFrage": "Keep existing pools active?",
+    "bestehendeAktivText": "You already have active pools. Should they stay active, or only the new one?",
+    "nurNeuerPool": "Only the new one",
+    "alleAktivLassen": "Keep all active"
   },
   "uebersetzung": {
     "angebotTitel": "This recipe is written in {sprache}.",

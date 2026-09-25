@@ -25,6 +25,7 @@ interface MeinPool {
   id: string;
   name: string;
   owner_user_id: string | null;
+  owner_display_name: string | null;
   is_community: boolean;
   active: boolean;
   member_count: number;
@@ -87,13 +88,42 @@ export default function MyPoolsScreen() {
   const [beitretenOffen, setBeitretenOffen] = useState(false);
   const [beitrittsCode, setBeitrittsCode] = useState('');
   const [tritGeradeBei, setTrittGeradeBei] = useState(false);
-  const tretePoolBei = async () => {
+  const [pruefeGerade, setPrueftGerade] = useState(false);
+  // Vorschau VOR dem eigentlichen Beitreten (23.09.2026) - der Code wird
+  // dabei noch nicht verbraucht, erst mit "Beitreten" im Bestaetigungs-
+  // Dialog unten.
+  const [vorschau, setVorschau] = useState<{ code: string; poolName: string; inviterName: string; aktivePoolsAnzahl: number } | null>(null);
+
+  const pruefeCode = async () => {
     const code = beitrittsCode.trim();
     if (!code) return;
+    setPrueftGerade(true);
+    try {
+      const res = await api.get<{ pool_name: string; inviter_name: string; aktive_pools_anzahl: number }>(
+        `/pools/preview/${encodeURIComponent(code)}`,
+      );
+      setBeitretenOffen(false);
+      setVorschau({ code, poolName: res.pool_name, inviterName: res.inviter_name, aktivePoolsAnzahl: res.aktive_pools_anzahl });
+    } catch (err) {
+      Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
+    } finally {
+      setPrueftGerade(false);
+    }
+  };
+
+  const tretePoolBeiWirklich = async (andereAktivLassen: boolean) => {
+    if (!vorschau) return;
     setTrittGeradeBei(true);
     try {
-      await api.post('/pools/join', { code });
-      setBeitretenOffen(false);
+      const beigetreten = await api.post<{ id: string }>('/pools/join', { code: vorschau.code });
+      if (!andereAktivLassen) {
+        // Alle anderen AKTUELL aktiven Pools abschalten, ausser dem
+        // gerade erst beigetretenen - der bleibt in jedem Fall aktiv.
+        const alle = await api.get<MeinPool[]>('/pools/');
+        const abzuschalten = alle.filter((p) => p.active && p.id !== beigetreten.id);
+        await Promise.all(abzuschalten.map((p) => api.patch(`/pools/${p.id}/toggle`, {})));
+      }
+      setVorschau(null);
       setBeitrittsCode('');
       laden();
     } catch (err) {
@@ -101,6 +131,24 @@ export default function MyPoolsScreen() {
     } finally {
       setTrittGeradeBei(false);
     }
+  };
+
+  const bestaetigeBeitritt = () => {
+    if (!vorschau) return;
+    if (vorschau.aktivePoolsAnzahl === 0) {
+      // Nichts zu entscheiden - es gibt noch keinen aktiven Pool, der
+      // in Konflikt geraten koennte.
+      tretePoolBeiWirklich(true);
+      return;
+    }
+    Alert.alert(
+      t('sonstiges.bestehendeAktivFrage'),
+      t('sonstiges.bestehendeAktivText'),
+      [
+        { text: t('sonstiges.nurNeuerPool'), onPress: () => tretePoolBeiWirklich(false) },
+        { text: t('sonstiges.alleAktivLassen'), onPress: () => tretePoolBeiWirklich(true) },
+      ],
+    );
   };
 
   // --- Verwalten (Einladen, Mitglieder, Umbenennen, Verlassen) ---
@@ -202,6 +250,9 @@ export default function MyPoolsScreen() {
               <Text style={[styles.rowTitle, { color: colors.text }]}>{pool.name}</Text>
               <Text style={[styles.rowSub, { color: colors.muted }]}>
                 {t('sonstiges.mitgliederAnzahl', { anzahl: pool.member_count })}
+                {!pool.is_owner && !pool.is_community && pool.owner_display_name
+                  ? ` · ${t('sonstiges.vonName', { name: pool.owner_display_name })}`
+                  : ''}
               </Text>
             </View>
             {umschaltetId === pool.id ? (
@@ -283,9 +334,36 @@ export default function MyPoolsScreen() {
                 <Text style={{ color: colors.muted, fontWeight: '600' }}>{t('allgemein.abbrechen')}</Text>
               </Pressable>
               <Pressable
-                onPress={tretePoolBei}
-                disabled={tritGeradeBei || !beitrittsCode.trim()}
+                onPress={pruefeCode}
+                disabled={pruefeGerade || !beitrittsCode.trim()}
                 style={[styles.modalKnopf, { backgroundColor: gradient[0], borderRadius: radius.sm, opacity: !beitrittsCode.trim() ? 0.5 : 1 }]}
+              >
+                {pruefeGerade ? <ActivityIndicator color="#fff" size="small" /> : <Text style={{ color: '#fff', fontWeight: '700' }}>{t('sonstiges.pruefen')}</Text>}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Bestaetigung VOR dem eigentlichen Beitreten - zeigt, wohin und
+          von wem, statt den Code blind einzuloesen. */}
+      <Modal visible={!!vorschau} transparent animationType="fade" onRequestClose={() => setVorschau(null)}>
+        <View style={styles.modalUeberlagerung}>
+          <View style={[styles.modalKarte, { backgroundColor: colors.card, borderRadius: radius.md }]}>
+            <Text style={[styles.modalTitel, { color: colors.text }]}>{t('sonstiges.beitrittBestaetigen')}</Text>
+            {vorschau && (
+              <Text style={{ color: colors.text, fontSize: 14, lineHeight: 20, marginBottom: 4 }}>
+                {t('sonstiges.beitrittBestaetigenText', { pool: vorschau.poolName, name: vorschau.inviterName })}
+              </Text>
+            )}
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
+              <Pressable onPress={() => setVorschau(null)} style={[styles.modalKnopf, { borderColor: colors.muted, borderWidth: 1, borderRadius: radius.sm }]}>
+                <Text style={{ color: colors.muted, fontWeight: '600' }}>{t('allgemein.abbrechen')}</Text>
+              </Pressable>
+              <Pressable
+                onPress={bestaetigeBeitritt}
+                disabled={tritGeradeBei}
+                style={[styles.modalKnopf, { backgroundColor: gradient[0], borderRadius: radius.sm }]}
               >
                 {tritGeradeBei ? <ActivityIndicator color="#fff" size="small" /> : <Text style={{ color: '#fff', fontWeight: '700' }}>{t('sonstiges.poolBeitreten')}</Text>}
               </Pressable>
@@ -316,7 +394,9 @@ export default function MyPoolsScreen() {
                 ))
               )}
 
-              {!verwaltePool?.is_community && verwaltePool?.is_owner && (
+              {/* Jedes Mitglied darf einladen, nicht nur der Owner
+                  (23.09.2026) - muss nicht der eigene Pool sein. */}
+              {!verwaltePool?.is_community && (
                 <>
                   <Text style={[styles.abschnittLabel, { color: colors.muted, marginTop: 18 }]}>{t('sonstiges.einladen')}</Text>
                   <TextInput

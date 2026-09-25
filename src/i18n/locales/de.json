@@ -750,7 +750,15 @@
     "verlassen": "Verlassen",
     "communyPoolsAbschnitt": "Community & Pools",
     "meinePools": "Meine Pools",
-    "meinePoolsSub": "Eigene Pools anlegen, einladen, Community-Pool ein-/ausschalten"
+    "meinePoolsSub": "Eigene Pools anlegen, einladen, Community-Pool ein-/ausschalten",
+    "vonName": "von {name}",
+    "pruefen": "Prüfen",
+    "beitrittBestaetigen": "Beitreten bestätigen",
+    "beitrittBestaetigenText": "Du wurdest von {name} zum Pool „{pool}\" eingeladen. Beitreten?",
+    "bestehendeAktivFrage": "Bestehende Pools aktiv lassen?",
+    "bestehendeAktivText": "Du hast schon aktive Pools. Sollen die aktiv bleiben, oder nur der neue?",
+    "nurNeuerPool": "Nur der neue",
+    "alleAktivLassen": "Alle aktiv lassen"
   },
   "uebersetzung": {
     "angebotTitel": "Dieses Rezept ist auf {sprache} verfasst.",
