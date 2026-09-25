@@ -94,7 +94,9 @@ export default function AppSettingsScreen() {
     );
   }
 
-  const isServerSyncLocked = prefs.storage_mode === 'eigene_cloud';
+  // storage_mode wird nicht mehr fuer isServerSyncLocked gebraucht (die
+  // Server-Sync-Zeile ist ja jetzt ausgeblendet) - Feld bleibt im
+  // Preferences-Interface, falls spaeter wieder gebraucht.
 
   const Zeile = ({ zeile, gesperrt, untertitel }: { zeile: { key: PreferenceKey; title: string; subtitle: string }; gesperrt?: boolean; untertitel?: string }) => (
     <View style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}>
@@ -123,14 +125,12 @@ export default function AppSettingsScreen() {
         <Zeile key={zeile.key} zeile={zeile} />
       ))}
 
-      <Zeile
-        zeile={{ key: 'server_sync_enabled', title: 'profil.serverSync', subtitle: 'profil.serverSyncSub' }}
-        gesperrt={isServerSyncLocked}
-        untertitel={isServerSyncLocked ? t('profil.eigeneCloudAktiv') : undefined}
-      />
-      {!prefs.server_sync_enabled && (
-        <Text style={[styles.hint, { color: colors.muted }]}>{t('profil.serverSyncHinweis')}</Text>
-      )}
+      {/* Server-Sync-Zeile ABSICHTLICH nicht mehr angezeigt (23.09.2026,
+          vorerst) - er steht fuer alle fest auf aktiv (siehe Migration),
+          ein sichtbarer Schalter dafuer hat nur verwirrt, ohne dass es
+          normalerweise einen Grund gaebe, ihn abzuschalten. Feld und
+          Backend-Logik bleiben unangetastet, falls spaeter doch wieder
+          gebraucht. */}
 
       {/* Gehoert inhaltlich zur Brutzel-Animation direkt darueber - er
           spricht ja waehrend sie laeuft (23.09.2026, vorher ein eigener

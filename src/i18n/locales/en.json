@@ -762,7 +762,9 @@
     "eigeneRezepteFrage": "Keep your recipes in the pool?",
     "eigeneRezepteText": "Your recipes published in this pool can stay after you leave, or be removed too. Copies others already took are not affected.",
     "rezepteBehalten": "Keep",
-    "rezepteEntfernen": "Remove too"
+    "rezepteEntfernen": "Remove too",
+    "keineAktivenPools": "No active pools - activate one under \"My Pools\" in your profile.",
+    "teilweiseVeroeffentlicht": "Published in {erfolge} of {gesamt} pools. Error: {fehler}"
   },
   "uebersetzung": {
     "angebotTitel": "This recipe is written in {sprache}.",

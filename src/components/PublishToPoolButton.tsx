@@ -54,34 +54,65 @@ export default function PublishToPoolButton({
   const { serverSyncEnabled, isLoading: syncLoading } = useServerSync();
   const [isPublishing, setIsPublishing] = useState(false);
   const [isPublished, setIsPublished] = useState(initialPublished);
-  // Auswahl-Dialog nur bei MEHREREN aktiven Pools (23.09.2026) - bei
-  // genau einem aktiven (im Regelfall der Community-Pool) wird direkt
-  // dorthin veroeffentlicht, ohne extra zu fragen.
+  // Fenster IMMER zeigen (23.09.2026, vorher nur bei >1 aktiven Pools) -
+  // bei nur einem aktiven ist der schon vormarkiert, man muss nur noch
+  // "Übernehmen" antippen statt eines zweiten Rueckfrage-Dialogs.
+  // Mehrfachauswahl: ein Rezept kann in mehrere Pools gleichzeitig.
   const [poolAuswahl, setPoolAuswahl] = useState<MeinPool[] | null>(null);
+  const [ausgewaehlteIds, setAusgewaehlteIds] = useState<Set<string>>(new Set());
 
   // Solange der Wert noch laedt, NICHT sperren: Ein kurz verzoegerter
   // Ladevorgang darf nicht wie eine Sperre aussehen.
   const isLocked = !syncLoading && !serverSyncEnabled;
 
-  const publish = async (poolId: string) => {
-    setIsPublishing(true);
+  // publish() ohne eigenen Alert (23.09.2026) - wird jetzt aus einer
+  // Schleife heraus fuer mehrere Pools auf einmal aufgerufen, da waere
+  // ein Alert PRO Pool störend gestapelt. Die Zusammenfassung uebernimmt
+  // veroeffentlicheAusgewaehlte() unten.
+  const publish = async (poolId: string): Promise<{ ok: true } | { ok: false; status?: number; detail: string }> => {
     try {
       await api.post('/pool/publish', { recipe_id: recipeId, pool_id: poolId });
-      setIsPublished(true);
-      Alert.alert(t('sonstiges.veroeffentlicht'), t('sonstiges.veroeffentlichtText', { titel: recipeTitle }));
+      return { ok: true };
     } catch (err) {
-      const detail = err instanceof ApiError ? err.detail : t('profil.unbekannterFehler');
-      const title =
-        err instanceof ApiError && err.status === 403
-          ? t('sonstiges.syncNoetig')
-          : err instanceof ApiError && err.status === 429
-            ? t('sonstiges.tageslimit')
-            : t('sonstiges.veroeffentlichenFehlgeschlagen');
-      const message =
-        err instanceof ApiError && err.status === 403
-          ? t('sonstiges.poolBrauchtSync')
-          : detail;
-      Alert.alert(title, message);
+      return {
+        ok: false,
+        status: err instanceof ApiError ? err.status : undefined,
+        detail: err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'),
+      };
+    }
+  };
+
+  const veroeffentlicheAusgewaehlte = async () => {
+    if (ausgewaehlteIds.size === 0) return;
+    setIsPublishing(true);
+    const ziele = Array.from(ausgewaehlteIds);
+    try {
+      const ergebnisse = await Promise.all(ziele.map((id) => publish(id)));
+      setPoolAuswahl(null);
+      const erfolge = ergebnisse.filter((r) => r.ok).length;
+      const fehler = ergebnisse.filter((r) => !r.ok);
+      if (erfolge > 0) setIsPublished(true);
+
+      if (fehler.length === 0) {
+        Alert.alert(t('sonstiges.veroeffentlicht'), t('sonstiges.veroeffentlichtText', { titel: recipeTitle }));
+      } else {
+        // Mind. ein Ziel fehlgeschlagen (z.B. Tageslimit) - konkret sagen,
+        // wie viele es trotzdem geschafft haben, statt eines pauschalen
+        // Fehlers, der einen erfolgreichen Teil verschweigen wuerde.
+        const ersterFehler = fehler[0];
+        const titel =
+          ersterFehler.status === 403
+            ? t('sonstiges.syncNoetig')
+            : ersterFehler.status === 429
+              ? t('sonstiges.tageslimit')
+              : t('sonstiges.veroeffentlichenFehlgeschlagen');
+        Alert.alert(
+          titel,
+          erfolge > 0
+            ? t('sonstiges.teilweiseVeroeffentlicht', { erfolge, gesamt: ziele.length, fehler: ersterFehler.detail })
+            : ersterFehler.detail,
+        );
+      }
     } finally {
       setIsPublishing(false);
     }
@@ -150,20 +181,12 @@ export default function PublishToPoolButton({
       setIsPublishing(false);
     }
     const aktive = meinePools.filter((p) => p.active);
-
-    if (aktive.length > 1) {
-      setPoolAuswahl(aktive);
-      return;
-    }
-    const zielPool = aktive[0]?.id ?? 'community';
-    Alert.alert(
-      t('sonstiges.insPoolFrage'),
-      t('sonstiges.insPoolText', { titel: recipeTitle }),
-      [
-        { text: t('allgemein.abbrechen'), style: 'cancel' },
-        { text: t('sonstiges.veroeffentlichen'), onPress: () => publish(zielPool) },
-      ],
-    );
+    // Bei genau einem aktiven Pool ist er schon markiert - ein Tipp auf
+    // "Übernehmen" reicht dann. Bei mehreren startet die Auswahl leer,
+    // bewusst kein Vorauswaehlen aller, damit nicht versehentlich in
+    // mehr Pools veroeffentlicht wird als gewollt.
+    setAusgewaehlteIds(new Set(aktive.length === 1 ? [aktive[0].id] : []));
+    setPoolAuswahl(aktive);
   };
 
   return (
@@ -197,28 +220,60 @@ export default function PublishToPoolButton({
       <View style={styles.modalUeberlagerung}>
         <View style={[styles.modalKarte, { backgroundColor: colors.card, borderRadius: radius.md }]}>
           <Text style={[styles.modalTitel, { color: colors.text }]}>{t('sonstiges.poolWaehlen')}</Text>
-          <ScrollView style={{ maxHeight: 300 }}>
-            {(poolAuswahl ?? []).map((p) => (
-              <Pressable
-                key={p.id}
-                onPress={() => {
-                  setPoolAuswahl(null);
-                  publish(p.id);
-                }}
-                style={[styles.poolZeile, { borderColor: colors.cardBorder }]}
-              >
-                <MaterialCommunityIcons
-                  name={p.is_community ? 'earth' : 'account-group'}
-                  size={18}
-                  color={colors.muted}
-                />
-                <Text style={{ color: colors.text, fontSize: 14, marginLeft: 10 }}>{p.name}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-          <Pressable onPress={() => setPoolAuswahl(null)} style={styles.modalAbbrechen}>
-            <Text style={{ color: colors.muted, fontWeight: '600' }}>{t('allgemein.abbrechen')}</Text>
-          </Pressable>
+          {poolAuswahl && poolAuswahl.length === 0 ? (
+            <Text style={{ color: colors.muted, fontSize: 13, paddingVertical: 10 }}>{t('sonstiges.keineAktivenPools')}</Text>
+          ) : (
+            <ScrollView style={{ maxHeight: 300 }}>
+              {(poolAuswahl ?? []).map((p) => {
+                const ausgewaehlt = ausgewaehlteIds.has(p.id);
+                return (
+                  <Pressable
+                    key={p.id}
+                    onPress={() =>
+                      setAusgewaehlteIds((prev) => {
+                        const naechste = new Set(prev);
+                        if (naechste.has(p.id)) naechste.delete(p.id);
+                        else naechste.add(p.id);
+                        return naechste;
+                      })
+                    }
+                    style={[styles.poolZeile, { borderColor: colors.cardBorder }]}
+                  >
+                    <MaterialCommunityIcons
+                      name={ausgewaehlt ? 'checkbox-marked' : 'checkbox-blank-outline'}
+                      size={19}
+                      color={ausgewaehlt ? gradient[0] : colors.muted}
+                    />
+                    <MaterialCommunityIcons
+                      name={p.is_community ? 'earth' : 'account-group'}
+                      size={17}
+                      color={colors.muted}
+                      style={{ marginLeft: 10 }}
+                    />
+                    <Text style={{ color: colors.text, fontSize: 14, marginLeft: 8 }}>{p.name}</Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          )}
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
+            <Pressable
+              onPress={() => setPoolAuswahl(null)}
+              style={[styles.modalKnopf, { borderColor: colors.muted, borderWidth: 1, borderRadius: radius.sm }]}
+            >
+              <Text style={{ color: colors.muted, fontWeight: '600' }}>{t('allgemein.abbrechen')}</Text>
+            </Pressable>
+            <Pressable
+              onPress={veroeffentlicheAusgewaehlte}
+              disabled={isPublishing || ausgewaehlteIds.size === 0}
+              style={[
+                styles.modalKnopf,
+                { backgroundColor: gradient[0], borderRadius: radius.sm, opacity: ausgewaehlteIds.size === 0 ? 0.5 : 1 },
+              ]}
+            >
+              {isPublishing ? <ActivityIndicator color="#fff" size="small" /> : <Text style={{ color: '#fff', fontWeight: '700' }}>{t('sonstiges.veroeffentlichen')}</Text>}
+            </Pressable>
+          </View>
         </View>
       </View>
     </Modal>
@@ -236,5 +291,5 @@ const styles = StyleSheet.create({
   modalKarte: { padding: 20 },
   modalTitel: { fontSize: 15.5, fontWeight: '700', marginBottom: 12 },
   poolZeile: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1 },
-  modalAbbrechen: { alignItems: 'center', paddingTop: 16 },
+  modalKnopf: { flex: 1, height: 46, alignItems: 'center', justifyContent: 'center' },
 });
