@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, Alert, Share, ScrollView } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, Alert, Linking, ScrollView } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
@@ -172,13 +172,17 @@ export default function HouseholdScreen() {
 
   const handleShareInvite = () => {
     if (!inviteCode) return;
-    Share.share({
-      // Vom Server (inkl. App-Store-Links), Rueckfall auf den alten festen
-      // Text nur falls er aus irgendeinem Grund fehlen sollte.
-      message: inviteShareText
-        ?? `Komm in meinen Kochbuch-Haushalt "${household?.name}"! Gib in der App unter Profil → Haushalt diesen Code ein: ${inviteCode} (24 Std. gültig)`,
-    }).catch(() => {
-      // Teilen abgebrochen/fehlgeschlagen - kein Alert noetig, der Code steht ja weiterhin sichtbar da
+    // Direkter WhatsApp-Link statt Share.share() (23.09.2026) - der
+    // allgemeine iOS-Teilen-Dialog kuerzt Text+Link-Kombinationen bei
+    // WhatsApp oft auf nur den Link, der Rest der Nachricht faellt weg.
+    // Direkt an wa.me behaelt den kompletten Text zuverlaessig (gleicher
+    // Ansatz wie beim Pool-Einladen, siehe MyPoolsScreen.tsx).
+    const text =
+      inviteShareText
+      ?? `Komm in meinen Kochbuch-Haushalt "${household?.name}"! Gib in der App unter Profil → Haushalt diesen Code ein: ${inviteCode} (24 Std. gültig)`;
+    Linking.openURL(`https://wa.me/?text=${encodeURIComponent(text)}`).catch(() => {
+      // WhatsApp nicht installiert/erreichbar - kein Alert noetig, der
+      // Code steht ja weiterhin sichtbar da.
     });
   };
 
