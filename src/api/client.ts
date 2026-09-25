@@ -21,6 +21,18 @@ class ApiError extends Error {
   }
 }
 
+// 3-Monats-Testphase (siehe deps.py verify_supabase_jwt, Backend antwortet
+// 402 auf JEDEM authentifizierten Endpunkt, sobald abgelaufen). Kein
+// einzelner "erster Request nach Login" wie bei den anderen HomeArchive-
+// Apps - hier faengt zentral apiFetch selbst jeden 402 ab und meldet ihn
+// ueber diesen Callback, egal von welchem Screen aus der Request kam.
+// AuthContext registriert sich hier (siehe dort) und zeigt den blockierenden
+// Screen an.
+let onTrialExpired: ((detail: string) => void) | null = null;
+export function setOnTrialExpired(cb: ((detail: string) => void) | null) {
+  onTrialExpired = cb;
+}
+
 /**
  * Zentrale Fetch-Hilfsfunktion: haengt automatisch das aktuelle Supabase-
  * JWT als Authorization-Header an, wirft eine ApiError mit lesbarer
@@ -54,6 +66,9 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
       }
     } catch {
       // Antwort war kein JSON - Standardmeldung behalten
+    }
+    if (response.status === 402 && onTrialExpired) {
+      onTrialExpired(detail);
     }
     throw new ApiError(response.status, detail, data);
   }
@@ -149,6 +164,9 @@ export const api = {
         detail = body.detail ?? detail;
       } catch {
         // Antwort war kein JSON
+      }
+      if (result.status === 402 && onTrialExpired) {
+        onTrialExpired(detail);
       }
       throw new ApiError(result.status, detail);
     }
