@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert, ScrollView, TextInput, Modal, Linking } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert, ScrollView, TextInput, Modal, Linking, Switch } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme, type BackgroundStyle, type AccentColor } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
@@ -127,6 +127,25 @@ export default function ProfileScreen({ navigation }: Props) {
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []),
   );
+
+  // Wieder da (23.09.2026, vorher kurzzeitig komplett in AppSettingsScreen
+  // ausgelagert) - nur noch fuer die zwei Zeilen, die dort wieder raus
+  // sollten: Benachrichtigungen und KI-Analyse.
+  const handleToggle = async (key: 'notifications_enabled' | 'ai_enabled', value: boolean) => {
+    if (!prefs) return;
+    const vorher = prefs;
+    setPrefs({ ...prefs, [key]: value });
+    setSavingKey(key);
+    try {
+      const updated = await api.patch<Preferences>('/preferences/', { [key]: value });
+      setPrefs(updated);
+    } catch (err) {
+      setPrefs(vorher);
+      Alert.alert(t('profil.nichtGespeichert'), err instanceof ApiError ? err.detail : t('profil.unbekannterFehler'));
+    } finally {
+      setSavingKey(null);
+    }
+  };
 
   const handleHaubenLevelSelect = async (level: HaubenLevel) => {
     if (!prefs || prefs.default_hauben_level === level) return;
@@ -408,23 +427,9 @@ export default function ProfileScreen({ navigation }: Props) {
         {!quer && <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>}
       </Pressable>
 
-      {/* "Vorlesen & Stimme" jetzt oberhalb von Server-Sync (22.09.2026) -
-          beide haengen inhaltlich naeher zusammen als Server-Sync und
-          Starter-Rezepte. */}
-      <Pressable
-        onPress={() => navigation.getParent()?.navigate('VoiceSettings')}
-        style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}
-      >
-        <MaterialCommunityIcons name="account-voice" size={20} color={colors.muted} style={styles.rowIcon} />
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.rowTitle, { color: colors.text }]}>{t('profil.vorlesenStimme')}</Text>
-          <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
-            {t('profil.vorlesenStimmeSub')}
-          </Text>
-        </View>
-        <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>
-      </Pressable>
-
+      {/* "Vorlesen & Stimme" zieht in den Einstellungen-Unterschirm um
+          (23.09.2026) - gehoert inhaltlich zur Brutzel-Animation dort,
+          er spricht ja waehrend sie laeuft. */}
       <Pressable
         onPress={() => navigation.getParent()?.navigate('StarterPacks')}
         style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md, marginTop: 8 }]}
@@ -454,8 +459,52 @@ export default function ProfileScreen({ navigation }: Props) {
         <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>
       </Pressable>
 
+      {/* Benachrichtigungen und KI-Analyse (23.09.2026 zurueck auf den
+          Profil-Hauptbildschirm, vorher kurz in Einstellungen) - anders
+          als Darstellung/Server-Sync/Vorlesen keine Sache der Brutzel-
+          Animation, gehoeren eigenstaendig direkt hierher. */}
+      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 26 }]}>{t('profil.benachrichtigungen')}</Text>
+      <View style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}>
+        <MaterialCommunityIcons name="bell-outline" size={20} color={colors.muted} style={styles.rowIcon} />
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.rowTitle, { color: colors.text }]}>{t('profil.benachrichtigungenZeile')}</Text>
+          <Text style={[styles.rowSubtitle, { color: colors.muted }]}>{t('profil.benachrichtigungenSub')}</Text>
+        </View>
+        {savingKey === 'notifications_enabled' ? (
+          <ActivityIndicator color={colors.muted} />
+        ) : (
+          <Switch
+            value={prefs.notifications_enabled}
+            onValueChange={(v) => handleToggle('notifications_enabled', v)}
+            trackColor={{ false: '#E7E1D4', true: gradient[0] }}
+            thumbColor="#fff"
+          />
+        )}
+      </View>
 
-      <Pressable onPress={() => signOut()} style={[styles.signOutButton, { borderColor: '#DC2626', borderRadius: radius.md }]}>
+      <Text style={[styles.sectionLabel, { color: colors.muted, marginTop: 22 }]}>{t('profil.kiFunktionen')}</Text>
+      <View style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}>
+        <MaterialCommunityIcons name="auto-fix" size={20} color={colors.muted} style={styles.rowIcon} />
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.rowTitle, { color: colors.text }]}>{t('profil.kiAnalyse')}</Text>
+          <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
+            {t('profil.kiAnalyseSub')}
+            {t('profil.kiVerbrauch', { verbraucht: prefs.ai_calls_this_month, grenze: prefs.ai_monthly_limit })}
+          </Text>
+        </View>
+        {savingKey === 'ai_enabled' ? (
+          <ActivityIndicator color={colors.muted} />
+        ) : (
+          <Switch
+            value={prefs.ai_enabled}
+            onValueChange={(v) => handleToggle('ai_enabled', v)}
+            trackColor={{ false: '#E7E1D4', true: gradient[0] }}
+            thumbColor="#fff"
+          />
+        )}
+      </View>
+
+      <Pressable onPress={() => signOut()} style={[styles.signOutButton, { borderColor: '#DC2626', borderRadius: radius.md, marginTop: 22 }]}>
         <Text style={styles.signOutText}>{t('profil.abmelden')}</Text>
       </Pressable>
 

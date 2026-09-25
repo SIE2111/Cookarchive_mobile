@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Switch, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, Switch, StyleSheet, ScrollView, ActivityIndicator, Alert, Pressable } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
@@ -24,9 +25,7 @@ type PreferenceKey =
   | 'large_text'
   | 'show_greeting_animation'
   | 'play_animation_music'
-  | 'server_sync_enabled'
-  | 'notifications_enabled'
-  | 'ai_enabled';
+  | 'server_sync_enabled';
 
 interface Preferences {
   show_brutzel: boolean;
@@ -34,10 +33,6 @@ interface Preferences {
   show_greeting_animation: boolean;
   play_animation_music: boolean;
   server_sync_enabled: boolean;
-  notifications_enabled: boolean;
-  ai_enabled: boolean;
-  ai_calls_this_month: number;
-  ai_monthly_limit: number;
   storage_mode: string;
 }
 
@@ -53,6 +48,12 @@ export default function AppSettingsScreen() {
   const { inhaltsBreite } = useLayout();
   const { t } = useUebersetzung();
   const { refresh: refreshServerSync } = useServerSync();
+  // useNavigation() statt eines navigation-Props (23.09.2026): dieser
+  // Bildschirm laeuft sowohl als eigener Stack-Screen als auch OHNE Props
+  // eingebettet im Profil quer (siehe ProfileScreen.tsx) - der Hook
+  // funktioniert in beiden Faellen gleich, ein durchgereichtes Prop nur
+  // im ersten.
+  const navigation = useNavigation<any>();
   const [prefs, setPrefs] = useState<Preferences | null>(null);
   const [savingKey, setSavingKey] = useState<PreferenceKey | null>(null);
 
@@ -131,46 +132,20 @@ export default function AppSettingsScreen() {
         <Text style={[styles.hint, { color: colors.muted }]}>{t('profil.serverSyncHinweis')}</Text>
       )}
 
-      <Text style={[styles.label, { color: colors.muted, marginTop: 22 }]}>{t('profil.benachrichtigungen')}</Text>
-      <View style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}>
-        <MaterialCommunityIcons name="bell-outline" size={20} color={colors.muted} style={styles.rowIcon} />
+      {/* Gehoert inhaltlich zur Brutzel-Animation direkt darueber - er
+          spricht ja waehrend sie laeuft (23.09.2026, vorher ein eigener
+          Link im Profil-Hauptbildschirm). */}
+      <Pressable
+        onPress={() => navigation.navigate('VoiceSettings')}
+        style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md, marginTop: 8 }]}
+      >
+        <MaterialCommunityIcons name="account-voice" size={20} color={colors.muted} style={styles.rowIcon} />
         <View style={{ flex: 1 }}>
-          <Text style={[styles.rowTitle, { color: colors.text }]}>{t('profil.benachrichtigungenZeile')}</Text>
-          <Text style={[styles.rowSubtitle, { color: colors.muted }]}>{t('profil.benachrichtigungenSub')}</Text>
+          <Text style={[styles.rowTitle, { color: colors.text }]}>{t('profil.vorlesenStimme')}</Text>
+          <Text style={[styles.rowSubtitle, { color: colors.muted }]}>{t('profil.vorlesenStimmeSub')}</Text>
         </View>
-        {savingKey === 'notifications_enabled' ? (
-          <ActivityIndicator color={colors.muted} />
-        ) : (
-          <Switch
-            value={prefs.notifications_enabled}
-            onValueChange={(v) => handleToggle('notifications_enabled', v)}
-            trackColor={{ false: '#E7E1D4', true: gradient[0] }}
-            thumbColor="#fff"
-          />
-        )}
-      </View>
-
-      <Text style={[styles.label, { color: colors.muted, marginTop: 22 }]}>{t('profil.kiFunktionen')}</Text>
-      <View style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md }]}>
-        <MaterialCommunityIcons name="auto-fix" size={20} color={colors.muted} style={styles.rowIcon} />
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.rowTitle, { color: colors.text }]}>{t('profil.kiAnalyse')}</Text>
-          <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
-            {t('profil.kiAnalyseSub')}
-            {t('profil.kiVerbrauch', { verbraucht: prefs.ai_calls_this_month, grenze: prefs.ai_monthly_limit })}
-          </Text>
-        </View>
-        {savingKey === 'ai_enabled' ? (
-          <ActivityIndicator color={colors.muted} />
-        ) : (
-          <Switch
-            value={prefs.ai_enabled}
-            onValueChange={(v) => handleToggle('ai_enabled', v)}
-            trackColor={{ false: '#E7E1D4', true: gradient[0] }}
-            thumbColor="#fff"
-          />
-        )}
-      </View>
+        <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>
+      </Pressable>
     </ScrollView>
   );
 }
