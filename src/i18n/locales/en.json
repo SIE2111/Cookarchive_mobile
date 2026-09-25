@@ -570,7 +570,11 @@
     "vorschlagTitel": "Meal suggestion",
     "bereitsVollText": "Everything is already planned for this period.",
     "keinVorschlagText": "Brutzel couldn't find a fitting suggestion right now. Maybe add a few of your own recipes first.",
-    "vorschlagFehlgeschlagen": "The meal suggestion failed."
+    "vorschlagFehlgeschlagen": "The meal suggestion failed.",
+    "fuerWelcheMahlzeiten": "For which meals?",
+    "kategorieOptional": "Category (optional)",
+    "alleKategorien": "All",
+    "vorschlagenKnopf": "Suggest"
   },
   "teilen": {
     "rezeptSchicken": "Send recipe",

@@ -570,7 +570,11 @@
     "vorschlagTitel": "Essensvorschlag",
     "bereitsVollText": "Für diesen Zeitraum ist schon alles geplant.",
     "keinVorschlagText": "Brutzel konnte gerade keinen passenden Vorschlag finden. Leg vielleicht erst ein paar eigene Rezepte an.",
-    "vorschlagFehlgeschlagen": "Der Essensvorschlag ist fehlgeschlagen."
+    "vorschlagFehlgeschlagen": "Der Essensvorschlag ist fehlgeschlagen.",
+    "fuerWelcheMahlzeiten": "Für welche Mahlzeiten?",
+    "kategorieOptional": "Kategorie (optional)",
+    "alleKategorien": "Alle",
+    "vorschlagenKnopf": "Vorschlagen"
   },
   "teilen": {
     "rezeptSchicken": "Rezept schicken",

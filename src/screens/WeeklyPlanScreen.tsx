@@ -225,12 +225,12 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
   // Fuellt nur LEERE Hauptgericht-Plaetze - das macht der Server ohnehin
   // schon so (siehe /ai/suggest-week-plan), diese Funktion ruft ihn nur
   // fuer den richtigen Zeitraum auf.
-  const holeVorschlag = async (kennung: string, von: string, bis: string) => {
+  const holeVorschlag = async (kennung: string, von: string, bis: string, mahlzeiten: string[], kategorie: string | null) => {
     setVorschlagLaeuft(kennung);
     try {
       const res = await api.post<{ filled: unknown[]; empty_slots_found: number }>(
         '/ai/suggest-week-plan',
-        { start_date: von, end_date: bis },
+        { start_date: von, end_date: bis, mahlzeiten, kategorie },
       );
       if (res.empty_slots_found === 0) {
         Alert.alert(t('wochenplan.vorschlagTitel'), t('wochenplan.bereitsVollText'));
@@ -246,6 +246,32 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
     } finally {
       setVorschlagLaeuft(null);
     }
+  };
+
+  // Dialog VOR der Generierung (23.09.2026): frueher wurden immer alle
+  // drei Mahlzeiten gefuellt, ohne zu fragen. "kennung" traegt weiter,
+  // ob es der Wochen- oder ein Tages-Knopf war (fuer den Ladezustand am
+  // jeweiligen Knopf), "von"/"bis" den Zeitraum.
+  const [vorschlagDialog, setVorschlagDialog] = useState<{ kennung: string; von: string; bis: string } | null>(null);
+  const [dialogMahlzeiten, setDialogMahlzeiten] = useState<Set<string>>(
+    new Set(['fruehstueck', 'mittag', 'abend']),
+  );
+  const [dialogKategorie, setDialogKategorie] = useState<string | null>(null);
+  const dialogKategorien = Array.from(new Set(allRecipes.flatMap((r) => r.tags ?? []))).sort((a, b) =>
+    a.localeCompare(b, 'de'),
+  );
+
+  const oeffneVorschlagDialog = (kennung: string, von: string, bis: string) => {
+    setDialogMahlzeiten(new Set(['fruehstueck', 'mittag', 'abend']));
+    setDialogKategorie(null);
+    setVorschlagDialog({ kennung, von, bis });
+  };
+
+  const bestaetigeVorschlagDialog = () => {
+    if (!vorschlagDialog || dialogMahlzeiten.size === 0) return;
+    const { kennung, von, bis } = vorschlagDialog;
+    setVorschlagDialog(null);
+    holeVorschlag(kennung, von, bis, Array.from(dialogMahlzeiten), dialogKategorie);
   };
 
   const pickerKategorien = Array.from(new Set(allRecipes.flatMap((r) => r.tags ?? []))).sort((a, b) =>
@@ -271,7 +297,7 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
 
       <View style={{ flexDirection: 'row', gap: 10 }}>
         <Pressable
-          onPress={() => holeVorschlag('woche', startKey, endKey)}
+          onPress={() => oeffneVorschlagDialog('woche', startKey, endKey)}
           disabled={vorschlagLaeuft !== null}
           style={[
             styles.addAllButton,
@@ -326,7 +352,7 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
                     {t(WEEKDAY_KEYS[i])}, {formatShort(day)}
                   </Text>
                   <Pressable
-                    onPress={() => holeVorschlag(dateKey, dateKey, dateKey)}
+                    onPress={() => oeffneVorschlagDialog(dateKey, dateKey, dateKey)}
                     disabled={vorschlagLaeuft !== null}
                     hitSlop={8}
                     style={{ opacity: vorschlagLaeuft !== null ? 0.5 : 1 }}
@@ -511,6 +537,92 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
           </ScrollView>
         </View>
       </Modal>
+
+      <Modal visible={!!vorschlagDialog} transparent animationType="fade" onRequestClose={() => setVorschlagDialog(null)}>
+        <View style={styles.modalUeberlagerung}>
+          <View style={[styles.dialogKarte, { backgroundColor: colors.card, borderRadius: radius.md }]}>
+            <View style={styles.pickerHeader}>
+              <Text style={[styles.pickerTitle, { color: colors.text }]}>{t('wochenplan.vorschlagTitel')}</Text>
+              <Pressable onPress={() => setVorschlagDialog(null)} hitSlop={10}>
+                <MaterialCommunityIcons name="close" size={24} color={colors.text} />
+              </Pressable>
+            </View>
+
+            <Text style={[styles.dialogLabel, { color: colors.muted }]}>{t('wochenplan.fuerWelcheMahlzeiten')}</Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+              {MEAL_SLOTS.map((slot) => {
+                const aktiv = dialogMahlzeiten.has(slot.key);
+                return (
+                  <Pressable
+                    key={slot.key}
+                    onPress={() =>
+                      setDialogMahlzeiten((prev) => {
+                        const naechste = new Set(prev);
+                        if (naechste.has(slot.key)) naechste.delete(slot.key);
+                        else naechste.add(slot.key);
+                        return naechste;
+                      })
+                    }
+                    style={[
+                      styles.mahlzeitChip,
+                      { backgroundColor: aktiv ? gradient[0] : colors.bg, borderRadius: radius.sm },
+                    ]}
+                  >
+                    <Text style={{ color: aktiv ? '#fff' : colors.text, fontSize: 12.5, fontWeight: '600' }}>
+                      {t(slot.title)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {dialogKategorien.length > 0 && (
+              <>
+                <Text style={[styles.dialogLabel, { color: colors.muted }]}>{t('wochenplan.kategorieOptional')}</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ gap: 8, alignItems: 'center' }}
+                  style={styles.pickerKategorienBar}
+                >
+                  <Pressable
+                    onPress={() => setDialogKategorie(null)}
+                    style={[styles.pickerChip, { backgroundColor: !dialogKategorie ? gradient[0] : colors.bg, borderRadius: radius.sm }]}
+                  >
+                    <Text style={{ color: !dialogKategorie ? '#fff' : colors.text, fontSize: 12.5, fontWeight: '600' }}>
+                      {t('wochenplan.alleKategorien')}
+                    </Text>
+                  </Pressable>
+                  {dialogKategorien.map((kat) => {
+                    const aktiv = dialogKategorie === kat;
+                    return (
+                      <Pressable
+                        key={kat}
+                        onPress={() => setDialogKategorie(aktiv ? null : kat)}
+                        style={[styles.pickerChip, { backgroundColor: aktiv ? gradient[0] : colors.bg, borderRadius: radius.sm }]}
+                      >
+                        <Text style={{ color: aktiv ? '#fff' : colors.text, fontSize: 12.5, fontWeight: '600' }}>{kat}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </>
+            )}
+
+            <Pressable
+              onPress={bestaetigeVorschlagDialog}
+              disabled={dialogMahlzeiten.size === 0}
+              style={[
+                styles.dialogBestaetigen,
+                { backgroundColor: gradient[0], borderRadius: radius.sm, opacity: dialogMahlzeiten.size === 0 ? 0.5 : 1 },
+              ]}
+            >
+              <MaterialCommunityIcons name="auto-fix" size={16} color="#fff" />
+              <Text style={{ color: '#fff', fontWeight: '700' }}>{t('wochenplan.vorschlagenKnopf')}</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -562,4 +674,9 @@ const styles = StyleSheet.create({
   // zusammen, genau der Fehler, der im normalen Rezepte-Tab (categoryBar)
   // schon einmal aufgetreten und dort so geloest worden war.
   pickerKategorienBar: { height: 50, marginBottom: 10, flexGrow: 0, flexShrink: 0 },
+  modalUeberlagerung: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 24 },
+  dialogKarte: { padding: 20 },
+  dialogLabel: { fontSize: 11.5, fontWeight: '600', marginBottom: 8, marginTop: 2 },
+  mahlzeitChip: { flex: 1, height: 38, alignItems: 'center', justifyContent: 'center' },
+  dialogBestaetigen: { flexDirection: 'row', gap: 7, alignItems: 'center', justifyContent: 'center', height: 46, marginTop: 6 },
 });
