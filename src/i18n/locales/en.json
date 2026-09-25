@@ -726,7 +726,8 @@
     "nachrichtGesendetTitel": "Message sent",
     "nachrichtGesendetText": "Your message is on its way.",
     "nachrichtFehlgeschlagen": "The message could not be sent.",
-    "senden": "Send"
+    "senden": "Send",
+    "poolWaehlen": "Publish in which pool?"
   },
   "uebersetzung": {
     "angebotTitel": "This recipe is written in {sprache}.",

@@ -726,7 +726,8 @@
     "nachrichtGesendetTitel": "Nachricht gesendet",
     "nachrichtGesendetText": "Deine Nachricht ist unterwegs.",
     "nachrichtFehlgeschlagen": "Die Nachricht konnte nicht gesendet werden.",
-    "senden": "Senden"
+    "senden": "Senden",
+    "poolWaehlen": "In welchem Pool veröffentlichen?"
   },
   "uebersetzung": {
     "angebotTitel": "Dieses Rezept ist auf {sprache} verfasst.",

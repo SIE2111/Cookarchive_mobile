@@ -1,10 +1,17 @@
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import { Pressable, StyleSheet, ActivityIndicator, Alert, View, Text, Modal, ScrollView } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
 import { api, ApiError } from '../api/client';
 import { useServerSync } from '../context/ServerSyncContext';
+
+interface MeinPool {
+  id: string;
+  name: string;
+  is_community: boolean;
+  active: boolean;
+}
 
 /**
  * Kleiner Knopf "ins Gemeinschaftskochbuch stellen" - sitzt direkt an der
@@ -42,20 +49,24 @@ export default function PublishToPoolButton({
   style?: object;
   initialPublished?: boolean;
 }) {
-  const { colors, gradient } = useTheme();
+  const { colors, gradient, radius } = useTheme();
   const { t } = useUebersetzung();
   const { serverSyncEnabled, isLoading: syncLoading } = useServerSync();
   const [isPublishing, setIsPublishing] = useState(false);
   const [isPublished, setIsPublished] = useState(initialPublished);
+  // Auswahl-Dialog nur bei MEHREREN aktiven Pools (23.09.2026) - bei
+  // genau einem aktiven (im Regelfall der Community-Pool) wird direkt
+  // dorthin veroeffentlicht, ohne extra zu fragen.
+  const [poolAuswahl, setPoolAuswahl] = useState<MeinPool[] | null>(null);
 
   // Solange der Wert noch laedt, NICHT sperren: Ein kurz verzoegerter
   // Ladevorgang darf nicht wie eine Sperre aussehen.
   const isLocked = !syncLoading && !serverSyncEnabled;
 
-  const publish = async () => {
+  const publish = async (poolId: string) => {
     setIsPublishing(true);
     try {
-      await api.post('/pool/publish', { recipe_id: recipeId });
+      await api.post('/pool/publish', { recipe_id: recipeId, pool_id: poolId });
       setIsPublished(true);
       Alert.alert(t('sonstiges.veroeffentlicht'), t('sonstiges.veroeffentlichtText', { titel: recipeTitle }));
     } catch (err) {
@@ -95,7 +106,7 @@ export default function PublishToPoolButton({
     }
   };
 
-  const confirm = () => {
+  const confirm = async () => {
     if (isPublishing) return;
     if (isPublished) {
       // Bewusst mit derselben Rueckfrage-Staerke wie das Veroeffentlichen
@@ -123,17 +134,40 @@ export default function PublishToPoolButton({
       );
       return;
     }
+
+    // Aktive Pools erst hier laden (nicht vorab beim Rendern) - der
+    // Knopf sitzt in Listenzeilen, ein Netzwerkaufruf pro Zeile beim
+    // blossen Anzeigen waere unnoetig teuer.
+    setIsPublishing(true);
+    let meinePools: MeinPool[] = [];
+    try {
+      meinePools = await api.get<MeinPool[]>('/pools/');
+    } catch {
+      // Fehlschlag hier soll das gewohnte Veroeffentlichen nicht
+      // blockieren - einfach so weitermachen, als gaebe es nur den
+      // Community-Pool (bisheriges Verhalten).
+    } finally {
+      setIsPublishing(false);
+    }
+    const aktive = meinePools.filter((p) => p.active);
+
+    if (aktive.length > 1) {
+      setPoolAuswahl(aktive);
+      return;
+    }
+    const zielPool = aktive[0]?.id ?? 'community';
     Alert.alert(
       t('sonstiges.insPoolFrage'),
       t('sonstiges.insPoolText', { titel: recipeTitle }),
       [
         { text: t('allgemein.abbrechen'), style: 'cancel' },
-        { text: t('sonstiges.veroeffentlichen'), onPress: publish },
+        { text: t('sonstiges.veroeffentlichen'), onPress: () => publish(zielPool) },
       ],
     );
   };
 
   return (
+    <>
     <Pressable
       onPress={confirm}
       hitSlop={8}
@@ -158,6 +192,37 @@ export default function PublishToPoolButton({
         />
       )}
     </Pressable>
+
+    <Modal visible={!!poolAuswahl} transparent animationType="fade" onRequestClose={() => setPoolAuswahl(null)}>
+      <View style={styles.modalUeberlagerung}>
+        <View style={[styles.modalKarte, { backgroundColor: colors.card, borderRadius: radius.md }]}>
+          <Text style={[styles.modalTitel, { color: colors.text }]}>{t('sonstiges.poolWaehlen')}</Text>
+          <ScrollView style={{ maxHeight: 300 }}>
+            {(poolAuswahl ?? []).map((p) => (
+              <Pressable
+                key={p.id}
+                onPress={() => {
+                  setPoolAuswahl(null);
+                  publish(p.id);
+                }}
+                style={[styles.poolZeile, { borderColor: colors.cardBorder }]}
+              >
+                <MaterialCommunityIcons
+                  name={p.is_community ? 'earth' : 'account-group'}
+                  size={18}
+                  color={colors.muted}
+                />
+                <Text style={{ color: colors.text, fontSize: 14, marginLeft: 10 }}>{p.name}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+          <Pressable onPress={() => setPoolAuswahl(null)} style={styles.modalAbbrechen}>
+            <Text style={{ color: colors.muted, fontWeight: '600' }}>{t('allgemein.abbrechen')}</Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+    </>
   );
 }
 
@@ -167,4 +232,9 @@ const styles = StyleSheet.create({
   // klar ist, dass es die Funktion gibt - sie ist nur gerade nicht
   // freigeschaltet.
   locked: { opacity: 0.35 },
+  modalUeberlagerung: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 24 },
+  modalKarte: { padding: 20 },
+  modalTitel: { fontSize: 15.5, fontWeight: '700', marginBottom: 12 },
+  poolZeile: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1 },
+  modalAbbrechen: { alignItems: 'center', paddingTop: 16 },
 });
