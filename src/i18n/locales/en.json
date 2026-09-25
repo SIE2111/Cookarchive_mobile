@@ -576,7 +576,10 @@
     "alleKategorien": "All",
     "vorschlagenKnopf": "Suggest",
     "keineMahlzeitMarkiert": "No meal selected",
-    "keineMahlzeitMarkiertText": "Please select at least breakfast, lunch or dinner."
+    "keineMahlzeitMarkiertText": "Please select at least breakfast, lunch or dinner.",
+    "wocheLeeren": "Clear week",
+    "wocheLeerenFrage": "Clear the whole week?",
+    "wocheLeerenText": "Removes all planned meals for this week, mains and sides. This cannot be undone."
   },
   "teilen": {
     "rezeptSchicken": "Send recipe",

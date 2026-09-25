@@ -14,6 +14,10 @@ type MealSlot = 'fruehstueck' | 'mittag' | 'abend';
 // Schluessel statt Texte: Die Tabellen werden einmal beim Laden der
 // Datei ausgewertet, ein Text darin bliebe fuer immer in der Sprache des
 // ersten Starts.
+// Sentinel statt eines echten Tag-Namens - kann nie mit einem
+// tatsaechlichen Rezept-Tag kollidieren.
+const FAVORITEN_FILTER = '__favoriten__';
+
 const MEAL_SLOTS: { key: MealSlot; title: string }[] = [
   { key: 'fruehstueck', title: 'wochenplan.fruehstueck' },
   { key: 'mittag', title: 'wochenplan.mittag' },
@@ -40,6 +44,7 @@ interface RecipeSummary {
   title: string;
   cover_image_url: string | null;
   tags: string[] | null;
+  is_favorite: boolean;
 }
 
 // Immer dasselbe Gold, unabhaengig von der gewaehlten Akzentfarbe
@@ -98,11 +103,17 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
   const [pickerKategorie, setPickerKategorie] = useState<string | null>(null);
   const [defaultServings, setDefaultServings] = useState(4);
   const [servingsInput, setServingsInput] = useState('4');
+  const [categoryOrder, setCategoryOrder] = useState<string[] | null>(null);
+  const [hiddenCategories, setHiddenCategories] = useState<string[]>([]);
 
   useEffect(() => {
     api
-      .get<{ default_servings: number }>('/preferences/')
-      .then((prefs) => setDefaultServings(prefs.default_servings))
+      .get<{ default_servings: number; category_order?: string[]; hidden_categories?: string[] }>('/preferences/')
+      .then((prefs) => {
+        setDefaultServings(prefs.default_servings);
+        setCategoryOrder(prefs.category_order ?? []);
+        setHiddenCategories(prefs.hidden_categories ?? []);
+      })
       .catch(() => {
         // Vorgabe konnte nicht geladen werden - bleibt beim Fallback 4,
         // kein Grund den Wochenplan zu blockieren
@@ -175,6 +186,30 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
         onPress: async () => {
           try {
             await api.delete(`/weekly-plan/${entryId}`);
+            loadWeek();
+          } catch (err) {
+            Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('wochenplan.nichtEntfernt'));
+          }
+        },
+      },
+    ]);
+  };
+
+  // Alles auf einmal entfernen (23.09.2026) - z.B. um einen Essensvorschlag
+  // komplett zu verwerfen, statt jeden Platz einzeln per X. Betrifft ALLE
+  // Eintraege der sichtbaren Woche (Haupt- UND Beilagen), nicht nur die,
+  // die gerade per Vorschlag entstanden sind - "der ganzen Woche
+  // gesamten Vorschlag stornieren" unterscheidet nicht nach Herkunft.
+  const leereWoche = () => {
+    if (entries.length === 0) return;
+    Alert.alert(t('wochenplan.wocheLeerenFrage'), t('wochenplan.wocheLeerenText'), [
+      { text: t('allgemein.abbrechen'), style: 'cancel' },
+      {
+        text: t('wochenplan.wocheLeeren'),
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await Promise.all(entries.map((e) => api.delete(`/weekly-plan/${e.id}`)));
             loadWeek();
           } catch (err) {
             Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('wochenplan.nichtEntfernt'));
@@ -280,12 +315,30 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
     holeVorschlag(kennung, von, bis, Array.from(dialogMahlzeiten), dialogKategorie);
   };
 
-  const pickerKategorien = Array.from(new Set(allRecipes.flatMap((r) => r.tags ?? []))).sort((a, b) =>
-    a.localeCompare(b, 'de'),
-  );
+  // Dieselbe Reihenfolge wie im Dashboard (23.09.2026, vorher rein
+  // alphabetisch): erst die vom Nutzer selbst festgelegte Reihenfolge
+  // (ManageCategoriesScreen), dann der Rest nach Haeufigkeit - und wie
+  // dort eine feste "Favoriten"-Kachel vorneweg, kein echter Tag.
+  const pickerKategorien = (() => {
+    const counts = new Map<string, number>();
+    allRecipes.forEach((r) => (r.tags ?? []).forEach((tag) => counts.set(tag, (counts.get(tag) ?? 0) + 1)));
+    const versteckt = new Set(hiddenCategories);
+    const eingeordnet = new Set(categoryOrder ?? []);
+    const festeReihenfolge = (categoryOrder ?? []).filter((tag) => counts.has(tag) && !versteckt.has(tag));
+    const restKandidaten = Array.from(counts.keys()).filter((tag) => !eingeordnet.has(tag) && !versteckt.has(tag));
+    const nachHaeufigkeit = restKandidaten.sort((a, b) => {
+      const diff = (counts.get(b) ?? 0) - (counts.get(a) ?? 0);
+      return diff !== 0 ? diff : a.localeCompare(b, 'de');
+    });
+    return [...festeReihenfolge, ...nachHaeufigkeit];
+  })();
   const filteredRecipes = allRecipes
     .filter((r) => !recipeSearch.trim() || r.title.toLowerCase().includes(recipeSearch.trim().toLowerCase()))
-    .filter((r) => !pickerKategorie || r.tags?.includes(pickerKategorie));
+    .filter((r) => {
+      if (!pickerKategorie) return true;
+      if (pickerKategorie === FAVORITEN_FILTER) return r.is_favorite;
+      return r.tags?.includes(pickerKategorie);
+    });
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
@@ -332,6 +385,20 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
               <Text style={styles.addAllButtonText}>{t('wochenplan.zutatenDerWoche')}</Text>
             </>
           )}
+        </Pressable>
+        {/* Kompakt statt flex:1 wie die anderen beiden - eine seltene,
+            zerstoerende Aktion muss nicht gleich viel Platz beanspruchen
+            wie die beiden Hauptknoepfe (23.09.2026). */}
+        <Pressable
+          onPress={leereWoche}
+          disabled={entries.length === 0}
+          accessibilityLabel={t('wochenplan.wocheLeeren')}
+          style={[
+            styles.addAllButton,
+            { width: 44, backgroundColor: colors.card, borderRadius: radius.md, opacity: entries.length === 0 ? 0.4 : 1 },
+          ]}
+        >
+          <MaterialCommunityIcons name="trash-can-outline" size={18} color="#C0392B" />
         </Pressable>
       </View>
 
@@ -497,27 +564,42 @@ export default function WeeklyPlanScreen({ navigation }: Props) {
             value={recipeSearch}
             onChangeText={setRecipeSearch}
           />
-          {pickerKategorien.length > 0 && (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 8, alignItems: 'center' }}
-              style={styles.pickerKategorienBar}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 8, alignItems: 'center' }}
+            style={styles.pickerKategorienBar}
+          >
+            <Pressable
+              onPress={() => setPickerKategorie(pickerKategorie === FAVORITEN_FILTER ? null : FAVORITEN_FILTER)}
+              style={[
+                styles.pickerChip,
+                { backgroundColor: pickerKategorie === FAVORITEN_FILTER ? gradient[0] : colors.card, borderRadius: radius.sm },
+              ]}
             >
-              {pickerKategorien.map((kat) => {
-                const aktiv = pickerKategorie === kat;
-                return (
-                  <Pressable
-                    key={kat}
-                    onPress={() => setPickerKategorie(aktiv ? null : kat)}
-                    style={[styles.pickerChip, { backgroundColor: aktiv ? gradient[0] : colors.card, borderRadius: radius.sm }]}
-                  >
-                    <Text style={{ color: aktiv ? '#fff' : colors.text, fontSize: 12.5, fontWeight: '600' }}>{kat}</Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          )}
+              <MaterialCommunityIcons
+                name="heart"
+                size={13}
+                color={pickerKategorie === FAVORITEN_FILTER ? '#fff' : gradient[0]}
+                style={{ marginRight: 5 }}
+              />
+              <Text style={{ color: pickerKategorie === FAVORITEN_FILTER ? '#fff' : colors.text, fontSize: 12.5, fontWeight: '600' }}>
+                {t('dashboard.favoriten')}
+              </Text>
+            </Pressable>
+            {pickerKategorien.map((kat) => {
+              const aktiv = pickerKategorie === kat;
+              return (
+                <Pressable
+                  key={kat}
+                  onPress={() => setPickerKategorie(aktiv ? null : kat)}
+                  style={[styles.pickerChip, { backgroundColor: aktiv ? gradient[0] : colors.card, borderRadius: radius.sm }]}
+                >
+                  <Text style={{ color: aktiv ? '#fff' : colors.text, fontSize: 12.5, fontWeight: '600' }}>{kat}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
           <ScrollView>
             {filteredRecipes.map((r) => (
               <Pressable

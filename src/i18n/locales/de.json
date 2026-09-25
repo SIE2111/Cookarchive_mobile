@@ -576,7 +576,10 @@
     "alleKategorien": "Alle",
     "vorschlagenKnopf": "Vorschlagen",
     "keineMahlzeitMarkiert": "Keine Mahlzeit ausgewählt",
-    "keineMahlzeitMarkiertText": "Bitte mindestens Frühstück, Mittag oder Abend markieren."
+    "keineMahlzeitMarkiertText": "Bitte mindestens Frühstück, Mittag oder Abend markieren.",
+    "wocheLeeren": "Woche leeren",
+    "wocheLeerenFrage": "Ganze Woche leeren?",
+    "wocheLeerenText": "Entfernt alle geplanten Mahlzeiten dieser Woche, Haupt- und Beilagen. Das lässt sich nicht rückgängig machen."
   },
   "teilen": {
     "rezeptSchicken": "Rezept schicken",
