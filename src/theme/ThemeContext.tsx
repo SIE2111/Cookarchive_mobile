@@ -6,7 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // oder "Grosse Schrift" - Theme ist rein visuell (siehe Architekturprinzip
 // im Umsetzungskonzept Abschnitt 5).
 
-export type AccentColor = 'gruen' | 'orange' | 'tuerkis' | 'pink' | 'gelb';
+export type AccentColor = 'gruen' | 'orange' | 'tuerkis' | 'pink' | 'gelb' | 'bernstein';
 export type BackgroundStyle = 'warm-hell' | 'kuehl-hell' | 'dunkel';
 export type TypographyStyle = 'weich' | 'clean';
 export type RadiusStyle = 'weich' | 'clean'; // grosse vs. kleine Ecken (FAB bleibt immer rund)
@@ -32,6 +32,7 @@ const ACCENT_GRADIENTS: Record<AccentColor, [string, string]> = {
   tuerkis: ['#0D9488', '#0891B2'],
   pink: ['#DB2777', '#F472B6'],
   gelb: ['#EAB308', '#F59E0B'],
+  bernstein: ['#B07A12', '#D99A2B'],
 };
 
 const BACKGROUND_COLORS: Record<BackgroundStyle, { bg: string; card: string; text: string; muted: string; cardBorder: string }> = {
