@@ -720,8 +720,8 @@ const styles = StyleSheet.create({
   weekLabel: { fontSize: 15, fontWeight: '700' },
   // marginBottom, damit die erste Zeile des Montags nicht direkt unter
   // dem Knopf klebt und angeschnitten wirkt.
-  addAllButton: { flexDirection: 'row', gap: 7, alignItems: 'center', justifyContent: 'center', height: 44, marginBottom: 12 },
-  addAllButtonText: { color: '#fff', fontWeight: '700', fontSize: 12.5 },
+  addAllButton: { flexDirection: 'row', gap: 7, alignItems: 'center', justifyContent: 'center', minHeight: 44, paddingVertical: 8, paddingHorizontal: 6, marginBottom: 12 },
+  addAllButtonText: { color: '#fff', fontWeight: '700', fontSize: 12.5, flexShrink: 1, textAlign: 'center' },
   tageRaster: { flexDirection: 'row', flexWrap: 'wrap', gap: 18 },
   // Knapp unter der Haelfte, damit der Abstand dazwischen Platz hat.
   tagInSpalte: { width: '47%' },
