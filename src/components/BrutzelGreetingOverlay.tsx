@@ -65,7 +65,11 @@ export default function BrutzelGreetingOverlay({ name, onDismiss, mitVideo = tru
     // Textbloecke erscheinen jetzt gemeinsam.
     Animated.timing(textOpacity, { toValue: 1, duration: 500, useNativeDriver: true }).start();
 
-    if (!sprechen) {
+    // Haengt jetzt an "Animations-Musik" (mitMusik) statt am separaten
+    // sprechen-Prop - gleiche Vereinheitlichung wie bei Buerroablage und
+    // in CookingFinishedCelebration.tsx (Vorlesen laeuft automatisch mit
+    // der Animation mit, kein eigener Schalter mehr dafuer noetig).
+    if (!mitMusik) {
       return;
     }
 
