@@ -104,10 +104,13 @@ export default function CookingFinishedCelebration({ recipeTitle, onDone }: Prop
 
   // Spricht "Guten Appetit! ... ist fertig." genau einmal, sobald der Text
   // erscheint - mit neutraler Stimme (kein voice/pitch/rate), nicht
-  // Brutzels eigener, und nur bei eingeschaltetem "Schritte automatisch
-  // vorlesen". hasSpokenRef verhindert ein zweites Mal bei Re-Renders.
+  // Brutzels eigener. Haengt jetzt an "Animations-Musik" statt am eigenen
+  // "Schritte automatisch vorlesen"-Schalter (gleiche Vereinheitlichung wie
+  // bei Buerroablage: Vorlesen laeuft automatisch mit der Animation mit,
+  // kein separates Feld mehr dafuer noetig). hasSpokenRef verhindert ein
+  // zweites Mal bei Re-Renders.
   useEffect(() => {
-    if (!showText || !autoReadSteps || hasSpokenRef.current) return;
+    if (!showText || !mitMusik || hasSpokenRef.current) return;
     hasSpokenRef.current = true;
     // Hardcodierter deutscher Text statt der lokalisierten Anzeige (die
     // ein Emoji enthaelt) - gleiche Konvention wie BrutzelGreetingOverlay:
@@ -121,7 +124,7 @@ export default function CookingFinishedCelebration({ recipeTitle, onDone }: Prop
       Speech.stop();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showText, autoReadSteps]);
+  }, [showText, mitMusik]);
 
   const player = useVideoPlayer(require('../../assets/brutzel-celebration.mp4'), (p) => {
     p.loop = false;
