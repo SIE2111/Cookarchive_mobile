@@ -294,6 +294,9 @@ export default function ProfileScreen({ navigation }: Props) {
         />
         {savingKey === 'display_name' && <ActivityIndicator color={colors.muted} size="small" />}
       </View>
+      {!!accountEmail && (
+        <Text style={{ color: colors.muted, fontSize: 13, marginBottom: 8 }}>{accountEmail}</Text>
+      )}
       {prefs.household_role && (
         <View style={[styles.adminBadge, { backgroundColor: prefs.household_role === 'owner' ? gradient[0] : colors.card, borderRadius: radius.sm }]}>
           <MaterialCommunityIcons
