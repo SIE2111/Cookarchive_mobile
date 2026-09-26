@@ -26,7 +26,7 @@ export async function ensureMediaLibraryAccess(): Promise<boolean> {
   if (!permission.canAskAgain) {
     Alert.alert(
       'Foto-Zugriff nötig',
-      'Der Zugriff auf deine Fotos wurde bereits abgelehnt. Öffne die Einstellungen und aktiviere ihn dort für Expo Go, um Bilder auswählen zu können.',
+      'Der Zugriff auf deine Fotos wurde bereits abgelehnt. Öffne die Einstellungen und aktiviere ihn dort für Mein Kochbuch, um Bilder auswählen zu können.',
       [
         { text: 'Abbrechen', style: 'cancel' },
         { text: 'Einstellungen öffnen', onPress: () => Linking.openSettings() },
