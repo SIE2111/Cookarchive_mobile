@@ -78,6 +78,7 @@ const ACCENT_OPTIONS: { key: AccentColor; title: string; color: string }[] = [
   { key: 'tuerkis', title: 'profil.farbeTuerkis', color: '#0D9488' },
   { key: 'pink', title: 'profil.farbePink', color: '#DB2777' },
   { key: 'gelb', title: 'profil.farbeGelb', color: '#EAB308' },
+  { key: 'bernstein', title: 'profil.farbeBernstein', color: '#B07A12' },
 ];
 
 // Die einzelnen Schalter-Definitionen (Darstellung, Server-Sync,
