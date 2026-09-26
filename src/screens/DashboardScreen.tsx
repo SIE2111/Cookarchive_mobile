@@ -465,6 +465,17 @@ export default function DashboardScreen({ navigation }: Props) {
       contentContainerStyle={[styles.container, istTablet ? inhaltsBreiteZweispaltig : inhaltsBreite]}
       refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
     >
+      {/* "Powered by HomeArchive AI" + App-Titel oben - wie bei Buerroablage,
+          fehlte hier bisher komplett (nicht zu verwechseln mit der bewusst
+          entfernten Begruessung "Hallo...Was kochen wir heute" weiter
+          unten - das ist eine andere, statische Kopfzeile). */}
+      <View style={styles.brandRow}>
+        <Text style={[styles.brandText, { color: colors.muted }]}>Powered by</Text>
+        <Text style={[styles.brandName, { color: colors.text }]}>HomeArchive</Text>
+        <View style={[styles.brandBadge, { backgroundColor: gradient[0] }]}><Text style={styles.brandBadgeText}>AI</Text></View>
+      </View>
+      <Text style={[styles.appTitle, { color: colors.text }]}>Mein Kochbuch</Text>
+
       {/* Begruessung ("Hallo …! 👋" / "Was kochen wir heute?") bewusst
           entfernt: Sie kostete zwei Zeilen fuer eine Information, die man
           nach dem ersten Oeffnen kennt, und schob die Rezepte nach unten.
@@ -517,6 +528,12 @@ export default function DashboardScreen({ navigation }: Props) {
 // Liste erneut aus dem Bild.
 const styles = StyleSheet.create({
   container: { padding: 18, paddingBottom: 40 },
+  brandRow:       { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 },
+  brandText:      { fontSize: 11 },
+  brandName:      { fontSize: 11, fontWeight: '500' },
+  brandBadge:     { borderRadius: 5, paddingHorizontal: 5, paddingVertical: 2 },
+  brandBadgeText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.3, color: '#fff' },
+  appTitle:       { fontSize: 18, fontWeight: '500', marginBottom: 12 },
   // Zwei Spalten am Tablet: links ~7/12, rechts ~5/12 (Auftrag Punkt 4).
   // gap statt Raendern an den Kindern, damit sich die Blockabstaende
   // innerhalb einer Spalte nicht mit dem Spaltenabstand vermischen.
