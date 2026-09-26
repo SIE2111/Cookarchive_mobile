@@ -207,7 +207,23 @@ export default function PhotoCaptureScreen({ navigation }: Props) {
       quality: 0.9,
     });
     if (!pickerResult.canceled && pickerResult.assets[0]) {
-      setZuschnittUri(pickerResult.assets[0].uri);
+      const uri = pickerResult.assets[0].uri;
+      // Vorher sprang die App bei einem Fehler hier still zurueck, ohne
+      // Hinweis - z.B. wenn das Foto nur als iCloud-Cloud-Vorschau existiert
+      // (noch nicht lokal heruntergeladen, etwa weil die Synchronisierung
+      // pausiert ist) und sich daher nicht in voller Aufloesung laden
+      // laesst. Jetzt zumindest eine Meldung, statt kommentarlos nichts zu
+      // tun.
+      Image.getSize(
+        uri,
+        () => setZuschnittUri(uri),
+        () => {
+          Alert.alert(
+            'Foto konnte nicht geladen werden',
+            'Dieses Foto ließ sich nicht öffnen - möglicherweise ist es nur in der iCloud gespeichert und noch nicht auf dieses Gerät heruntergeladen. Prüfe, ob die iCloud-Fotos-Synchronisierung aktiv ist (z.B. bei niedrigem Akkustand pausiert sie), oder wähle ein anderes Foto.',
+          );
+        },
+      );
     }
   };
 
