@@ -50,6 +50,8 @@ export default function BrutzelGreetingOverlay({ name, onDismiss, mitVideo = tru
 
   const greetingText = `Hallo ${name}! Was möchtest du heute kochen?`;
 
+  const [videoReady, setVideoReady] = useState(false);
+
   // Der Haken laeuft unbedingt - Hooks duerfen nicht bedingt aufgerufen
   // werden. Abgespielt und angezeigt wird nur bei eingeschalteter Animation.
   const player = useVideoPlayer(require('../../assets/brutzel-celebration.mp4'), (p) => {
@@ -57,6 +59,23 @@ export default function BrutzelGreetingOverlay({ name, onDismiss, mitVideo = tru
     p.muted = !mitMusik;
     if (mitVideo) p.play();
   });
+
+  useEffect(() => {
+    if (!mitVideo) return;
+    // Standbild bleibt bei aktivierter Animation verborgen, bis das Video
+    // wirklich bereit ist - vorher blitzte es beim Start immer kurz auf,
+    // bevor der erste Frame kam (unschoen). Wird der Player NIE bereit
+    // (echter Ladefehler), bleibt videoReady false und das Standbild
+        // erscheint als Sicherheitsnetz weiterhin (siehe Kommentar unten).
+    if (player.status === 'readyToPlay') {
+      setVideoReady(true);
+      return;
+    }
+    const sub = player.addListener('statusChange', ({ status }) => {
+      if (status === 'readyToPlay') setVideoReady(true);
+    });
+    return () => sub.remove();
+  }, [mitVideo, player]);
 
   useEffect(() => {
     // Frueher lief hier ein Zeitgeber von 3,5 Sekunden, damit der Text erst
@@ -113,9 +132,14 @@ export default function BrutzelGreetingOverlay({ name, onDismiss, mitVideo = tru
         {/* Standbild LIEGT HINTER dem Player, nicht als Ersatz daneben: Bleibt
             der Player stumm - was bei genau diesem Video schon am Ende des
             Kochvorgangs vorkam -, steht hier Brutzel statt einer Luecke.
-            Spielt das Video, verdeckt es das Bild vollstaendig. */}
+            Spielt das Video, verdeckt es das Bild vollstaendig. Bei
+            eingeschalteter Animation aber erst NACH videoReady zeigen -
+            sonst blitzte es beim Start immer kurz auf, bevor der erste
+            Frame da war. */}
         <View style={styles.videoBox}>
-          <Image source={require('../../assets/brutzel-full.png')} style={styles.videoFallback} resizeMode="contain" />
+          {(!mitVideo || !videoReady) && (
+            <Image source={require('../../assets/brutzel-full.png')} style={styles.videoFallback} resizeMode="contain" />
+          )}
           {mitVideo && <VideoView player={player} style={styles.video} contentFit="cover" nativeControls={false} />}
         </View>
 
