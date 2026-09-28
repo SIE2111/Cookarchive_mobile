@@ -137,7 +137,18 @@ function MainTabs() {
         sceneStyle: { paddingTop: insets.top },
         tabBarActiveTintColor: gradient[0],
         tabBarInactiveTintColor: colors.muted,
-        tabBarStyle: { backgroundColor: colors.card, borderTopColor: colors.bg },
+        // Android edge-to-edge (app.json: edgeToEdgeEnabled) zeichnet den
+        // Inhalt hinter der System-Navigationsleiste (Geste/3-Tasten) -
+        // ohne expliziten Abstand landet die Tab-Leiste dahinter/darunter.
+        // Hoehe + unteres Padding daher manuell um insets.bottom erweitern,
+        // statt uns auf die automatische Erkennung der Bibliothek zu verlassen.
+        tabBarStyle: {
+          backgroundColor: colors.card,
+          borderTopColor: colors.bg,
+          height: 56 + insets.bottom,
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
+          paddingTop: 8,
+        },
         tabBarIcon: ({ color, size }) => (
           <MaterialCommunityIcons name={TAB_ICONS[route.name as keyof MainTabParamList]} size={size} color={color} />
         ),
