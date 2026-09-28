@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { Platform, Dimensions } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import * as Updates from 'expo-updates';
-import * as ScreenOrientation from 'expo-screen-orientation';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider } from './src/theme/ThemeContext';
@@ -85,6 +84,17 @@ export default function App() {
     const istTabletGeraet = Math.max(width, height) >= TABLET_AB;
     (async () => {
       try {
+        // Bewusst per require() HIER drin statt als statischer Top-Level-
+        // Import (siehe oben, wo er vorher stand): ein statischer Import
+        // fuehrt das native Modul schon beim Laden des JS-Bundles nach -
+        // das crasht die GESAMTE App (auch auf iOS, wo dieser Code nie
+        // laeuft!), wenn ein per OTA ausgeliefertes Update diese
+        // Abhaengigkeit nutzt, der installierte native Build eines Nutzers
+        // sie aber (noch kein neuer eas build) gar nicht enthaelt - siehe
+        // Absturzreport "Cannot find native module 'ExpoScreenOrientation'"
+        // bei einem Nutzer. Mit require() HIER greift das try/catch auch
+        // fuer genau diesen Fall.
+        const ScreenOrientation = require('expo-screen-orientation');
         if (istTabletGeraet) {
           await ScreenOrientation.unlockAsync();
         } else {
