@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavigationContainer, type NavigatorScreenParams } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../theme/ThemeContext';
+import { api } from '../api/client';
 import LoginScreen from '../screens/LoginScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import RegisterScreen from '../screens/RegisterScreen';
@@ -163,12 +164,13 @@ function MainTabs() {
   );
 }
 
-function MainNavigator() {
+function MainNavigator({ startOnOnboarding }: { startOnOnboarding: boolean }) {
   const { colors } = useTheme();
-  const { justRegistered } = useAuth();
   // Neu registrierte Nutzer starten im Onboarding (Ordner/Starter-Pack-Wahl),
-  // alle anderen landen wie gewohnt direkt auf den Tabs.
-  const initialRouteName = justRegistered ? 'Onboarding' : 'MainTabs';
+  // ebenso ein Konto, das zum ersten Mal HIER in Kochbuch auftaucht, auch
+  // wenn es laengst in Buerroablage/Medienablage eingerichtet ist (siehe
+  // startOnOnboarding-Berechnung in AppNavigator unten).
+  const initialRouteName = startOnOnboarding ? 'Onboarding' : 'MainTabs';
   return (
     <MainStack.Navigator
       initialRouteName={initialRouteName}
@@ -245,10 +247,29 @@ function MainNavigator() {
 }
 
 export default function AppNavigator() {
-  const { session, isLoading, trialExpired, signOut } = useAuth();
+  const { session, isLoading, trialExpired, signOut, justRegistered } = useAuth();
   const { colors, isLoaded: themeLoaded } = useTheme();
 
-  if (isLoading || !themeLoaded) {
+  // 2026-09-29: Prueft, ob dieses (ggf. laengst in Buerroablage/Medienablage
+  // bestehende) Konto zum ERSTEN MAL in Kochbuch auftaucht - dann soll der
+  // Einrichtungsbildschirm auch ohne frische Kochbuch-Registrierung
+  // erscheinen (justRegistered allein deckte das bisher nicht ab, siehe
+  // AuthContext.tsx: wird nur bei einer echten Neuregistrierung gesetzt).
+  // Bewusst HIER (vor MainNavigator), nicht in einem einzelnen Tab-Screen -
+  // andere Screens feuern beim Start eigene Requests, die die Registrierung
+  // ueber die normale JWT-Pruefung sonst zuerst ausloesen wuerden (siehe
+  // GET /account/app-status Docstring im Backend).
+  const [firstLoginThisApp, setFirstLoginThisApp] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!session) { setFirstLoginThisApp(null); return; }
+    let cancelled = false;
+    api.get<{ first_login_this_app: boolean }>('/account/app-status')
+      .then(res => { if (!cancelled) setFirstLoginThisApp(!!res.first_login_this_app); })
+      .catch(() => { if (!cancelled) setFirstLoginThisApp(false); }); // im Zweifel nicht blockieren
+    return () => { cancelled = true; };
+  }, [session]);
+
+  if (isLoading || !themeLoaded || (!!session && firstLoginThisApp === null)) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>
         <ActivityIndicator color={colors.text} />
@@ -281,7 +302,9 @@ export default function AppNavigator() {
 
   return (
     <NavigationContainer>
-      {session ? <MainNavigator /> : <AuthNavigator />}
+      {session
+        ? <MainNavigator startOnOnboarding={!!justRegistered || !!firstLoginThisApp} />
+        : <AuthNavigator />}
     </NavigationContainer>
   );
 }
