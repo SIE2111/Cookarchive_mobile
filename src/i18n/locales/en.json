@@ -251,7 +251,12 @@
     "animationMusikSub": "Sound during greeting and finish celebration. Off = muted.",
     "einstellungen": "Settings",
     "einstellungenSub": "Brutzel, animation, server sync, notifications, AI",
-    "serverSyncHinweis": "Without server sync, \"Local\" stays completely private – but the Community Pool won't be usable."
+    "serverSyncHinweis": "Without server sync, \"Local\" stays completely private – but the Community Pool won't be usable.",
+    "auchLoginLoeschen": "Delete your login too?",
+    "auchLoginLoeschenHinweis": "You are no longer registered in any app of the HomeArchive family. Do you also want to permanently delete your login (email/password)? This frees your email address for a new registration. Without this you can still log in, but have no data anywhere.",
+    "nurAppDatenBehalten": "Keep just deleting data",
+    "loginEndgueltigLoeschen": "Delete login permanently",
+    "andereAppsBleiben": "Your data stays unchanged in:"
   },
   "detail": {
     "nichtGeladen": "The recipe could not be loaded",

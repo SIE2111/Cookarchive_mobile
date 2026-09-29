@@ -50,6 +50,18 @@ const HILFE_URL = 'https://www.homearchive.at/meinkochbuch/hilfe';
 const AGB_URL = 'https://www.homearchive.at/agb';
 const DATENSCHUTZ_URL = 'https://www.homearchive.at/datenschutz';
 
+// Anzeigenamen aller Apps der HomeArchive-Familie - dupliziert in
+// buero-ablage/mobile-bueroablage und medien-ablage sowie im Backend
+// (routers/account.py), da es zwischen den Repos keine gemeinsame
+// Bibliothek gibt (siehe docs/UMBAU.md: bewusste Entscheidung gegen
+// Code-Merge).
+const APP_DISPLAY_NAMES: Record<string, string> = {
+  bueroablage: 'Meine Büroablage',
+  medienablage: 'Meine Medienablage',
+  kochbuch: 'Mein Kochbuch',
+  weinkeller: 'Mein Weinkeller',
+};
+
 // Schluessel statt fertiger Texte: Die Tabellen stehen auf Modulebene und
 // werden einmal beim Laden ausgewertet - ein dort eingesetzter Text waere
 // fuer immer in der Sprache des ersten Starts.
@@ -109,6 +121,20 @@ export default function ProfileScreen({ navigation }: Props) {
   const [prefs, setPrefs] = useState<Preferences | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [savingKey, setSavingKey] = useState<PreferenceKey | 'default_hauben_level' | 'default_servings' | 'display_name' | null>(null);
+  const [otherApps, setOtherApps] = useState<string[]>([]);
+
+  // Fuer den Loesch-Dialog: in welchen anderen Apps der HomeArchive-
+  // Familie ist dieses Konto noch registriert? Rein informativ - schlaegt
+  // der Abruf fehl, bleibt die Liste einfach leer, die eigentliche
+  // Loeschung haengt nicht davon ab.
+  useEffect(() => {
+    api
+      .get<{ apps: string[]; app_names: string[] }>('/account/registered-apps')
+      .then((data) => {
+        setOtherApps(data.apps.filter((a) => a !== 'kochbuch').map((a) => APP_DISPLAY_NAMES[a] ?? a));
+      })
+      .catch(() => {});
+  }, []);
 
   const loadPrefs = () => {
     api
@@ -248,6 +274,44 @@ export default function ProfileScreen({ navigation }: Props) {
   //
   // Bewusst ein eigenes Modal statt Alert.prompt: Alert.prompt gibt es
   // NUR auf iOS, unter Android passiert damit gar nichts.
+  // Nach dem Loeschen der Kochbuch-Daten: fragt automatisch nach, ob auch
+  // der GETEILTE Login (Buerroablage/Medienablage/Kochbuch, dieselbe
+  // Privatarchive-DB) komplett entfernt werden soll - aber NUR, wenn das
+  // Backend meldet, dass keine Registrierung in einer anderen App der
+  // Familie mehr uebrig ist (remainingApps leer). Sonst bliebe der Login
+  // bestehen, damit die Anmeldung in den anderen Apps weiter funktioniert -
+  // genau das ist der Sinn des geteilten Kontos.
+  //
+  // WICHTIG: wartet auf die Nutzer-Antwort UND ruft DELETE /account/login
+  // auf, BEVOR signOut() passiert - danach waere die Sitzung schon weg und
+  // der Aufruf faellig, falls die Route einen gueltigen Token voraussetzt.
+  const maybeAskDeleteLogin = (remainingApps: string[]): Promise<void> => {
+    if (remainingApps.length > 0) return Promise.resolve();
+    return new Promise((resolve) => {
+      Alert.alert(
+        t('profil.auchLoginLoeschen'),
+        t('profil.auchLoginLoeschenHinweis'),
+        [
+          { text: t('profil.nurAppDatenBehalten'), style: 'cancel', onPress: () => resolve() },
+          {
+            text: t('profil.loginEndgueltigLoeschen'),
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await api.delete('/account/login');
+              } catch {
+                // Login-Loeschung ist ein separater, expliziter Zusatzschritt -
+                // schlaegt er fehl, sind die Kochbuch-Daten trotzdem schon weg;
+                // einfach weiter zum Logout, spaeter erneut versuchbar.
+              }
+              resolve();
+            },
+          },
+        ],
+      );
+    });
+  };
+
   const handleDeleteAccount = async () => {
     if (deleteConfirmText.trim().toLowerCase() !== accountEmail.toLowerCase()) {
       Alert.alert(t('profil.nichtGeloescht'), 'Die eingegebene Adresse stimmt nicht überein.');
@@ -255,8 +319,9 @@ export default function ProfileScreen({ navigation }: Props) {
     }
     setIsDeleting(true);
     try {
-      await api.delete('/account', { confirm_email: accountEmail });
+      const result = await api.delete<{ remaining_apps?: string[] }>('/account', { confirm_email: accountEmail });
       setShowDeleteDialog(false);
+      await maybeAskDeleteLogin(result?.remaining_apps ?? []);
       // Kein Erfolgs-Dialog noetig: Die Abmeldung wirft den Nutzer direkt
       // auf den Login-Screen, das ist Rueckmeldung genug.
       await signOut();
@@ -632,6 +697,11 @@ export default function ProfileScreen({ navigation }: Props) {
               {'\n\n'}Tippe zur Bestätigung deine E-Mail-Adresse ein:
               {'\n'}<Text style={{ color: colors.text, fontWeight: '600' }}>{accountEmail}</Text>
             </Text>
+            {otherApps.length > 0 && (
+              <Text style={[styles.modalBody, { color: colors.muted, marginTop: -6, marginBottom: 10 }]}>
+                {t('profil.andereAppsBleiben')} {otherApps.join(', ')}.
+              </Text>
+            )}
             <TextInput
               value={deleteConfirmText}
               onChangeText={setDeleteConfirmText}

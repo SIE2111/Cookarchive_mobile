@@ -251,7 +251,12 @@
     "animationMusikSub": "Ton bei Begrüßung und Fertigstellung. Aus = stumm.",
     "einstellungen": "Einstellungen",
     "einstellungenSub": "Brutzel, Animation, Server-Sync, Benachrichtigungen, KI",
-    "serverSyncHinweis": "Ohne Server-Sync bleibt \"Lokal\" komplett privat – dafür ist der Community-Pool nicht nutzbar."
+    "serverSyncHinweis": "Ohne Server-Sync bleibt \"Lokal\" komplett privat – dafür ist der Community-Pool nicht nutzbar.",
+    "auchLoginLoeschen": "Auch die Anmeldung löschen?",
+    "auchLoginLoeschenHinweis": "Du bist jetzt in keiner App der HomeArchive-Familie mehr registriert. Soll auch deine Anmeldung (E-Mail/Passwort) endgültig gelöscht werden? Das entsperrt deine E-Mail-Adresse für eine Neuregistrierung. Ohne das kannst du dich weiterhin anmelden, hast aber nirgends mehr Daten.",
+    "nurAppDatenBehalten": "Nur Daten löschen",
+    "loginEndgueltigLoeschen": "Anmeldung endgültig löschen",
+    "andereAppsBleiben": "Deine Daten bleiben unverändert in:"
   },
   "detail": {
     "nichtGeladen": "Rezept konnte nicht geladen werden",
