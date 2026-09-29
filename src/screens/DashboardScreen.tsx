@@ -7,6 +7,7 @@ import { useUebersetzung } from '../i18n';
 import ScanFab from '../components/ScanFab';
 import IncomingSharesCard from '../components/IncomingSharesCard';
 import BrutzelGreetingOverlay from '../components/BrutzelGreetingOverlay';
+import BrutzelFaqBubble from '../components/BrutzelFaqBubble';
 import { useAuth } from '../context/AuthContext';
 import { api, ApiError } from '../api/client';
 import type { CompositeScreenProps } from '@react-navigation/native';
@@ -474,7 +475,13 @@ export default function DashboardScreen({ navigation }: Props) {
         <Text style={[styles.brandName, { color: colors.text }]}>HomeArchive</Text>
         <View style={[styles.brandBadge, { backgroundColor: gradient[0] }]}><Text style={styles.brandBadgeText}>AI</Text></View>
       </View>
-      <Text style={[styles.appTitle, { color: colors.text }]}>Mein Kochbuch</Text>
+      <View style={styles.titleRow}>
+        <Text style={[styles.appTitle, { color: colors.text }]}>Mein Kochbuch</Text>
+        {/* Brutzel jederzeit antippbar - oeffnet vorgefertigte Fragen +
+            Antworten, siehe BrutzelFaqBubble.tsx (Wunsch 29.09.2026,
+            gleiches Muster wie Klammi/Blitzi in Buerroablage/Medienablage). */}
+        <BrutzelFaqBubble />
+      </View>
 
       {/* Begruessung ("Hallo …! 👋" / "Was kochen wir heute?") bewusst
           entfernt: Sie kostete zwei Zeilen fuer eine Information, die man
@@ -533,7 +540,8 @@ const styles = StyleSheet.create({
   brandName:      { fontSize: 11, fontWeight: '500' },
   brandBadge:     { borderRadius: 5, paddingHorizontal: 5, paddingVertical: 2 },
   brandBadgeText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.3, color: '#fff' },
-  appTitle:       { fontSize: 18, fontWeight: '500', marginBottom: 12 },
+  appTitle:       { fontSize: 18, fontWeight: '500' },
+  titleRow:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   // Zwei Spalten am Tablet: links ~7/12, rechts ~5/12 (Auftrag Punkt 4).
   // gap statt Raendern an den Kindern, damit sich die Blockabstaende
   // innerhalb einer Spalte nicht mit dem Spaltenabstand vermischen.
