@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert, ScrollView, TextInput, Modal, Linking, Switch } from 'react-native';
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert, ScrollView, TextInput, Modal, Linking, Switch, KeyboardAvoidingView, Platform } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme, type BackgroundStyle, type AccentColor } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
@@ -688,7 +688,15 @@ export default function ProfileScreen({ navigation }: Props) {
       </View>
 
       <Modal visible={showDeleteDialog} transparent animationType="fade" onRequestClose={() => setShowDeleteDialog(false)}>
-        <View style={styles.modalBackdrop}>
+        {/* KeyboardAvoidingView HIER, nicht nur um den Bildschirm herum:
+            ein <Modal> rendert in einem eigenen nativen Fenster ausserhalb
+            der normalen View-Hierarchie - eine aeussere KeyboardAvoidingView
+            wirkt darauf nicht. Ohne diese lag die Tastatur beim Eintippen
+            der E-Mail-Adresse ueber dem Eingabefeld/Knopf. */}
+        <KeyboardAvoidingView
+          style={styles.modalBackdrop}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
           <View style={[styles.modalCard, { backgroundColor: colors.bg, borderRadius: radius.lg }]}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>{t('profil.kontoEndgueltig')}</Text>
             <Text style={[styles.modalBody, { color: colors.muted }]}>
@@ -726,7 +734,7 @@ export default function ProfileScreen({ navigation }: Props) {
               <Text style={[styles.modalCancel, { color: colors.muted }]}>{t('allgemein.abbrechen')}</Text>
             </Pressable>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </ScrollView>
     {quer && (

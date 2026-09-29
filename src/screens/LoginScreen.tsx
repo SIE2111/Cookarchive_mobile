@@ -1,16 +1,28 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, Alert, Image } from 'react-native';
+import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
 import PasswortFeld from '../components/PasswortFeld';
 import LanguageSwitchRow from '../components/LanguageSwitchRow';
-import DismissKeyboardView from '../components/DismissKeyboardView';
 import { useAuth } from '../context/AuthContext';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../navigation/AppNavigator';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
+
+// Supabase liefert Fehlermeldungen nur auf Englisch (z.B. "Invalid login
+// credentials") - roh angezeigt versteht das nicht jeder Nutzer.
+// Gleiche Uebersetzung wie in Buerroablage/Medienablage (dortige
+// LoginScreen.tsx), damit die Meldung ueberall gleich klingt.
+function translateAuthError(message: string): string {
+  const m = (message || '').toLowerCase();
+  if (m.includes('invalid login credentials')) return 'E-Mail oder Passwort ist falsch.';
+  if (m.includes('email not confirmed')) return 'Bitte bestätige zuerst deine E-Mail-Adresse.';
+  if (m.includes('rate limit')) return 'Zu viele Versuche. Bitte später erneut versuchen.';
+  if (m.includes('email') && m.includes('valid')) return 'Bitte eine gültige E-Mail-Adresse eingeben.';
+  return message || 'Unbekannter Fehler';
+}
 
 export default function LoginScreen({ navigation }: Props) {
   const { colors, gradient, radius } = useTheme();
@@ -31,7 +43,7 @@ export default function LoginScreen({ navigation }: Props) {
       // Navigation zur App uebernimmt der Root-Navigator automatisch,
       // sobald AuthContext eine gueltige Session meldet.
     } catch (err) {
-      const message = err instanceof Error ? err.message : t('auth.loginFehlgeschlagen');
+      const message = err instanceof Error ? translateAuthError(err.message) : t('auth.loginFehlgeschlagen');
       Alert.alert(t('auth.anmeldungFehlgeschlagen'), message);
     } finally {
       setIsSubmitting(false);
@@ -39,7 +51,11 @@ export default function LoginScreen({ navigation }: Props) {
   };
 
   return (
-    <DismissKeyboardView style={[styles.container, { backgroundColor: colors.bg }]}>
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: colors.bg }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
       <View style={[styles.card, { backgroundColor: colors.bg, borderRadius: radius.lg }]}>
         {/* Logo ueber dem Namen: Der Anmeldeschirm war das einzige Bild
             der App ohne jedes Erkennungszeichen - man sah ein Formular
@@ -105,13 +121,15 @@ export default function LoginScreen({ navigation }: Props) {
 
         <LanguageSwitchRow />
       </View>
-    </DismissKeyboardView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   logo: { width: 84, height: 84, alignSelf: 'center', marginBottom: 10, borderRadius: 18 },
-  container: { flex: 1, justifyContent: 'center' },
+  container: { flex: 1 },
+  scroll: { flexGrow: 1, justifyContent: 'center' },
   // Obergrenze fuers Tablet: Ein Formular ueber die volle Breite wirkt
   // verloren. Breiter als jedes Handy, dort also unveraendert.
   card: { marginHorizontal: 20, padding: 24, width: '100%', maxWidth: 460, alignSelf: 'center' },
