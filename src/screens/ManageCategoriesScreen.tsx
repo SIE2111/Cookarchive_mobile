@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, Switch, Alert, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
@@ -26,6 +26,7 @@ interface RecipeSummary {
 
 export default function ManageCategoriesScreen({ navigation }: any) {
   const { colors, gradient, radius } = useTheme();
+  const insets = useSafeAreaInsets();
   const { t } = useUebersetzung();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -264,7 +265,7 @@ export default function ManageCategoriesScreen({ navigation }: any) {
           {polsterUnten > 0 && <View style={{ height: polsterUnten }} />}
         </ScrollView>
 
-        <View style={[styles.footer, { backgroundColor: colors.bg }]}>
+        <View style={[styles.footer, { backgroundColor: colors.bg, paddingBottom: 16 + insets.bottom }]}>
           <Pressable
             onPress={handleSave}
             disabled={isSaving}

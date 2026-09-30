@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, Modal, TextInput, Linking, Alert, ScrollView, Keyboard } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import * as Speech from 'expo-speech';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLayout } from '../utils/layout';
 import { SPEECH_LANGUAGE, BRUTZEL_PITCH, BRUTZEL_RATE, loadBrutzelVoice, vorleserStimme } from '../utils/speech';
 import { useTheme } from '../theme/ThemeContext';
@@ -144,6 +145,7 @@ interface Props {
 
 export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded, onFinished, sessionOverrides, initialServings }: Props) {
   const { colors, gradient, radius } = useTheme();
+  const insets = useSafeAreaInsets();
   const { inhaltsBreiteZweispaltig, istTablet } = useLayout();
   const { t, sprache } = useUebersetzung();
 
@@ -1244,7 +1246,7 @@ export default function SingleRecipeCookView({ recipeId, isActive, onTitleLoaded
       </View>
       </ScrollView>
 
-      <View style={styles.navRow}>
+      <View style={[styles.navRow, { paddingBottom: insets.bottom }]}>
         <Pressable onPress={goBackStep} style={[styles.navButtonSecondary, { borderColor: colors.muted, borderRadius: radius.md }]}>
           <Text style={[styles.navButtonSecondaryText, { color: colors.muted }]}>{t('allgemein.zurueck')}</Text>
         </Pressable>
