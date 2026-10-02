@@ -32,15 +32,17 @@
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.POST_NOTIFICATIONS",
-        "android.permission.READ_MEDIA_IMAGES",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.READ_MEDIA_IMAGES"
       ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FCEBD5"
       },
       "softwareKeyboardLayoutMode": "resize",
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -57,7 +59,8 @@
         "expo-image-picker",
         {
           "photosPermission": "Mein Kochbuch braucht Zugriff auf deine Fotos, um Rezeptbilder oder Kochbuchseiten auszuwählen.",
-          "cameraPermission": "Mein Kochbuch braucht Kamerazugriff, um Kochbuchseiten oder Rezeptzettel zu fotografieren."
+          "cameraPermission": "Mein Kochbuch braucht Kamerazugriff, um Kochbuchseiten oder Rezeptzettel zu fotografieren.",
+          "microphonePermission": false
         }
       ],
       "expo-localization",
