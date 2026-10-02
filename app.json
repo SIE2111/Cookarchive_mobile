@@ -24,7 +24,10 @@
         "UIBackgroundModes": [
           "audio"
         ],
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "LSApplicationQueriesSchemes": [
+          "meinweinkeller"
+        ]
       }
     },
     "android": {
@@ -64,7 +67,8 @@
         }
       ],
       "expo-localization",
-      "expo-sharing"
+      "expo-sharing",
+      "./plugins/withWeinkellerQuery"
     ],
     "extra": {
       "eas": {
