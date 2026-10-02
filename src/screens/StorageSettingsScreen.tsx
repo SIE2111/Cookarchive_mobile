@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert, ScrollView, Linking, TextInput } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
 import PasswortFeld from '../components/PasswortFeld';
+import StorageMigrationModal from '../components/StorageMigrationModal';
 import { api, ApiError } from '../api/client';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { MainStackParamList } from '../navigation/AppNavigator';
@@ -61,6 +62,10 @@ export default function StorageSettingsScreen({ navigation }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [savingKey, setSavingKey] = useState<'storage_mode' | 'drittanbieter_provider' | null>(null);
   const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
+  // Speicher-Umzug der Rezeptbilder (02.10.2026, wie Buero-/Medienablage):
+  // 'manual' ueber die Zeile unten, 'ask' automatisch nach einem Wechsel.
+  const [migration, setMigration] = useState<'ask' | 'manual' | null>(null);
+  const letztesZiel = useRef<string | null>(null);
 
   const loadPrefs = () => {
     api
@@ -236,6 +241,22 @@ export default function StorageSettingsScreen({ navigation }: Props) {
       setSavingKey(null);
     }
   };
+
+  // Nach einem Wechsel des Speicherorts (auch nach der Rueckkehr aus dem
+  // Google/OneDrive/Dropbox-Login) fragt Brutzel, ob vorhandene Bilder
+  // mitkommen sollen - aber nur, wenn wirklich etwas zu verschieben ist.
+  useEffect(() => {
+    if (!prefs) return;
+    const ziel = prefs.storage_mode === 'drittanbieter_cloud'
+      ? `cloud:${prefs.drittanbieter_provider ?? ''}`
+      : prefs.storage_mode === 'nas' ? 'eigene_cloud' : prefs.storage_mode;
+    const vorher = letztesZiel.current;
+    letztesZiel.current = ziel;
+    if (vorher === null || vorher === ziel || ziel === 'lokal') return;
+    api.get<{ supported: boolean; ready: boolean; movable: number }>('/storage-migration/status')
+      .then((st) => { if (st.supported && st.ready && st.movable > 0) setMigration('ask'); })
+      .catch(() => { /* Rueckfrage ist nur ein Angebot - ohne Status keine */ });
+  }, [prefs?.storage_mode, prefs?.drittanbieter_provider]);
 
   if (error) {
     return (
@@ -461,6 +482,26 @@ export default function StorageSettingsScreen({ navigation }: Props) {
           </Pressable>
         );
       })}
+
+      {/* Speicher-Umzug: vorhandene Rezeptbilder an den gewaehlten Ort bringen,
+          alte Kopien aufraeumen, fehlende Bilder bereinigen. */}
+      {prefs.storage_mode !== 'lokal' && (
+        <Pressable
+          onPress={() => setMigration('manual')}
+          style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md, marginTop: 14 }]}
+        >
+          <MaterialCommunityIcons name="folder-move-outline" size={20} color={gradient[0]} style={styles.rowIcon} />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.rowTitle, { color: colors.text }]}>Rezeptbilder hierher übernehmen</Text>
+            <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
+              Bilder verschieben, alte Kopien aufräumen, fehlende Bilder bereinigen
+            </Text>
+          </View>
+          <MaterialCommunityIcons name="chevron-right" size={20} color={colors.muted} />
+        </Pressable>
+      )}
+
+      <StorageMigrationModal visible={migration !== null} mode={migration} onClose={() => setMigration(null)} />
     </ScrollView>
   );
 }
