@@ -463,7 +463,7 @@ export default function StorageSettingsScreen({ navigation }: Props) {
               <Text style={[styles.rowTitle, { color: isActive ? '#16A34A' : colors.text }]}>
                 {isActive ? `${p.title} ✓ verbunden` : hasTokens ? `${p.title} (verbunden, nicht aktiv)` : p.title}
               </Text>
-              <Text style={[styles.rowSubtitle, { color: colors.muted }]}>{p.subtitle}</Text>
+              <Text style={[styles.rowSubtitle, { color: colors.muted }]}>{t(p.subtitle)}</Text>
               {hasTokens && (
                 <Pressable onPress={() => handleDisconnectProvider(p.apiPrefix)} hitSlop={8} style={{ marginTop: 6, alignSelf: 'flex-start' }}>
                   <Text style={{ color: '#DC2626', fontSize: 11.5, fontWeight: '700' }}>{t('sonstiges.trennen')}</Text>
@@ -488,16 +488,14 @@ export default function StorageSettingsScreen({ navigation }: Props) {
       {prefs.storage_mode !== 'lokal' && (
         <Pressable
           onPress={() => setMigration('manual')}
-          style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md, marginTop: 14 }]}
+          style={{
+            marginTop: 16, borderWidth: 2, borderColor: gradient[0], borderRadius: radius.md,
+            paddingVertical: 14, paddingHorizontal: 12, alignItems: 'center',
+          }}
         >
-          <MaterialCommunityIcons name="folder-move-outline" size={20} color={gradient[0]} style={styles.rowIcon} />
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.rowTitle, { color: colors.text }]}>Rezeptbilder hierher übernehmen</Text>
-            <Text style={[styles.rowSubtitle, { color: colors.muted }]}>
-              Bilder verschieben, alte Kopien aufräumen, fehlende Bilder bereinigen
-            </Text>
-          </View>
-          <MaterialCommunityIcons name="chevron-right" size={20} color={colors.muted} />
+          <Text style={{ color: gradient[0], fontSize: 15, fontWeight: '800', textAlign: 'center' }}>
+            Rezeptbilder in den aktuellen Speicher verschieben
+          </Text>
         </Pressable>
       )}
 
