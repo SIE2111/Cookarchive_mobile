@@ -2,6 +2,7 @@
   "expo": {
     "name": "Mein Kochbuch AI",
     "slug": "meinkochbuch",
+    "scheme": "meinkochbuch",
     "version": "1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

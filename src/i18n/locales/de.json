@@ -341,7 +341,14 @@
     "einarbeitenSpeichern": "Rezept so übernehmen",
     "einarbeitenVerwerfen": "Verwerfen",
     "einarbeitenFehler": "Die Vorschläge konnten nicht eingearbeitet werden.",
-    "alsNotizMerken": "{anzahl} als Notiz merken"
+    "alsNotizMerken": "{anzahl} als Notiz merken",
+    "weinTitel": "Passender Wein aus meinem Keller",
+    "weinButton": "Wein in Mein Weinkeller aussuchen",
+    "weinAndererButton": "Anderen Wein aussuchen",
+    "weinDazu": "Dazu:",
+    "weinEntfernen": "Entfernen",
+    "weinNichtInstalliert": "Mein Weinkeller nicht gefunden",
+    "weinNichtInstalliertText": "Für Weinvorschläge aus deinem eigenen Keller brauchst du die App „Mein Weinkeller“ auf diesem Gerät."
   },
   "kochen": {
     "tipp": {

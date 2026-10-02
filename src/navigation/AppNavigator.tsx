@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { NavigationContainer, type NavigatorScreenParams } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef, type NavigatorScreenParams } from '@react-navigation/native';
+import { Linking } from 'react-native';
+import { parseRuecksprung, weinFuerRezeptSpeichern, gemerktenTitelHolen } from '../utils/weinPairing';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { ActivityIndicator, View, Text, Pressable } from 'react-native';
@@ -67,7 +69,7 @@ export type MainStackParamList = {
   // Parametrisiert, damit von einem Stack-Screen aus gezielt ein Tab
   // angesprungen werden kann (z.B. nach dem Kochen zurueck aufs Dashboard).
   MainTabs: NavigatorScreenParams<MainTabParamList> | undefined;
-  RecipeDetail: { recipeId: string; title: string };
+  RecipeDetail: { recipeId: string; title: string; weinAktualisiert?: number };
   RecipeSourceMenu: undefined;
   ManualRecipe: { recipeId?: string } | undefined;
   WebImport: { pickedUrl?: string } | undefined;
@@ -246,6 +248,10 @@ function MainNavigator({ startOnOnboarding }: { startOnOnboarding: boolean }) {
   );
 }
 
+// Für den Rücksprung aus Mein Weinkeller ("Passender Wein") - Navigation
+// außerhalb eines Screens heraus.
+const navigationRef = createNavigationContainerRef<MainStackParamList>();
+
 export default function AppNavigator() {
   const { session, isLoading, trialExpired, signOut, justRegistered } = useAuth();
   const { colors, isLoaded: themeLoaded } = useTheme();
@@ -268,6 +274,33 @@ export default function AppNavigator() {
       .catch(() => { if (!cancelled) setFirstLoginThisApp(false); }); // im Zweifel nicht blockieren
     return () => { cancelled = true; };
   }, [session]);
+
+  // Rücksprung aus Mein Weinkeller: meinkochbuch://recipe/<id>?wine=…
+  // Der gewählte Wein wird sofort lokal am Rezept gemerkt; geöffnet wird das
+  // Rezept, sobald Login und Navigation bereit sind (Link kann auch beim
+  // Kaltstart oder ausgeloggt ankommen).
+  // Diese Hooks MÜSSEN vor den frühen returns unten stehen.
+  const [offenerRuecksprung, setOffenerRuecksprung] = useState<string | null>(null);
+  const [navBereit, setNavBereit] = useState(false);
+  useEffect(() => {
+    async function verarbeiten(url: string | null) {
+      const r = parseRuecksprung(url);
+      if (!r) return;
+      if (r.wein) await weinFuerRezeptSpeichern(r.recipeId, r.wein);
+      setOffenerRuecksprung(r.recipeId);
+    }
+    Linking.getInitialURL().then(verarbeiten);
+    const sub = Linking.addEventListener('url', ({ url }) => { verarbeiten(url); });
+    return () => sub.remove();
+  }, []);
+  useEffect(() => {
+    if (!offenerRuecksprung || !session || !navBereit || !navigationRef.isReady()) return;
+    const recipeId = offenerRuecksprung;
+    gemerktenTitelHolen(recipeId).then((title) => {
+      navigationRef.navigate('RecipeDetail', { recipeId, title, weinAktualisiert: Date.now() });
+      setOffenerRuecksprung(null);
+    });
+  }, [offenerRuecksprung, session, navBereit]);
 
   if (isLoading || !themeLoaded || (!!session && firstLoginThisApp === null)) {
     return (
@@ -301,7 +334,7 @@ export default function AppNavigator() {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef} onReady={() => setNavBereit(true)}>
       {session
         ? <MainNavigator startOnOnboarding={!!justRegistered || !!firstLoginThisApp} />
         : <AuthNavigator />}

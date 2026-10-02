@@ -4,6 +4,7 @@ import * as Sharing from 'expo-sharing';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
+import WeinEmpfehlungCard from '../components/WeinEmpfehlungCard';
 import NutritionCard from '../components/NutritionCard';
 import TranslationBanner from '../components/TranslationBanner';
 import PublishToPoolButton from '../components/PublishToPoolButton';
@@ -1112,6 +1113,11 @@ export default function RecipeDetailScreen({ route, navigation, onClose }: Props
           fat_g: recipe.fat_g,
           carbs_g: recipe.carbs_g,
         }}
+      />
+
+      <WeinEmpfehlungCard
+        recipe={{ id: recipe.id, title: recipe.title, ingredients: recipe.ingredients }}
+        refreshKey={route.params.weinAktualisiert}
       />
 
       <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('detail.zutaten')}</Text>
