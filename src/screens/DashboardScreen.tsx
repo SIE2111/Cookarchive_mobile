@@ -15,6 +15,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { MainTabParamList, MainStackParamList } from '../navigation/AppNavigator';
 import { useLayout } from '../utils/layout';
+import KochplanKarte from '../components/KochplanKarte';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabParamList, 'Home'>,
@@ -482,6 +483,9 @@ export default function DashboardScreen({ navigation }: Props) {
             gleiches Muster wie Klammi/Blitzi in Buerroablage/Medienablage). */}
         <BrutzelFaqBubble />
       </View>
+
+      {/* Nach dem Einkaufen direkt in die Zubereitung (Kochplan) */}
+      <KochplanKarte />
 
       {/* Begruessung ("Hallo …! 👋" / "Was kochen wir heute?") bewusst
           entfernt: Sie kostete zwei Zeilen fuer eine Information, die man

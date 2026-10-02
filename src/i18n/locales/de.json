@@ -816,5 +816,14 @@
     "feldCode": "Code aus der E-Mail",
     "feldPasswort": "Neues Passwort",
     "mindestens": "Mindestens 8 Zeichen"
+  },
+  "kochplan": {
+    "titel": "Bereit zum Kochen",
+    "beilagen": "+ {anzahl} Beilagen",
+    "portionen": "{anzahl} Portionen",
+    "ansehen": "Rezept ansehen",
+    "jetztKochen": "Jetzt kochen",
+    "entfernen": "Aus dem Kochplan entfernen",
+    "hinweisNachUebernahme": "Die Zutaten sind auf der Einkaufsliste. Nach dem Einkauf findest du das Rezept oben in der Einkaufsliste und auf der Startseite unter „Bereit zum Kochen“."
   }
 }

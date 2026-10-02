@@ -816,5 +816,14 @@
     "feldCode": "Code from the email",
     "feldPasswort": "New password",
     "mindestens": "At least 8 characters"
+  },
+  "kochplan": {
+    "titel": "Ready to cook",
+    "beilagen": "+ {anzahl} sides",
+    "portionen": "{anzahl} servings",
+    "ansehen": "View recipe",
+    "jetztKochen": "Cook now",
+    "entfernen": "Remove from cooking plan",
+    "hinweisNachUebernahme": "The ingredients are on your shopping list. After shopping, you will find the recipe at the top of the shopping list and on the home screen under “Ready to cook”."
   }
 }

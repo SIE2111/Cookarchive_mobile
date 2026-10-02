@@ -5,6 +5,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useTheme } from '../theme/ThemeContext';
 import { useUebersetzung } from '../i18n';
 import WeinEmpfehlungCard from '../components/WeinEmpfehlungCard';
+import { kochplanMerken } from '../utils/kochplan';
 import NutritionCard from '../components/NutritionCard';
 import TranslationBanner from '../components/TranslationBanner';
 import PublishToPoolButton from '../components/PublishToPoolButton';
@@ -528,7 +529,18 @@ export default function RecipeDetailScreen({ route, navigation, onClose }: Props
         recipe_ids: [recipeId, ...selectedSideIds],
         servings_by_recipe_id: angezeigtePortionen ? { [recipeId]: angezeigtePortionen } : undefined,
       });
-      Alert.alert(t('detail.erledigt'), t('detail.zutatenHinzugefuegt'));
+      // Für "Jetzt kochen" nach dem Einkauf (Kochplan-Karte in Einkaufsliste
+      // und Startseite) - gleiche Gruppe und Portionen wie auf der Liste.
+      if (recipe) {
+        await kochplanMerken({
+          id: recipeId,
+          titel: recipe.title,
+          recipeIds: [recipeId, ...selectedSideIds],
+          beilagen: selectedSideIds.map((sid) => allSideCandidates.find((c) => c.id === sid)?.title).filter((x): x is string => !!x),
+          portionen: angezeigtePortionen ?? undefined,
+        }).catch(() => {});
+      }
+      Alert.alert(t('detail.erledigt'), t('kochplan.hinweisNachUebernahme'));
     } catch (err) {
       Alert.alert(t('allgemein.fehler'), err instanceof ApiError ? err.detail : t('detail.zutatenNichtHinzugefuegt'));
     } finally {
