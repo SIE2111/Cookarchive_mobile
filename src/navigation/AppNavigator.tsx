@@ -28,6 +28,7 @@ import CookModeScreen from '../screens/CookModeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import CommunityPoolScreen from '../screens/CommunityPoolScreen';
 import PoolRecipeDetailScreen from '../screens/PoolRecipeDetailScreen';
+import ModerationScreen from '../screens/ModerationScreen';
 import VoiceSettingsScreen from '../screens/VoiceSettingsScreen';
 import SupportScreen from '../screens/SupportScreen';
 import HouseholdScreen from '../screens/HouseholdScreen';
@@ -87,6 +88,7 @@ export type MainStackParamList = {
   // Aufruf aus dem Erfassen-Menue.
   CommunityPool: undefined;
   PoolRecipeDetail: { publicRecipeId: string; title?: string };
+  Moderation: undefined;
   VoiceSettings: undefined;
   Support: undefined;
   Household: undefined;
@@ -233,6 +235,7 @@ function MainNavigator({ startOnOnboarding }: { startOnOnboarding: boolean }) {
         component={PoolRecipeDetailScreen}
         options={({ route }) => ({ title: route.params?.title ?? 'Rezept' })}
       />
+      <MainStack.Screen name="Moderation" component={ModerationScreen} options={{ title: 'Moderation' }} />
       <MainStack.Screen name="VoiceSettings" component={VoiceSettingsScreen} options={{ title: 'Vorlesen & Stimme' }} />
       <MainStack.Screen name="Support" component={SupportScreen} options={{ title: 'Support kontaktieren' }} />
       <MainStack.Screen name="Household" component={HouseholdScreen} options={{ title: 'Haushalt' }} />

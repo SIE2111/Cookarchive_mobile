@@ -118,6 +118,11 @@ export default function ProfileScreen({ navigation }: Props) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+  // Moderations-Zeile nur für Moderatoren (MODERATOR_EMAILS am Server)
+  const [istModerator, setIstModerator] = useState(false);
+  useEffect(() => {
+    api.get<{ moderator: boolean }>('/pool/moderation/me').then((r) => setIstModerator(!!r.moderator)).catch(() => setIstModerator(false));
+  }, []);
   const [prefs, setPrefs] = useState<Preferences | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [savingKey, setSavingKey] = useState<PreferenceKey | 'default_hauben_level' | 'default_servings' | 'display_name' | null>(null);
@@ -527,6 +532,19 @@ export default function ProfileScreen({ navigation }: Props) {
         </View>
         <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>
       </Pressable>
+      {istModerator && (
+        <Pressable
+          onPress={() => navigation.getParent()?.navigate('Moderation')}
+          style={[styles.row, { backgroundColor: colors.card, borderRadius: radius.md, marginTop: 8 }]}
+        >
+          <MaterialCommunityIcons name="shield-check-outline" size={20} color={colors.muted} style={styles.rowIcon} />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.rowTitle, { color: colors.text }]}>{t('moderation.titel')}</Text>
+            <Text style={[styles.rowSubtitle, { color: colors.muted }]}>{t('moderation.zeileSub')}</Text>
+          </View>
+          <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>
+        </Pressable>
+      )}
 
       {/* Benachrichtigungen und KI-Analyse (23.09.2026 zurueck auf den
           Profil-Hauptbildschirm, vorher kurz in Einstellungen) - anders

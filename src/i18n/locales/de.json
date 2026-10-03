@@ -825,5 +825,20 @@
     "jetztKochen": "Jetzt kochen",
     "entfernen": "Aus dem Kochplan entfernen",
     "hinweisNachUebernahme": "Die Zutaten sind auf der Einkaufsliste. Nach dem Einkauf findest du das Rezept oben in der Einkaufsliste und auf der Startseite unter „Bereit zum Kochen“."
+  },
+  "moderation": {
+    "titel": "Moderation",
+    "zeileSub": "Gemeldete Community-Rezepte prüfen",
+    "keine": "Keine offenen Meldungen.",
+    "grund": "Grund",
+    "rezeptAnsehen": "Rezept ansehen",
+    "unbegruendet": "Unbegründet",
+    "ausblenden": "Ausblenden",
+    "sperren": "Sperren",
+    "entscheidung": "Entscheidung",
+    "bestaetigen": "Bestätigen",
+    "frageIgnorieren": "Meldung als unbegründet schließen?",
+    "frageAusblenden": "Rezept aus dem Community-Pool ausblenden?",
+    "frageSperren": "Rezept ausblenden UND den Ersteller fürs Veröffentlichen sperren?"
   }
 }

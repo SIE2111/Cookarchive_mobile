@@ -825,5 +825,20 @@
     "jetztKochen": "Cook now",
     "entfernen": "Remove from cooking plan",
     "hinweisNachUebernahme": "The ingredients are on your shopping list. After shopping, you will find the recipe at the top of the shopping list and on the home screen under “Ready to cook”."
+  },
+  "moderation": {
+    "titel": "Moderation",
+    "zeileSub": "Review reported community recipes",
+    "keine": "No open reports.",
+    "grund": "Reason",
+    "rezeptAnsehen": "View recipe",
+    "unbegruendet": "Unfounded",
+    "ausblenden": "Hide",
+    "sperren": "Ban",
+    "entscheidung": "Decision",
+    "bestaetigen": "Confirm",
+    "frageIgnorieren": "Close the report as unfounded?",
+    "frageAusblenden": "Hide the recipe from the community pool?",
+    "frageSperren": "Hide the recipe AND ban the author from publishing?"
   }
 }
