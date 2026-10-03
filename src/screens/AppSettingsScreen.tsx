@@ -36,11 +36,14 @@ interface Preferences {
   storage_mode: string;
 }
 
-const DARSTELLUNG_ROWS: { key: PreferenceKey; title: string; subtitle: string }[] = [
+// Abschnitt "Animation" - Überschrift in allen HomeArchive-Apps gleich (03.10.2026)
+const ANIMATION_ROWS: { key: PreferenceKey; title: string; subtitle: string }[] = [
   { key: 'show_brutzel', title: 'profil.brutzelAnzeigen', subtitle: 'profil.brutzelAnzeigenSub' },
-  { key: 'large_text', title: 'profil.grosseSchrift', subtitle: 'profil.grosseSchriftSub' },
   { key: 'show_greeting_animation', title: 'profil.brutzelAnimation', subtitle: 'profil.brutzelAnimationSub' },
   { key: 'play_animation_music', title: 'profil.animationMusik', subtitle: 'profil.animationMusikSub' },
+];
+const DARSTELLUNG_ROWS: { key: PreferenceKey; title: string; subtitle: string }[] = [
+  { key: 'large_text', title: 'profil.grosseSchrift', subtitle: 'profil.grosseSchriftSub' },
 ];
 
 export default function AppSettingsScreen() {
@@ -120,8 +123,8 @@ export default function AppSettingsScreen() {
 
   return (
     <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={[styles.container, inhaltsBreite]}>
-      <Text style={[styles.label, { color: colors.muted }]}>{t('profil.darstellungBedienung')}</Text>
-      {DARSTELLUNG_ROWS.map((zeile) => (
+      <Text style={[styles.label, { color: colors.muted }]}>{t('profil.animation')}</Text>
+      {ANIMATION_ROWS.map((zeile) => (
         <Zeile key={zeile.key} zeile={zeile} />
       ))}
 
@@ -146,6 +149,11 @@ export default function AppSettingsScreen() {
         </View>
         <Text style={{ color: colors.muted, fontSize: 16 }}>›</Text>
       </Pressable>
+
+      <Text style={[styles.label, { color: colors.muted, marginTop: 20 }]}>{t('profil.darstellung')}</Text>
+      {DARSTELLUNG_ROWS.map((zeile) => (
+        <Zeile key={zeile.key} zeile={zeile} />
+      ))}
     </ScrollView>
   );
 }
